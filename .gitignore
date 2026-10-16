@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets / local config
+.env
+.env.*
+!.env.example
+
+# Footage and generated data (never commit)
+data/videos/*
+!data/videos/.gitkeep
+data/frames/*
+!data/frames/.gitkeep
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.m4v
+
+# Node (frontend, later)
+node_modules/
+dist/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
