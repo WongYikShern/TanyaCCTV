@@ -1,7 +1,7 @@
 """Settings for the indexer, loaded from environment variables or an optional .env file.
 
-No secrets are needed for this milestone. Later milestones should also read
-their secrets (e.g. bot tokens) from the environment, never from code.
+The indexer needs no secrets. Search (Milestone 2) needs GEMINI_API_KEY, which is only ever
+passed through the environment to the search subprocess; it is never read or stored here.
 """
 
 from __future__ import annotations
@@ -81,4 +81,48 @@ def load_settings(interval: float | str | None = None) -> Settings:
         db_path=db_path,
         frame_interval_sec=validate_interval(interval),
         jpeg_quality=quality,
+    )
+
+
+# --------------------------------------------------------------------------- search (Milestone 2)
+
+# SentrySearch (the natural-language search engine) runs in its own Python 3.12 environment and
+# is reached through search_engine/tanya_bridge.py. GEMINI_API_KEY is never read here: it is only
+# passed through the environment to that subprocess.
+SEARCHABLE_EXTENSIONS = frozenset({".mp4", ".mov"})  # what SentrySearch can index
+
+
+@dataclass(frozen=True)
+class SearchSettings:
+    sentry_python: Path | None  # python.exe of the SentrySearch env; None = search not configured
+    bridge_path: Path
+    sentry_db: Path | None = None  # None = SentrySearch's default index (~/.sentrysearch/db)
+    timeout_sec: float = 60.0
+    merge_ratio: float = 0.5  # grouping only; never affects result status
+    merge_gap_sec: float = 0.0
+
+
+def _float_env(name: str, default: float, low: float, high: float) -> float:
+    raw = os.getenv(name, str(default))
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ConfigError(f"{name} must be a number, got {raw!r}") from None
+    if not low <= value <= high:
+        raise ConfigError(f"{name} must be between {low} and {high}, got {value}")
+    return value
+
+
+def load_search_settings() -> SearchSettings:
+    """Build SearchSettings from the environment (and PROJECT_ROOT/.env if it exists)."""
+    load_dotenv(PROJECT_ROOT / ".env")
+    python = os.getenv("TANYA_SENTRY_PYTHON", "").strip()
+    db = os.getenv("TANYA_SENTRY_DB", "").strip()
+    return SearchSettings(
+        sentry_python=Path(python).expanduser() if python else None,
+        bridge_path=_resolve(os.getenv("TANYA_SENTRY_BRIDGE", "search_engine/tanya_bridge.py")),
+        sentry_db=_resolve(db) if db else None,
+        timeout_sec=_float_env("TANYA_SEARCH_TIMEOUT_SEC", 60.0, 1.0, 600.0),
+        merge_ratio=_float_env("TANYA_MERGE_RATIO", 0.5, 0.0, 1.0),
+        merge_gap_sec=_float_env("TANYA_MERGE_GAP_SEC", 0.0, 0.0, 10.0),
     )
