@@ -2,10 +2,16 @@
 
 AI-powered CCTV search and incident-response prototype (university hackathon).
 
-**Current milestone: 1 — video ingestion and indexing.**
-The indexer scans a folder of authorised sample videos, extracts one JPEG every 1–2 seconds,
-and stores video metadata and frame timestamps in SQLite. AI search, Flask API, React
-frontend, Telegram alerts and monitoring rules come in later milestones.
+**Milestone 1 — video ingestion and indexing.** The indexer scans a folder of authorised
+sample videos, extracts one JPEG every 1–2 seconds, and stores video metadata and frame
+timestamps in SQLite.
+
+**Milestone 2 — natural-language search** (command line, optional). Uses
+[SentrySearch](https://github.com/ssrajadh/sentrysearch) (Apache-2.0, pinned to commit `d3efd6a`)
+with Google's Gemini Embedding 2, in a separate Python 3.12 environment. See
+[Natural-language search](#natural-language-search-milestone-2).
+
+Flask API, React frontend, Telegram alerts and monitoring rules come in later milestones.
 
 ## Project layout
 
@@ -18,12 +24,20 @@ TanyaCCTV/
 │   │   ├── config.py           # settings from env vars / .env, validation
 │   │   ├── db.py               # SQLite schema
 │   │   ├── frames.py           # OpenCV frame extraction
-│   │   └── indexer.py          # repeatable indexing logic
+│   │   ├── indexer.py          # repeatable indexing logic
+│   │   ├── sentry_client.py    # runs the search bridge as a subprocess, checks its JSON
+│   │   ├── search.py           # maps results to videos, merges chunks, thumbnails
+│   │   └── search_sync.py      # opt-in sync of the search index (plan, then apply)
 │   ├── scripts/
 │   │   ├── index_videos.py     # run the indexer
 │   │   ├── show_index.py       # read-only view of the database
-│   │   └── make_test_video.py  # create a synthetic test video
-│   └── tests/                  # pytest, synthetic videos only
+│   │   ├── make_test_video.py  # create a synthetic test video
+│   │   ├── search_videos.py    # natural-language search
+│   │   └── sync_search_index.py # update the search index (dry run unless --yes)
+│   └── tests/                  # pytest, synthetic videos + fake search bridge
+├── search_engine/
+│   ├── tanya_bridge.py         # runs INSIDE the SentrySearch env; prints one JSON line
+│   └── tests/                  # bridge tests (run with the SentrySearch env)
 ├── data/
 │   ├── videos/                 # put authorised sample footage here (git-ignored)
 │   ├── frames/                 # generated JPEG frames (git-ignored)
@@ -241,6 +255,142 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r backend\requirements.txt
 ```
+
+## Natural-language search (Milestone 2)
+
+Search finds **10-second clips** that match a description such as "a person lying on the floor".
+It is optional: indexing and everything above work without it.
+
+> **Every result is `uncertain`.** Results are a ranked list of clips for a person to review,
+> not detected incidents. Scores are not comparable between queries, and **a low score does not
+> prove that something did not happen.** In testing, a correct "red car" clip scored 0.36 while an
+> irrelevant "fire and smoke" clip scored 0.34, so there is deliberately no score cutoff.
+
+### How it fits together
+
+```
+search_videos.py ─► tanya/search.py ─► tanya/sentry_client.py ──subprocess──► search_engine/tanya_bridge.py
+   (Python 3.14, this .venv)          (JSON only, timeout, key redaction)     (SentrySearch env, Python 3.12)
+```
+
+- SentrySearch splits each video into 10 s chunks (2 s overlap), embeds them with Gemini, and
+  stores them in its own index at `%USERPROFILE%\.sentrysearch\db`. That index is shared by
+  everything that uses SentrySearch on this computer.
+- Results are mapped back to TanyaCCTV videos. Only files inside `data/videos` that
+  `index_videos.py` has indexed count.
+- Neighbouring matching chunks are grouped into one time window, and the nearest extracted
+  frame is attached as a thumbnail.
+- SentrySearch indexes **only `.mp4` and `.mov`**. Other formats are listed as "not searchable".
+
+### Cost and privacy
+
+- Indexing uses the Gemini API: about **US$0.00079 per second of video** on the paid tier
+  (about US$2.84 per hour; Google pricing checked 2026-10-16). Searching costs a negligible amount.
+- The free tier costs nothing, but **Google may use free-tier content to improve its products**.
+  Only index footage whose licence or consent allows sending it to Google.
+- Search and indexing need internet access.
+
+### One-time setup (outside this project)
+
+1. Install [uv](https://docs.astral.sh/uv/), then install SentrySearch pinned to one commit, in
+   its own folder:
+
+   ```powershell
+   $T = "$HOME\sentrysearch-trial"
+   $env:UV_PYTHON_INSTALL_DIR = "$T\python"; $env:UV_TOOL_DIR = "$T\tools"; $env:UV_TOOL_BIN_DIR = "$T\tool-bin"
+   $env:UV_CACHE_DIR = "$T\cache"; $env:UV_PYTHON_BIN_DIR = "$T\python-bin"; $env:UV_PYTHON_PREFERENCE = "only-managed"
+   uv python install 3.12
+   uv tool install --python 3.12 "git+https://github.com/ssrajadh/sentrysearch@d3efd6a4351251084dc101a24970e40a38e1426d"
+   ```
+
+2. Point TanyaCCTV at that environment, either in your terminal or in your own git-ignored `.env`:
+
+   ```powershell
+   $env:TANYA_SENTRY_PYTHON = "$HOME\sentrysearch-trial\tools\sentrysearch\Scripts\python.exe"
+   ```
+
+3. Provide your Gemini API key **only** through the environment. Never put it in code,
+   `.env.example`, logs or Git. This sets it for the current terminal only, with typing hidden:
+
+   ```powershell
+   $env:GEMINI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host 'Gemini API key' -AsSecureString)))
+   ```
+
+### Index videos for search (opt-in, costs money)
+
+Run `index_videos.py` first. Then review the plan. This step is free and changes nothing:
+
+```powershell
+python backend\scripts\sync_search_index.py
+```
+
+The plan lists:
+
+- videos to index
+- index entries to remove (deleted, renamed or changed videos)
+- estimated frames and estimated cost
+
+Entries outside `data/videos`, such as other projects in the shared index, are never touched.
+
+To apply the plan:
+
+```powershell
+python backend\scripts\sync_search_index.py --yes
+```
+
+- Removals use exact path matching only. Don't use `sentrysearch remove`: it matches substrings
+  and could delete unrelated entries.
+- The script records what it indexed in `data/search_index_manifest.json` (git-ignored).
+- Searching never indexes or removes anything.
+
+### Search
+
+```powershell
+python backend\scripts\search_videos.py "a person lying on the floor"
+python backend\scripts\search_videos.py "a red car" --n 20 --json
+```
+
+Each result shows:
+
+- the video and the time window
+- the best chunk's score, and its margin over the query's median score (for ordering only)
+- the individual chunks
+- a thumbnail path
+
+Warnings explain:
+
+- results that were ignored (outside `data/videos`, or not indexed by TanyaCCTV)
+- videos that aren't searchable
+- timestamps that may be stale (run the sync plan to review)
+
+`TANYA_MERGE_RATIO` (default 0.5) and `TANYA_MERGE_GAP_SEC` (default 0) only control how chunks
+are grouped into windows. They never change a result's status. See `.env.example`.
+
+### Testing search
+
+- **Main tests:** `python -m pytest backend -v` includes the search tests. They use a **fake
+  bridge** that replays real recorded scores, so no SentrySearch, network or API key is needed.
+- **Bridge tests:** run these with the SentrySearch environment. The live tests run only if
+  `GEMINI_API_KEY` is set.
+
+  ```powershell
+  $env:TANYA_SENTRY_PYTHON = "$HOME\sentrysearch-trial\tools\sentrysearch\Scripts\python.exe"
+  cd search_engine\tests
+  & "$HOME\sentrysearch-trial\src\.venv\Scripts\python.exe" -m pytest -v
+  ```
+
+  `src\.venv` is a checkout of SentrySearch at the same commit, with pytest installed. To create it:
+  `git clone https://github.com/ssrajadh/sentrysearch src; cd src; git checkout d3efd6a; uv sync --python 3.12 --group test`
+
+### Search troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `Configuration error: Search is not configured` | Set `TANYA_SENTRY_PYTHON` (step 2 above). |
+| `GeminiAPIKeyError: GEMINI_API_KEY is not set` | Set the key in **this** terminal (step 3). Claude Desktop and other apps can't see variables set in a different window. |
+| Every result is ignored as "outside the video folder" | The shared SentrySearch index only holds other footage. Run the sync plan. |
+| "Timestamps may be stale" warning | Review `sync_search_index.py` (dry run), then apply it with `--yes` if the plan is right. |
+| `search engine timed out` | Check your internet connection, or raise `TANYA_SEARCH_TIMEOUT_SEC`. |
 
 ## Footage policy
 

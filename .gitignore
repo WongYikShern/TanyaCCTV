@@ -21,6 +21,7 @@ data/videos/*
 data/frames/*
 !data/frames/.gitkeep
 *.db
+data/search_index_manifest.json
 *.db-journal
 *.sqlite
 *.sqlite3
