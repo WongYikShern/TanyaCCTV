@@ -54,8 +54,9 @@ class SearchResponse:
     query: str
     hits: list[SearchHit]
     warnings: list[str] = field(default_factory=list)
-    note: str = ("Ranked similarity results for human review, not detections. A low score does "
-                 "not prove an incident is absent.")
+    note: str = ("Ranked similarity results for human review, not detections. Scores are ranking "
+                 "signals, not calibrated probabilities. Results are unverified until a person "
+                 "independently confirms them; a low score does not prove an incident is absent.")
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -122,6 +123,8 @@ def _map_to_video(source_file: str, video_dir: Path, conn: sqlite3.Connection) -
     row = conn.execute("SELECT * FROM videos WHERE rel_path = ? AND status = 'done'", (rel,)).fetchone()
     if row is None:
         return None, f"{rel} is not indexed by TanyaCCTV (run index_videos.py)"
+    if not (root / rel).is_file():
+        return None, f"{rel} is in the database but the video file is missing (run index_videos.py)"
     return row, ""
 
 

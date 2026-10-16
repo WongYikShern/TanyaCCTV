@@ -33,7 +33,8 @@ def redact(text: str) -> str:
     return text
 
 
-def _command(settings: SearchSettings, args: list[str]) -> list[str]:
+def _command(settings: SearchSettings, args: list[str], positional: list[str] | None = None) -> list[str]:
+    """Bridge command line. `positional` goes after "--" so values starting with "-" stay values."""
     if settings.sentry_python is None:
         raise SearchNotConfiguredError(
             "Search is not configured: set TANYA_SENTRY_PYTHON to the SentrySearch environment's "
@@ -43,12 +44,13 @@ def _command(settings: SearchSettings, args: list[str]) -> list[str]:
     if not settings.bridge_path.is_file():
         raise SearchNotConfiguredError(f"Bridge script not found: {settings.bridge_path}")
     db_args = ["--db", str(settings.sentry_db)] if settings.sentry_db else []
-    return [str(settings.sentry_python), str(settings.bridge_path), *args, *db_args]
+    tail = ["--", *positional] if positional else []
+    return [str(settings.sentry_python), str(settings.bridge_path), *args, *db_args, *tail]
 
 
-def run_bridge(settings: SearchSettings, args: list[str]) -> dict:
+def run_bridge(settings: SearchSettings, args: list[str], positional: list[str] | None = None) -> dict:
     """Run one bridge command and return its JSON payload (ok=true), or raise SearchError."""
-    cmd = _command(settings, args)
+    cmd = _command(settings, args, positional)
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
@@ -80,7 +82,8 @@ def search(settings: SearchSettings, query: str, n: int = 10) -> dict:
         raise SearchError("query must not be empty")
     if not 1 <= n <= 100:
         raise SearchError("n must be between 1 and 100")
-    data = run_bridge(settings, ["search", query, "--n", str(n)])
+    # The query goes after "--": a query such as "-fire" must not be parsed as an option.
+    data = run_bridge(settings, ["search", "--n", str(n)], positional=[query])
     results = data.get("results")
     if not isinstance(results, list):
         raise SearchError("search engine response has no results list")

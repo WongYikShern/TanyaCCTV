@@ -196,3 +196,16 @@ def test_subprocess_missing_key_is_clean_json_error(index_copy, bridge_python):
     data = json.loads(proc.stdout)
     assert proc.returncode == 1 and data["ok"] is False
     assert data["error_type"] == "GeminiAPIKeyError"
+
+
+def test_query_starting_with_dash_after_separator(capsys, index_copy, chunk_embeddings, fake_embedder):
+    """The client sends `search --n N [--db X] -- QUERY`; a query like "-fire" must work."""
+    fake_embedder(vector=chunk_embeddings[("cam2_carpark.mp4", 24.0)])
+    code, data, _, _ = run_main(capsys, ["search", "--n", "3", "--db", str(index_copy), "--", "-fire"])
+    assert code == 0 and data["query"] == "-fire" and len(data["results"]) == 3
+
+
+def test_note_says_scores_are_not_probabilities(capsys, index_copy, chunk_embeddings, fake_embedder):
+    fake_embedder(vector=chunk_embeddings[("cam2_carpark.mp4", 24.0)])
+    _, data, _, _ = run_main(capsys, ["search", "--n", "1", "--db", str(index_copy), "--", "a red car"])
+    assert "not calibrated probabilities" in data["note"]

@@ -22,6 +22,9 @@ from tanya.config import ConfigError, load_search_settings, load_settings  # noq
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):  # never crash on filenames the console can't show
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     parser = argparse.ArgumentParser(description="Sync the SentrySearch index (dry run unless --yes).")
     parser.add_argument("--yes", action="store_true", help="apply the plan (removes entries, calls the API)")
     args = parser.parse_args(argv)

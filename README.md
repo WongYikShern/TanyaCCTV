@@ -27,7 +27,8 @@ TanyaCCTV/
 │   │   ├── indexer.py          # repeatable indexing logic
 │   │   ├── sentry_client.py    # runs the search bridge as a subprocess, checks its JSON
 │   │   ├── search.py           # maps results to videos, merges chunks, thumbnails
-│   │   └── search_sync.py      # opt-in sync of the search index (plan, then apply)
+│   │   ├── search_sync.py      # opt-in sync of the search index (plan, then apply)
+│   │   └── report.py           # HTML review page for search results
 │   ├── scripts/
 │   │   ├── index_videos.py     # run the indexer
 │   │   ├── show_index.py       # read-only view of the database
@@ -348,7 +349,19 @@ python backend\scripts\sync_search_index.py --yes
 ```powershell
 python backend\scripts\search_videos.py "a person lying on the floor"
 python backend\scripts\search_videos.py "a red car" --n 20 --json
+python backend\scripts\search_videos.py "a red car" --html data\search_results.html --open
 ```
+
+`--html FILE` (must end in `.html` or `.htm`) writes a self-contained **review page**, and `--open` opens it in your browser. The
+page has an "unverified, human review required" banner, and for each result:
+
+- the matched clip in a video player that starts at the matched time
+- the thumbnail, with a link to the extracted frame
+- the time window and scores
+
+If a search fails, the page shows the error instead. Pages under `data\` are git-ignored.
+Clips play in the browser only if the video codec is supported (H.264 MP4 is; OpenCV's `mp4v`
+test videos are not). Otherwise, use the "open video file" link.
 
 Each result shows:
 
@@ -370,6 +383,11 @@ are grouped into windows. They never change a result's status. See `.env.example
 
 - **Main tests:** `python -m pytest backend -v` includes the search tests. They use a **fake
   bridge** that replays real recorded scores, so no SentrySearch, network or API key is needed.
+- **End-to-end test without a key:** with `$env:TANYA_SENTRY_PYTHON` set (step 2), the same
+  command also runs `test_e2e_real_bridge.py`. It goes through the real SentrySearch environment,
+  bridge and index, replacing only Gemini's query embedding with a stored chunk vector (via the
+  test-only `search_engine/tests/e2e_shim_bridge.py`). It needs the synthetic trial index and
+  is skipped otherwise.
 - **Bridge tests:** run these with the SentrySearch environment. The live tests run only if
   `GEMINI_API_KEY` is set.
 
@@ -391,6 +409,69 @@ are grouped into windows. They never change a result's status. See `.env.example
 | Every result is ignored as "outside the video folder" | The shared SentrySearch index only holds other footage. Run the sync plan. |
 | "Timestamps may be stale" warning | Review `sync_search_index.py` (dry run), then apply it with `--yes` if the plan is right. |
 | `search engine timed out` | Check your internet connection, or raise `TANYA_SEARCH_TIMEOUT_SEC`. |
+| Clip on the review page is black or doesn't play | The video isn't H.264. Use "open video file" or re-encode it to H.264 MP4. |
+| "is in the database but the video file is missing" | The video was deleted or moved. Run `index_videos.py`, then the sync plan. |
+| "Timestamps may be stale" on footage you indexed by hand | Expected: the video wasn't indexed through `sync_search_index.py`, so its content can't be verified. Run the sync plan. |
+
+## Hackathon demo (command line)
+
+There is no web frontend yet: the demo is the command line plus the HTML review page. Allow about
+5 minutes.
+
+**Before the demo (once, needs internet and your key):**
+
+1. Put 2–4 short **authorised** clips in `data\videos\`, as H.264 MP4 so they play in the browser.
+2. Run the free local indexer: `python backend\scripts\index_videos.py`
+3. Review the search-index plan (free, changes nothing):
+   `python backend\scripts\sync_search_index.py`
+4. Apply it. This costs about US$0.00079 per second of video on the paid tier:
+   `python backend\scripts\sync_search_index.py --yes`
+
+**During the demo:**
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+$env:TANYA_SENTRY_PYTHON = "$HOME\sentrysearch-trial\tools\sentrysearch\Scripts\python.exe"
+# GEMINI_API_KEY must already be set in this window (see step 3 of the one-time setup)
+python backend\scripts\show_index.py
+python backend\scripts\search_videos.py "a person lying on the floor" --html data\demo_lying.html --open
+python backend\scripts\search_videos.py "a red car" --html data\demo_car.html --open
+python backend\scripts\search_videos.py "fire and smoke" --html data\demo_fire.html --open
+```
+
+Talking points:
+
+- Results are **ranked clips for a human to check**, not alarms.
+- "fire and smoke" still returns clips. That shows why there is no automatic incident
+  confirmation: scores rank results, they don't prove anything.
+
+**Fallback if the network fails:** keep `data\demo*.html` pages from a rehearsal. They're static
+files and open without internet (the videos are local).
+
+## Search quality: what has been verified
+
+| Check | Footage | Result |
+|---|---|---|
+| Ranking, real Gemini (bridge live tests, 2026-10-17) | synthetic lobby/car-park clips | top 3 chunks inside the event for walking, lying and red car; "fire and smoke" only weak matches; all `uncertain` |
+| TanyaCCTV CLI end to end with real Gemini (`search_videos.py`, 2026-10-17) | same | 4/4 ground-truth checks passed. Top windows: walking 16–42 s, lying 40–60 s, red car 16–40 s (events 20–40, 40–60, 20–40). "fire and smoke" got weak matches only. All `uncertain`, all with thumbnails. |
+| End-to-end through the real bridge and index, no key | same | correct video IDs, windows inside videos, thumbnails, read-only |
+| **Real authorised CCTV footage** | **none available yet** | **not validated**; see limitations |
+
+## Known limitations
+
+- **Not validated on real CCTV footage.** Every quality result above comes from simple synthetic
+  scenes. Lighting, camera angle, resolution and crowded scenes may rank very differently.
+- **No automatic incident detection.** Every result is `uncertain`. In testing, an irrelevant
+  "fire and smoke" clip (0.34) scored close to a correct "red car" clip (0.36), so no score cutoff
+  is safe.
+- **Timestamps are 10 s chunks** (2 s overlap). Merged windows can include a few seconds without
+  the event.
+- The merge ratio (0.5) was tuned on 4 synthetic queries. It affects grouping only.
+- SentrySearch indexes only `.mp4` and `.mov`, identifies videos by path (a rename means
+  re-indexing, which costs money), and keeps one index per Windows user, shared with other uses.
+- Search and indexing need internet and a Gemini key. On the free tier, Google may use the content.
+- There is no web frontend or API server yet: the demo uses the CLI and a static HTML page.
+- In the browser, clips play only for browser-supported codecs (H.264).
 
 ## Footage policy
 

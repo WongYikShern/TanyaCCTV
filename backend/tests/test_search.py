@@ -192,3 +192,36 @@ def test_cli_engine_error_hides_key(cli_env, monkeypatch, capsys):
 def test_cli_rejects_bad_merge_ratio(cli_env, monkeypatch, capsys):
     monkeypatch.setenv("TANYA_MERGE_RATIO", "2")
     assert search_cli.main(["x"]) == 2
+
+
+def test_hit_for_deleted_video_file_is_skipped_with_warning(search_env):
+    """Regression: a video deleted from disk (database not yet re-indexed) was still returned."""
+    (search_env.settings.video_dir / "cam2_carpark.mp4").unlink()
+    response = search_videos("a red car", search_env.settings, search_env.search_settings, n=5)
+    assert all(h.rel_path != "cam2_carpark.mp4" for h in response.hits)
+    assert any("cam2_carpark.mp4 is in the database but the video file is missing" in w for w in response.warnings)
+
+
+def test_cli_survives_console_that_cannot_show_the_query(cli_env):
+    """Regression: a Chinese query crashed the CLI with UnicodeEncodeError on a cp1252 console."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    script = Path(search_cli.__file__)
+    env = dict(os.environ, PYTHONIOENCODING="cp1252", PYTHONUTF8="0")
+    proc = subprocess.run([sys.executable, str(script), "有人跌倒"], capture_output=True, env=env, timeout=120)
+    assert proc.returncode == 0, proc.stderr.decode("cp1252", "replace")
+    assert b"Results for" in proc.stdout
+
+
+def test_missing_tanya_database_is_a_clear_error_and_engine_not_started(search_env, tmp_path):
+    from dataclasses import replace
+
+    from tanya.sentry_client import SearchError
+
+    settings = replace(search_env.settings, db_path=tmp_path / "nope" / "tanya.db")
+    with pytest.raises(SearchError, match="Run index_videos.py first"):
+        search_videos("a red car", settings, search_env.search_settings)
+    assert search_env.calls() == [] and not settings.db_path.exists()

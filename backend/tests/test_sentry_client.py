@@ -72,3 +72,15 @@ def test_invalid_input_never_starts_the_engine(search_env, query, n):
 def test_db_override_is_passed_to_bridge(search_env, tmp_path):
     sentry_client.stats(search_env.with_search(sentry_db=tmp_path / "idx"))
     assert search_env.calls()[-1] == ["stats", "--db", str(tmp_path / "idx")]
+
+
+@pytest.mark.parametrize("query", ["-fire", "--help", "-n 5"])
+def test_query_starting_with_dash_is_sent_after_separator(search_env, query):
+    """Regression: "-fire" was parsed by the bridge as an option and the search failed."""
+    sentry_client.search(search_env.search_settings, query, n=3)
+    assert search_env.calls()[-1] == ["search", "--n", "3", "--", query]
+
+
+def test_separator_comes_after_db_option(search_env, tmp_path):
+    sentry_client.search(search_env.with_search(sentry_db=tmp_path / "idx"), "-fire", n=3)
+    assert search_env.calls()[-1] == ["search", "--n", "3", "--db", str(tmp_path / "idx"), "--", "-fire"]

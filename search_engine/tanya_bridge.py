@@ -48,7 +48,8 @@ from pathlib import Path
 
 STATUS_UNCERTAIN = "uncertain"  # the only status: results are never treated as confirmed incidents
 NOTE = ("Ranked similarity search results, not detections. Every result needs human review; "
-        "score and score_above_median are for ordering only, not confidence.")
+        "score and score_above_median are ranking signals only, not calibrated probabilities "
+        "or confidence.")
 
 
 class BridgeError(Exception):

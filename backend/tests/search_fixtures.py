@@ -66,3 +66,17 @@ def search_env(workspace, tmp_path, monkeypatch) -> SearchEnv:
     monkeypatch.delenv("FAKE_CLI_MODE", raising=False)
     monkeypatch.setenv("GEMINI_API_KEY", FAKE_KEY)
     return env
+
+
+@pytest.fixture
+def cli_env(search_env, monkeypatch) -> SearchEnv:
+    """search_env, plus the TANYA_* variables the command-line scripts read."""
+    s = search_env.settings
+    monkeypatch.setenv("TANYA_VIDEO_DIR", str(s.video_dir))
+    monkeypatch.setenv("TANYA_FRAMES_DIR", str(s.frames_dir))
+    monkeypatch.setenv("TANYA_DB_PATH", str(s.db_path))
+    monkeypatch.setenv("TANYA_SENTRY_PYTHON", str(search_env.search_settings.sentry_python))
+    monkeypatch.setenv("TANYA_SENTRY_BRIDGE", str(search_env.search_settings.bridge_path))
+    for name in ("TANYA_SENTRY_DB", "TANYA_MERGE_RATIO", "TANYA_MERGE_GAP_SEC", "TANYA_SEARCH_TIMEOUT_SEC"):
+        monkeypatch.delenv(name, raising=False)
+    return search_env

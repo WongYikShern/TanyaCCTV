@@ -65,7 +65,9 @@ if command == "remove":
     save(s)
     out({"ok": True, "source_file": src, "removed_chunks": 2})
 if command == "search":
-    query, n = args[1], int(args[args.index("--n") + 1])
+    # Like argparse: the query is the value after "--" (or the first non-option argument).
+    query = args[args.index("--") + 1] if "--" in args else args[1]
+    n = int(args[args.index("--n") + 1])
     recorded = json.loads((HERE / "recorded_live.json").read_text(encoding="utf-8"))
     data = recorded.get(query, {"ok": True, "query": query, "results": []})
     text = json.dumps(data).replace("{VIDEO_DIR}", os.environ.get("FAKE_VIDEO_DIR", "C:/videos").replace("\\", "/"))
