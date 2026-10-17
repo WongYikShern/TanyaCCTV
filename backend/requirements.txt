@@ -1,6 +1,7 @@
 # Milestone 1: video ingestion and indexing
 opencv-python-headless>=4.10
 python-dotenv>=1.0
+Flask>=3.1,<4
 
 # Development / testing
 pytest>=8.0

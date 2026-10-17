@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf }}">
+  <title>TanyaCCTV · Video workspace</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <script defer src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/">◉ <span>Tanya<span class="accent">CCTV</span></span></a>
+  <p class="eyebrow">YOUR WORKSPACE</p>
+  <a class="nav active" href="#library">▦ &nbsp; Video library</a>
+  <a class="nav" href="#search">⌕ &nbsp; Search footage</a>
+  <div class="sidebar-bottom"><span class="dot"></span> Running on your computer<br><small>Local video review workspace</small></div>
+</aside>
+<main>
+  <header><span>Workspace / Overview</span><span class="pill">LOCAL PROTOTYPE</span></header>
+  <section class="intro"><p class="eyebrow">SEE THE MOMENT. FIND THE CONTEXT.</p><h1>Your footage, in focus.</h1><p>Bring your videos together. Explore the frames. Find the moments that matter.</p></section>
+  <div class="stats"><article><span>Videos in library</span><strong id="video-count">—</strong></article><article><span>Frames extracted</span><strong id="frame-count">—</strong></article><article><span>Total footage</span><strong id="duration-count">—</strong></article><article><span>Semantic search</span><strong id="search-state" class="small-stat">Checking…</strong></article></div>
+  <section class="panel search-panel" id="search"><div class="section-top"><div><p class="eyebrow">NATURAL LANGUAGE SEARCH</p><h2>What are you looking for?</h2></div><span class="pill">HUMAN REVIEW REQUIRED</span></div>
+    <form id="search-form"><label class="sr-only" for="query">Describe a moment</label><div class="search-input"><span aria-hidden="true">⌕</span><input id="query" maxlength="500" required placeholder="Try ‘a person walking near a red car’"><button id="search-button">Search footage ↗</button></div></form>
+    <p id="setup" class="muted" aria-live="polite">Checking search setup…</p>
+    <div class="workflow"><strong>1. Upload &amp; extract frames</strong><span>→</span><strong>2. Review &amp; approve AI preparation</strong><span>→</span><strong>3. Search &amp; review clips</strong></div>
+    <p id="coverage" class="warning" aria-live="polite"></p>
+    <details id="setup-details"><summary>How to enable AI search</summary><p>Search needs SentrySearch in a separate Python 3.12 environment, a Gemini API key, and videos added to its search index. Follow “Local website” in the project README, then restart this website. Local frame indexing alone does not prepare videos for AI search.</p><p>Search indexing sends footage to Google and may incur charges. Use only footage you are authorised to share. Review the AI indexing plan below before applying it.</p></details>
+    <button id="plan-button" type="button" class="secondary">Review AI indexing plan</button>
+    <div id="sync-plan" hidden><h3>Prepare footage for AI search</h3><p id="plan-summary"></p><p id="plan-files" class="muted"></p><div id="sync-approval"><p class="warning">This sends planned footage to Google and may incur API charges. Free-tier content may be used to improve Google products. Only continue with footage you are authorised to share. Stale search entries listed in the plan will be removed; original videos stay untouched.</p><label class="check"><input id="sync-consent" type="checkbox"><span>I approve this plan, the footage transfer to Google, and any API charges.</span></label><button id="sync-button" type="button">Prepare AI search</button></div></div>
+    <div id="results" aria-live="polite"></div>
+  </section>
+  <section id="library"><div class="section-top"><div><h2>Video library</h2><p class="muted">Your original footage and its extracted frames.</p></div><button id="index-button" class="secondary">↻ Index local videos</button></div>
+    <div class="library-layout"><div id="videos" class="video-grid" aria-live="polite"></div>
+    <form id="upload-form" class="panel upload-panel"><div class="upload-icon">↑</div><h3>Add footage</h3><p class="muted">Choose a video from your computer.</p><label class="file-label" for="video-file">MP4, MOV, AVI, MKV or M4V</label><input id="video-file" name="video" type="file" accept=".mp4,.mov,.avi,.mkv,.m4v" required><p class="muted">Up to 512 MB per file. H.264 MP4 works best for browser playback.</p><label class="check"><input type="checkbox" name="authorized" value="yes" required><span>I have permission to use this footage.</span></label><button id="upload-button">Upload &amp; index</button><p class="muted">Local uploads stay on your computer. AI search indexing is a separate step.</p></form></div>
+  </section>
+  <p id="notice" role="status" aria-live="polite"></p>
+  <footer>Built for careful review. Search rankings are not incident confirmations.</footer>
+</main>
+<dialog id="viewer"><div class="section-top"><h2 id="viewer-title">Video review</h2><button id="close-viewer" class="secondary">Close ✕</button></div><video id="player" controls preload="metadata"></video><p id="playback-help" class="muted">If the video does not play, its codec may not be supported. You can still review the extracted images below.</p><a id="download-video">Download original video</a><h3>Frame timeline</h3><p class="muted">Select an image to jump to that moment in the video.</p><div id="frames" class="frame-grid"></div><button id="more-frames" class="secondary" hidden>Load more frames</button></dialog>
+</body></html>
