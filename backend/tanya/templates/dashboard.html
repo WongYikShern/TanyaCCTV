@@ -7,6 +7,7 @@
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
   <script defer src="{{ url_for('static', filename='dashboard.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='investigations.js') }}"></script>
 </head>
 <body>
 <aside class="sidebar">
@@ -14,6 +15,7 @@
   <p class="eyebrow">YOUR WORKSPACE</p>
   <a class="nav active" href="#library">▦ &nbsp; Video library</a>
   <a class="nav" href="#search">⌕ &nbsp; Search footage</a>
+  <a class="nav" href="#investigations">▤ &nbsp; Investigations</a>
   <div class="sidebar-bottom"><span class="dot"></span> Running on your computer<br><small>Local video review workspace</small></div>
 </aside>
 <main>
@@ -22,6 +24,7 @@
   <div class="stats"><article><span>Videos in library</span><strong id="video-count">—</strong></article><article><span>Frames extracted</span><strong id="frame-count">—</strong></article><article><span>Total footage</span><strong id="duration-count">—</strong></article><article><span>Semantic search</span><strong id="search-state" class="small-stat">Checking…</strong></article></div>
   <section class="panel search-panel" id="search"><div class="section-top"><div><p class="eyebrow">NATURAL LANGUAGE SEARCH</p><h2>What are you looking for?</h2></div><span class="pill">HUMAN REVIEW REQUIRED</span></div>
     <form id="search-form"><label class="sr-only" for="query">Describe a moment</label><div class="search-input"><span aria-hidden="true">⌕</span><input id="query" maxlength="500" required placeholder="Try ‘a person walking near a red car’"><button id="search-button">Search &amp; check matches ↗</button></div>
+      <label class="save-to" for="save-to">Save searches and clips to <select id="save-to"><option value="">No investigation</option></select></label>
       <label class="check"><input id="visual-check" type="checkbox" checked><span>Check the actual images after retrieval. Separate supported candidates from unclear and unrelated clips.</span></label>
       <div id="visual-consent-panel"><p class="eyebrow">EXPERIMENTAL IMAGE CHECK · LIMITED SAMPLE TESTING</p><p class="muted">This extra check sends up to 6 sampled images from each of the first 5 retrieved windows to Google Gemini (up to 30 images per search), with your query. It may incur additional API charges. Sampling can miss events or misread clothing; results still need your review.</p><label class="check"><input id="visual-consent" type="checkbox"><span>I approve sending these sampled frames to Google and the API charges for this search.</span></label></div>
     </form>
@@ -32,6 +35,19 @@
     <button id="plan-button" type="button" class="secondary">Review AI indexing plan</button>
     <div id="sync-plan" hidden><h3>Prepare footage for AI search</h3><p id="plan-summary"></p><p id="plan-files" class="muted"></p><div id="sync-approval"><p class="warning">This sends planned footage to Google and may incur API charges. Free-tier content may be used to improve Google products. Only continue with footage you are authorised to share. Stale search entries listed in the plan will be removed; original videos stay untouched.</p><label class="check"><input id="sync-consent" type="checkbox"><span>I approve this plan, the footage transfer to Google, and any API charges.</span></label><button id="sync-button" type="button">Prepare AI search</button></div></div>
     <p><a href="/api/feedback/export" download>Export my search reviews (CSV)</a></p><p class="muted">Your reviews help track mistakes; they do not retrain the AI. Exports include queries and video filenames—review before sharing.</p><div id="results" aria-live="polite"></div>
+  </section>
+  <section class="panel investigations-panel" id="investigations">
+    <div class="section-top"><div><p class="eyebrow">CASE WORK</p><h2>Investigations</h2><p class="muted">Collect candidate clips, arrange them in time, record your decisions and export a report.</p></div><span class="pill">HUMAN DECISIONS ONLY</span></div>
+    <form id="new-investigation" class="inline-form"><label class="sr-only" for="new-title">Investigation title</label><input id="new-title" maxlength="200" required placeholder="New investigation title, e.g. ‘Lobby, Monday morning’"><button>Create</button></form>
+    <div id="investigation-list" class="investigation-list" aria-live="polite"></div>
+    <div id="case" hidden>
+      <div class="case-head"><div><p class="eyebrow" id="case-status">OPEN</p><h3 id="case-title"></h3><p id="case-description" class="muted"></p></div>
+        <div class="case-actions"><button type="button" class="secondary" id="case-rename">Rename</button><button type="button" class="secondary" id="case-close">Close</button><button type="button" class="secondary" id="case-report-html">Export report (HTML)</button><button type="button" class="secondary" id="case-report-json">Export data (JSON)</button></div></div>
+      <form id="rename-form" class="inline-form" hidden><label class="sr-only" for="rename-title">New title</label><input id="rename-title" maxlength="200" required><button>Save title</button><button type="button" class="secondary" id="rename-cancel">Cancel</button></form>
+      <h4>Saved searches</h4><div id="case-queries"></div>
+      <h4>Evidence timeline</h4><p id="case-basis" class="muted"></p><div id="case-clocks"></div><div id="case-evidence" aria-live="polite"></div>
+      <details id="case-history"><summary>Change history</summary><div id="case-history-items"></div></details>
+    </div>
   </section>
   <section id="library"><div class="section-top"><div><h2>Video library</h2><p class="muted">Your original footage and its extracted frames.</p></div><button id="index-button" class="secondary">↻ Index local videos</button></div>
     <div class="library-layout"><div id="videos" class="video-grid" aria-live="polite"></div>

@@ -93,6 +93,8 @@ def check_data(settings) -> list[Check]:
                                 "Close other programs using it; re-run indexing if it is corrupt"))
     else:
         checks.append(Check("Database", PASS, f"{settings.db_path} (created by the first indexing run)"))
+    for label, name in (("Investigations file", "investigations.db"), ("Search reviews file", "search_feedback.db")):
+        checks.append(_check_side_db(label, settings.db_path.with_name(name)))
     free_gb = shutil.disk_usage(_existing_parent(settings.video_dir)).free / 1e9
     checks.append(Check("Disk space", PASS if free_gb >= MIN_FREE_GB else WARN, f"{free_gb:.1f} GB free",
                         "" if free_gb >= MIN_FREE_GB else "Free some space; each hour of video adds ~3,600 JPEG frames"))
@@ -100,6 +102,24 @@ def check_data(settings) -> list[Check]:
         checks.append(Check("OneDrive", WARN, "data folders are inside OneDrive; sync can lock files during indexing",
                             "Pause OneDrive while indexing, or set TANYA_VIDEO_DIR/TANYA_FRAMES_DIR outside OneDrive"))
     return checks
+
+
+def _check_side_db(label: str, path: Path) -> Check:
+    """Read-only integrity check of the investigations or search-review file."""
+    if not path.exists():
+        return Check(label, PASS, f"{path.name} (created when first used)")
+    try:
+        conn = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+        try:
+            ok = conn.execute("PRAGMA quick_check").fetchone()[0]
+        finally:
+            conn.close()
+    except sqlite3.Error as e:
+        ok = str(e)
+    if ok == "ok":
+        return Check(label, PASS, f"{path.name}: integrity ok")
+    return Check(label, WARN, f"{path.name} cannot be read ({ok}); that feature fails safely and leaves it unchanged",
+                 f"Restore {path.name} from a backup, or move it aside so a new one is created")
 
 
 def check_port(port: int = WEB_PORT) -> Check:

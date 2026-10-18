@@ -1,0 +1,176 @@
+{
+  "description": "Known events in all five synthetic clips (make_demo_footage.py --set all; cartoon scenes, no real people). Every query is annotated across every clip, so misses and confusions are counted. Times in seconds. Not yet measured with real search: see docs/event-support.md.",
+  "cases": [
+    {
+      "query": "a person walking",
+      "event_type": "person_movement",
+      "events": [
+        {
+          "video": "cam1_lobby.mp4",
+          "start_sec": 20,
+          "end_sec": 40
+        },
+        {
+          "video": "cam3_entrance.mp4",
+          "start_sec": 10,
+          "end_sec": 20
+        },
+        {
+          "video": "cam3_entrance.mp4",
+          "start_sec": 45,
+          "end_sec": 55
+        },
+        {
+          "video": "cam5_corridor.mp4",
+          "start_sec": 5,
+          "end_sec": 20
+        }
+      ]
+    },
+    {
+      "query": "a person lying on the floor",
+      "event_type": "person_lying",
+      "events": [
+        {
+          "video": "cam1_lobby.mp4",
+          "start_sec": 40,
+          "end_sec": 60
+        },
+        {
+          "video": "cam5_corridor.mp4",
+          "start_sec": 23,
+          "end_sec": 40
+        }
+      ]
+    },
+    {
+      "query": "a person entering through a door",
+      "event_type": "entry",
+      "events": [
+        {
+          "video": "cam3_entrance.mp4",
+          "start_sec": 10,
+          "end_sec": 20
+        }
+      ]
+    },
+    {
+      "query": "a person leaving through a door",
+      "event_type": "exit",
+      "events": [
+        {
+          "video": "cam3_entrance.mp4",
+          "start_sec": 45,
+          "end_sec": 55
+        }
+      ]
+    },
+    {
+      "query": "a person standing still for a long time",
+      "event_type": "loitering",
+      "events": [
+        {
+          "video": "cam3_entrance.mp4",
+          "start_sec": 20,
+          "end_sec": 45
+        }
+      ]
+    },
+    {
+      "query": "a person falling down",
+      "event_type": "fall",
+      "events": [
+        {
+          "video": "cam5_corridor.mp4",
+          "start_sec": 20,
+          "end_sec": 23
+        }
+      ]
+    },
+    {
+      "query": "a red car",
+      "event_type": "vehicle_appearance",
+      "events": [
+        {
+          "video": "cam2_carpark.mp4",
+          "start_sec": 20,
+          "end_sec": 40
+        }
+      ]
+    },
+    {
+      "query": "a car",
+      "event_type": "vehicle_appearance",
+      "events": [
+        {
+          "video": "cam2_carpark.mp4",
+          "start_sec": 20,
+          "end_sec": 40
+        },
+        {
+          "video": "cam4_driveway.mp4",
+          "start_sec": 10,
+          "end_sec": 45
+        }
+      ]
+    },
+    {
+      "query": "a car arriving and parking",
+      "event_type": "vehicle_entry",
+      "events": [
+        {
+          "video": "cam4_driveway.mp4",
+          "start_sec": 10,
+          "end_sec": 20
+        }
+      ]
+    },
+    {
+      "query": "a parked car",
+      "event_type": "vehicle_parked",
+      "events": [
+        {
+          "video": "cam4_driveway.mp4",
+          "start_sec": 20,
+          "end_sec": 35
+        }
+      ]
+    },
+    {
+      "query": "a car driving away",
+      "event_type": "vehicle_exit",
+      "events": [
+        {
+          "video": "cam4_driveway.mp4",
+          "start_sec": 35,
+          "end_sec": 45
+        }
+      ]
+    },
+    {
+      "query": "fire and smoke",
+      "event_type": "negative",
+      "events": []
+    },
+    {
+      "query": "a dog running",
+      "event_type": "negative",
+      "events": []
+    },
+    {
+      "query": "a bicycle",
+      "event_type": "negative",
+      "events": []
+    },
+    {
+      "query": "a crowd of people",
+      "event_type": "negative",
+      "events": []
+    },
+    {
+      "query": "a person riding a motorcycle",
+      "event_type": "negative",
+      "events": []
+    }
+  ]
+}

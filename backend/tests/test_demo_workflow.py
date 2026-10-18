@@ -82,3 +82,54 @@ def test_documented_demo_workflow(demo):
 
     # Searching never indexed or removed anything in the search engine.
     assert {c[0] for c in env.calls()} <= {"search", "stats"}
+
+
+def test_documented_investigation_workflow(demo):
+    """docs/demo.md, part 2: investigation, evidence timeline, decisions and the report."""
+    client, headers, env = demo
+    client.post("/api/index", headers=headers)
+    sha = dict(env.ws.rows("SELECT rel_path, sha256 FROM videos"))
+    search_sync.save_manifest(env.settings, {env.source(r): {"sha256": h} for r, h in sha.items()})
+
+    def post(url, payload, expect=200):
+        r = client.post(url, headers=headers, json=payload)
+        assert r.status_code == expect, r.get_json()
+        return r
+
+    # Create an investigation and search with it selected: queries are saved with their settings.
+    iid = post("/api/investigations", {"title": "Lobby and car park, Monday"}, 201).json["id"]
+    car = post("/api/search", {"query": "a red car", "investigation_id": iid}).json
+    walk = post("/api/search", {"query": "a person walking", "investigation_id": iid}).json
+    assert car["saved_query"]["settings"]["merge_ratio"] == 0.5
+
+    # Add the top candidate of each search; references come from the server's records.
+    for result in (car, walk):
+        hit = result["hits"][0]
+        post(f"/api/investigations/{iid}/evidence", dict(
+            video_id=hit["video_id"], start_sec=hit["start_sec"], end_sec=hit["end_sec"], query=result["query"],
+            search_mode="ranked", rank=1, best_score=hit["best_score"],
+            score_above_median=hit["best_score_above_median"], thumbnail=hit["thumbnail"]), 201)
+
+    # Arrange by camera time: car park camera started 10 s after the lobby camera.
+    post(f"/api/investigations/{iid}/clock", {"video_sha256": sha["cam1_lobby.mp4"], "recorded_start": "2026-10-19T08:59:50"})
+    view = post(f"/api/investigations/{iid}/clock", {"video_sha256": sha["cam2_carpark.mp4"],
+                                                     "recorded_start": "2026-10-19T09:00:00"}).json
+    assert view["timeline_basis"] == "absolute"
+    assert [(e["video_filename"], e["absolute_start"]) for e in view["evidence"]] == [
+        ("cam1_lobby.mp4", "2026-10-19T09:00:06.000"), ("cam2_carpark.mp4", "2026-10-19T09:00:16.000")]
+
+    # Inspect the footage and record decisions with notes.
+    lobby, carpark = view["evidence"]
+    assert client.get(lobby["video_url"], headers={"Range": "bytes=0-99"}).status_code == 206
+    post(f"/api/investigations/{iid}/evidence/{carpark['id']}/review", {"decision": "correct", "note": "Red car enters at about 0:20."})
+    post(f"/api/investigations/{iid}/evidence/{lobby['id']}/review", {"decision": "unsure", "note": "Person partly hidden."})
+
+    # Export: categories, verified sources, camera times and the full history.
+    report = post(f"/api/investigations/{iid}/report", {"format": "json"}).get_json()
+    assert (report["summary"]["human_confirmed"], report["summary"]["unsure"], report["summary"]["unreviewed_candidate"]) == (1, 1, 0)
+    assert all(e["source"]["content_verified_at_export"] for e in report["evidence"])
+    assert [e["window"]["absolute_start"] for e in report["evidence"]] == ["2026-10-19T09:00:06.000", "2026-10-19T09:00:16.000"]
+    assert [a["action"] for a in report["audit_log"]][:3] == ["created", "query_saved", "query_saved"]
+    html = post(f"/api/investigations/{iid}/report", {"format": "html"}).data.decode()
+    assert "Human-confirmed (marked Correct)" in html and "Reviewer unsure" in html and "Red car enters" in html
+    assert {c[0] for c in env.calls()} <= {"search", "stats"}            # nothing indexed or removed

@@ -16,11 +16,12 @@ review. Telegram alerts and monitoring rules remain future work.
 
 **Guides:**
 
-- [Demo guide](docs/demo.md): the 8-step demo with synthetic footage
+- [Demo guide](docs/demo.md): search, review, then an investigation and its report, on synthetic footage
 - [Search evaluation](docs/search-evaluation.md): measured ranking quality and its limits
+- [Event support](docs/event-support.md): which event types are measured, unmeasured or unsupported
 - [Performance](docs/performance.md): measured indexing and search times
 - [Validating on real CCTV](docs/cctv-accuracy-checklist.md)
-- [Handover notes](docs/continue-work.md)
+- [Handover notes](docs/continue-work.md) and [Phases 6–9 progress](docs/progress.md)
 
 ## Local website (macOS / Linux)
 
@@ -64,7 +65,7 @@ pinned SentrySearch install and the key. Each problem comes with a "fix:" line. 
 means something required is missing.
 
 Expected test result on Windows without SentrySearch configured (checked 18 October 2026):
-**227 passed, 8 skipped, 0 failed**. The skips are:
+**279 passed, 8 skipped, 0 failed**. The skips are:
 
 - 4 end-to-end tests that need `TANYA_SENTRY_PYTHON` and the synthetic SentrySearch trial index.
 - 1 setup check that needs `TANYA_SENTRY_PYTHON` (it verifies the pinned SentrySearch install).
@@ -72,7 +73,7 @@ Expected test result on Windows without SentrySearch configured (checked 18 Octo
   (`WinError 1314`). Directory-junction tests, which need no special rights, check the same
   "no escaping the video or frames folder" protections on Windows.
 
-With `TANYA_SENTRY_PYTHON` set and the trial index present, the result is 232 passed and
+With `TANYA_SENTRY_PYTHON` set and the trial index present, the result is 284 passed and
 3 skipped. On macOS/Linux, the 3 symlink tests run and the junction tests are skipped.
 
 **Semantic search on Windows** needs the separate Python 3.12 SentrySearch environment
@@ -208,6 +209,37 @@ search mode, assessment and review time. Review the file before sharing; it may 
 private descriptions or filenames. The feedback database is ignored by Git. Exported text
 cells that could be spreadsheet formulas are escaped. Empty exports include the column names.
 
+### Investigations
+
+Use an investigation to collect candidate clips for one incident and turn them into a
+reviewable report:
+
+1. **Create it** under **Investigations**. Choose it in **Save searches and clips to**, and each
+   search is saved with its settings so it can be run again.
+2. **Add to investigation** on a result card adds that clip. The clip keeps its source: the
+   video's SHA-256 content hash, file name and path, the time window, and how it was found
+   (query, rank, ranking score, any AI image-check verdict). These references can't be edited.
+3. **Evidence timeline.** Clips are ordered by position within each recording. Enter a
+   recording's start time (camera local time) to order clips across cameras.
+4. **Review each clip.** Open the footage, mark it **Correct**, **Wrong** or **Unsure**, and add
+   a note. Every change, including the previous value, goes into the **Change history**.
+   Removing a clip is recorded, not erased.
+5. **Export.** The report (HTML with embedded frames, or JSON) keeps these groups separate:
+   human-confirmed (Correct), rejected, unsure, and unreviewed candidates. It also includes
+   source verification (each video is re-hashed at export), the saved searches, the removed
+   clips, the full history and the limitations.
+
+Points to know:
+
+- Investigations are stored locally in `data/investigations.db` (ignored by Git). The history
+  is append-only, enforced by the database itself.
+- **Missing sources.** If a recording is deleted, its clips show **SOURCE MISSING** and keep
+  their references.
+- **Changed sources.** If a file is modified after a clip was added, the report flags **CHANGED**.
+- **Closing.** A closed investigation is read-only until it's reopened.
+- Nothing in an investigation is confirmed by the AI. Only a person's **Correct** decision
+  makes a clip human-confirmed.
+
 ## Project layout
 
 ```
@@ -226,11 +258,13 @@ TanyaCCTV/
 │   │   ├── report.py           # HTML review page for search results
 │   │   ├── evaluation.py       # ranking metrics against annotated ground truth
 │   │   ├── feedback.py         # local human reviews and CSV export
+│   │   ├── investigations.py   # investigations, evidence, audit log (investigations.db)
+│   │   ├── case_report.py      # investigation reports (HTML / JSON)
 │   │   ├── setup_check.py      # read-only readiness checks
 │   │   ├── visual_review.py    # optional image check of sampled frames (with consent)
 │   │   ├── web.py              # local Flask website and API
 │   │   ├── templates/          # dashboard HTML
-│   │   └── static/             # dashboard CSS and JavaScript
+│   │   └── static/             # dashboard CSS and JavaScript (dashboard.js, investigations.js)
 │   ├── scripts/
 │   │   ├── run_web.py          # local website at http://localhost:5001
 │   │   ├── check_setup.py      # readiness report (read-only)
@@ -317,7 +351,7 @@ FFmpeg does **not** need to be installed: OpenCV's wheel bundles its own decoder
 python -m pytest backend -v
 ```
 
-Expected on Windows: 227 passed, 8 skipped, 0 failed. Skips explained in
+Expected on Windows: 279 passed, 8 skipped, 0 failed. Skips explained in
 [Local website (Windows PowerShell)](#local-website-windows-powershell). Tests use temporary
 folders and synthetic videos; they never touch `data/`.
 

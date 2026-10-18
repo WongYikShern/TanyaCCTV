@@ -3,3 +3,23 @@
 #visual-consent-panel{background:#f4f7f3;border:1px solid #dae4da;border-radius:9px;padding:4px 16px}#search-form .check{margin:14px 0}.evidence{margin:4px 6px 8px 0;font-size:11px}
 
 .review-feedback{margin-top:14px;border-top:1px solid var(--border);padding-top:10px}.review-feedback button{margin:4px 6px 4px 0}.review-feedback button[aria-pressed="true"]{background:#214d38;color:white}.review-feedback [role="status"]{display:block}
+/* Investigations */
+.investigations-panel{padding:25px;margin-bottom:32px}
+.inline-form{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 16px}.inline-form input{flex:1 1 260px;min-width:0;border:1px solid #cddbd1;border-radius:9px;padding:10px 12px}
+.investigation-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:18px}
+.case-card{display:flex;flex-direction:column;gap:4px;text-align:left;background:white;color:#253b30;border:1px solid var(--border);font-weight:400}
+.case-card strong{overflow-wrap:anywhere}.case-card.active{border-color:var(--green);box-shadow:0 0 0 2px #cfe5d8}
+#case{border-top:1px solid var(--border);padding-top:16px}
+.case-head{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}.case-head h3{margin:4px 0;font-size:19px;overflow-wrap:anywhere}
+.case-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}.case-actions button{font-size:12px;padding:9px 12px}
+#case h4{margin:22px 0 8px;font-size:14px}
+.case-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.case-row span{flex:1 1 260px;overflow-wrap:anywhere}.case-row button{font-size:11px;padding:7px 10px}
+.clock label{flex:1 1 240px;color:#56685f}.clock input{border:1px solid #cddbd1;border-radius:8px;padding:6px 8px}
+.small-placeholder{width:140px;height:95px;border-radius:8px;font-size:11px;flex-shrink:0}
+.evidence-item h3{overflow-wrap:anywhere}
+.review-feedback textarea{display:block;width:100%;margin:6px 0;border:1px solid #cddbd1;border-radius:8px;padding:8px;font:inherit;font-size:12px}
+.note-label{display:block;font-size:11px;color:#56685f;margin-top:8px}
+.save-to{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:#56685f;margin:12px 0 0}
+.save-to select,.clock input{font:inherit;font-size:12px}.save-to select{border:1px solid #cddbd1;border-radius:8px;padding:6px 8px;max-width:100%}
+@media(max-width:650px){.investigations-panel{padding:18px}.small-placeholder{width:100%;height:120px}.case-actions button{flex:1 1 45%}}

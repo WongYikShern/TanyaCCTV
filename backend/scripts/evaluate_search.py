@@ -32,9 +32,12 @@ DEFAULT_RECORDING = PROJECT_ROOT / "evaluation" / "recordings" / "2026-10-17-gem
 USD_PER_TEXT_TOKEN = 0.20 / 1_000_000
 
 
-def load_recording(path: Path) -> dict[str, list[dict]]:
+def load_recording(path: Path) -> tuple[dict[str, list[dict]], list[str] | None]:
+    """(responses, indexed_videos or None). indexed_videos lists what the recorded index contained."""
     data = json.loads(path.read_text(encoding="utf-8"))
-    return data["responses"] if "responses" in data else data
+    if "responses" in data:
+        return data["responses"], data.get("indexed_videos")
+    return data, None
 
 
 def live_responses(cases, n: int) -> dict[str, list[dict]]:
@@ -54,6 +57,8 @@ def main(argv=None) -> int:
     p.add_argument("--n", type=int, default=10, help="chunks requested per live query")
     p.add_argument("--save", type=Path, help="with --live: save the responses for later offline evaluation")
     p.add_argument("--merge-ratio", type=float, default=0.5)
+    p.add_argument("--allow-missing", action="store_true",
+                   help="evaluate only queries that have a response; list the rest as not measured")
     p.add_argument("--json", action="store_true")
     args = p.parse_args(argv)
 
@@ -75,24 +80,25 @@ def main(argv=None) -> int:
             print("Nothing was sent. Re-run with --approve-api-calls to proceed.")
             return 0
         try:
-            responses = live_responses(cases, args.n)
+            responses, indexed = live_responses(cases, args.n), None
         except (SearchError, ConfigError) as e:
             print(f"Live evaluation failed: {e}", file=sys.stderr)
             return 3
         if args.save:
             args.save.parent.mkdir(parents=True, exist_ok=True)
-            args.save.write_text(json.dumps({"recorded_at": date.today().isoformat(), "responses": responses},
-                                            indent=2) + "\n", encoding="utf-8")
+            args.save.write_text(json.dumps({"recorded_at": date.today().isoformat(), "responses": responses,
+                                             "indexed_videos": None}, indent=2) + "\n", encoding="utf-8")
             print(f"Saved responses to {args.save}")
     else:
         try:
-            responses = load_recording(args.recorded)
+            responses, indexed = load_recording(args.recorded)
         except (OSError, ValueError, KeyError) as e:
             print(f"Cannot read recording {args.recorded}: {e}", file=sys.stderr)
             return 2
 
     try:
-        report = evaluate(cases, responses, ratio=args.merge_ratio)
+        report = evaluate(cases, responses, ratio=args.merge_ratio, allow_missing=args.allow_missing,
+                          indexed_videos=indexed)
     except ValueError as e:
         print(f"Cannot evaluate: {e}", file=sys.stderr)
         return 2

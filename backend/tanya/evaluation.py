@@ -32,6 +32,7 @@ class Event:
 class Case:
     query: str
     events: list[Event]  # empty = negative query
+    event_type: str = "unspecified"
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ class QueryResult:
     level: str                      # "chunks" or "merged"
     negative: bool
     returned: int
+    event_type: str = "unspecified"
     hit_at: dict = field(default_factory=dict)
     precision_at: dict = field(default_factory=dict)
     recall_at: dict = field(default_factory=dict)
@@ -68,7 +70,7 @@ def load_ground_truth(path: Path) -> list[Case]:
     cases = []
     for c in data["cases"]:
         events = [Event(e["video"], float(e["start_sec"]), float(e["end_sec"])) for e in c.get("events", [])]
-        cases.append(Case(c["query"], events))
+        cases.append(Case(c["query"], events, c.get("event_type") or ("negative" if not events else "unspecified")))
     _validate(cases)
     return cases
 
@@ -122,7 +124,8 @@ def matches(w: Window, e: Event) -> bool:
 
 def score_case(case: Case, windows: list[Window], level: str, ks=DEFAULT_KS) -> QueryResult:
     """Metrics for one query; `windows` must be in ranked order."""
-    result = QueryResult(case.query, level, negative=not case.events, returned=len(windows))
+    result = QueryResult(case.query, level, negative=not case.events, event_type=case.event_type,
+                         returned=len(windows))
     if windows:
         top = windows[0]
         result.top_window = asdict(top)
@@ -173,20 +176,78 @@ def merged_windows(bridge_results: list[dict], ratio: float = 0.5, gap_sec: floa
     return sorted(windows, key=lambda w: -w.score)
 
 
+def restrict_to_index(cases: list[Case], indexed_videos) -> tuple[list[Case], list[dict]]:
+    """Drop annotated events in videos the recorded index did not contain.
+
+    Such events could never be retrieved, so counting them as misses would be wrong. They are
+    returned as "not_indexed". A positive query whose events are all outside the index becomes
+    unmeasurable (it must not be scored as a negative query).
+    """
+    indexed = set(indexed_videos)
+    kept, not_indexed = [], []
+    for c in cases:
+        inside = [e for e in c.events if e.video in indexed]
+        not_indexed += [{"query": c.query, **asdict(e)} for e in c.events if e.video not in indexed]
+        if c.events and not inside:
+            continue
+        kept.append(Case(c.query, inside, c.event_type))
+    return kept, not_indexed
+
+
 def evaluate(cases: list[Case], responses: dict[str, list[dict]], ks=DEFAULT_KS,
-             ratio: float = 0.5, gap_sec: float = 0.0) -> dict:
-    """Evaluate bridge responses ({query: ranked results}) at chunk and merged level."""
+             ratio: float = 0.5, gap_sec: float = 0.0, allow_missing: bool = False,
+             indexed_videos=None) -> dict:
+    """Evaluate bridge responses ({query: ranked results}) at chunk and merged level.
+
+    With allow_missing, queries without a response are listed under "not_measured" instead of
+    raising; they are never counted as hits or misses. With indexed_videos (the videos the
+    recorded index contained), events in other videos are excluded and listed as not indexed.
+    """
+    all_cases, not_indexed = cases, []
+    if indexed_videos is not None:
+        cases, not_indexed = restrict_to_index(cases, indexed_videos)
+    unmeasurable = [c for c in all_cases if c.query not in {k.query for k in cases}]
     missing = [c.query for c in cases if c.query not in responses]
-    if missing:
+    if missing and not allow_missing:
         raise ValueError("no recorded response for: " + ", ".join(missing))
-    per_query = []
-    for case in cases:
+    measured = [c for c in cases if c.query in responses]
+    per_query, analysis = [], []
+    for case in measured:
         results = responses[case.query]
+        merged = merged_windows(results, ratio, gap_sec)
         per_query.append(score_case(case, chunk_windows(results), "chunks", ks))
-        per_query.append(score_case(case, merged_windows(results, ratio, gap_sec), "merged", ks))
+        per_query.append(score_case(case, merged, "merged", ks))
+        analysis.append(error_analysis(case, merged, all_cases, k=max(ks)))
+    by_type = {t: summarise([q for q in per_query if q.level == "merged" and q.event_type == t], ks)
+               for t in sorted({c.event_type for c in measured})}
     return {"ks": list(ks), "per_query": [asdict(q) for q in per_query],
             "summary": {level: summarise([q for q in per_query if q.level == level], ks)
-                        for level in ("chunks", "merged")}}
+                        for level in ("chunks", "merged")},
+            "by_event_type": by_type, "analysis": analysis,
+            "not_measured": [{"query": c.query, "event_type": c.event_type,
+                              "reason": "no recorded response"} for c in cases if c.query in missing]
+                            + [{"query": c.query, "event_type": c.event_type,
+                                "reason": "its videos were not in the recorded index"} for c in unmeasurable],
+            "not_indexed_events": not_indexed}
+
+
+def error_analysis(case: Case, windows: list[Window], all_cases: list[Case], k: int = 5) -> dict:
+    """What the top-k windows actually were, and which annotated events were missed.
+
+    A non-relevant window is labelled with any *other* annotated event it overlaps (a confusion),
+    or "background" when it overlaps no annotated event at all.
+    """
+    annotated = [(c.query, e) for c in all_cases for e in c.events]
+    false_positives = []
+    for rank, w in enumerate(windows[:k], start=1):
+        if any(matches(w, e) for e in case.events):
+            continue
+        overlaps = sorted({q for q, e in annotated if q != case.query and matches(w, e)})
+        false_positives.append({"rank": rank, "video": w.video, "start_sec": w.start_sec, "end_sec": w.end_sec,
+                                "overlaps": overlaps or ["background"]})
+    missed = [asdict(e) for e in case.events if not any(matches(w, e) for w in windows[:k])]
+    return {"query": case.query, "event_type": case.event_type, "negative": not case.events, "k": k,
+            "false_positives": false_positives, "missed_events": missed}
 
 
 def summarise(results: list[QueryResult], ks=DEFAULT_KS) -> dict:
@@ -234,6 +295,24 @@ def format_report(report: dict) -> str:
             fr = q["first_relevant"]
             timing = (f"first relevant at rank {fr['rank']}, IoU {fr['iou']}" if fr else "no relevant window")
             lines.append(f"  {q['query']!r}: top {top_text}; {timing}")
+    if report.get("by_event_type"):
+        lines.append("\nBy event type (merged windows; positive queries only):")
+        for event_type, s in report["by_event_type"].items():
+            if s["positive_queries"]:
+                lines.append(f"  {event_type}: {s['positive_queries']} query(ies), hit@1 {s['hit_rate_at'][ks[0]]}, "
+                             f"MRR {s['mrr']}, mean IoU {s['mean_iou']}")
+    if report.get("analysis"):
+        lines.append("\nNon-matching results in the top windows (false positives) and missed events:")
+        for a in report["analysis"]:
+            fps = "; ".join(f"#{f['rank']} {f['video']} {f['start_sec']:g}-{f['end_sec']:g}s ({', '.join(f['overlaps'])})"
+                            for f in a["false_positives"]) or "none"
+            missed = ", ".join(f"{m['video']} {m['start_sec']:g}-{m['end_sec']:g}s" for m in a["missed_events"]) or "none"
+            lines.append(f"  {a['query']!r}: non-matching in top {a['k']}: {fps}; missed: {missed}")
+    if report.get("not_measured"):
+        lines.append("\nNot measured (counted neither as hits nor misses): "
+                     + "; ".join(f"{m['query']!r} [{m['event_type']}]: {m['reason']}" for m in report["not_measured"]))
+    if report.get("not_indexed_events"):
+        lines.append(f"Annotated events outside the recorded index (excluded): {len(report['not_indexed_events'])}")
     lines.append("\nRanking quality on this annotated set only; not detection accuracy. "
                  "Scores are ranking signals, not probabilities.")
     return "\n".join(lines)

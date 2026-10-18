@@ -182,3 +182,82 @@ def test_save_never_overwrites_and_refuses_before_any_api_call(monkeypatch, tmp_
     monkeypatch.setattr(evaluate_search, "search", lambda *a, **k: pytest.fail("must not call the API"))
     assert evaluate_search.main(["--live", "--approve-api-calls", "--save", str(existing)]) == 2
     assert existing.read_text(encoding="utf-8") == "keep me"
+
+
+# --------------------------------------------------------------------------- Phase 7: event dataset and analysis
+
+EVENTS_V2 = PROJECT_ROOT / "evaluation" / "synthetic_events_v2.json"
+
+
+def test_events_v2_ground_truth_matches_all_generated_scenes():
+    cases = load_ground_truth(EVENTS_V2)
+    annotated = {(e.video, c.query, e.start_sec, e.end_sec) for c in cases for e in c.events}
+    scenes = make_demo_footage.SETS["all"]
+    generated = {(f, q, float(s), float(t)) for f, (_, events) in scenes.items() for q, s, t in events}
+    assert generated <= annotated                                   # every generated event is annotated
+    assert {v for v, *_ in annotated} <= set(scenes)                # only generated clips are referenced
+    for video, _, start, end in annotated:
+        assert 0 <= start < end <= scenes[video][0]
+    types = {c.event_type for c in cases}
+    assert {"entry", "exit", "loitering", "fall", "vehicle_entry", "vehicle_parked", "vehicle_exit", "negative"} <= types
+    assert sum(not c.events for c in cases) == 5
+
+
+def test_event_scenes_show_their_events():
+    m = make_demo_footage
+    person = lambda img: int(np.sum((img[..., 0] > 170) & (img[..., 2] < 60)))      # blue shirt
+    blue_car = lambda img: int(np.sum((img[..., 0] > 140) & (img[..., 1] > 60) & (img[..., 1] < 120) & (img[..., 2] < 60)))
+    door_open = lambda img: int(np.sum(img[100:200, 500:560].max(axis=2) < 60)) > 3000
+    assert person(m.entrance_frame(5)) == 0 and person(m.entrance_frame(30)) > 500 and person(m.entrance_frame(58)) == 0
+    assert not door_open(m.entrance_frame(5)) and door_open(m.entrance_frame(15)) and door_open(m.entrance_frame(50))
+    assert blue_car(m.driveway_frame(5)) == 0 and blue_car(m.driveway_frame(28)) > 2000 and blue_car(m.driveway_frame(48)) == 0
+    upright, falling, lying = (m.corridor_frame(t) for t in (12, 21.5, 30))
+    assert person(upright) > 500 and person(falling) > 500 and person(lying) > 500
+    assert not np.array_equal(falling, lying)
+
+
+def test_events_outside_the_recorded_index_are_excluded_not_missed():
+    from tanya.evaluation import restrict_to_index
+    cases = [Case("walk", [Event("a.mp4", 0, 10), Event("c.mp4", 0, 10)], "person_movement"),
+             Case("only_c", [Event("c.mp4", 5, 9)], "fall"), Case("neg", [], "negative")]
+    kept, dropped = restrict_to_index(cases, ["a.mp4"])
+    assert [c.query for c in kept] == ["walk", "neg"] and kept[0].events == [Event("a.mp4", 0, 10)]
+    assert [d["video"] for d in dropped] == ["c.mp4", "c.mp4"]
+    report = evaluate(cases, {"walk": [dict(rank=1, filename="a.mp4", start_sec=0, end_sec=10, score=.4,
+                                            score_above_median=.1)], "neg": []}, indexed_videos=["a.mp4"])
+    s = report["summary"]["chunks"]
+    assert s["positive_queries"] == 1 and s["mean_recall_at"][5] == 1.0            # c.mp4 not counted as a miss
+    assert report["not_measured"] == [{"query": "only_c", "event_type": "fall",
+                                       "reason": "its videos were not in the recorded index"}]
+
+
+def test_error_analysis_labels_confusions_background_and_misses():
+    cases = [Case("walk", [Event("a.mp4", 20, 40), Event("b.mp4", 0, 10)], "person_movement"),
+             Case("lie", [Event("a.mp4", 40, 60)], "person_lying")]
+    r = lambda rank, f, s, e, score: dict(rank=rank, filename=f, start_sec=s, end_sec=e, score=score,
+                                          score_above_median=score - .3)
+    report = evaluate(cases, {"walk": [r(1, "a.mp4", 24, 34, .5), r(2, "a.mp4", 48, 58, .45), r(3, "a.mp4", 0, 10, .4)],
+                              "lie": [r(1, "a.mp4", 40, 50, .5)]}, ratio=1.0)
+    walk = next(a for a in report["analysis"] if a["query"] == "walk")
+    assert [(f["start_sec"], f["overlaps"]) for f in walk["false_positives"]] == [(48, ["lie"]), (0, ["background"])]
+    assert walk["missed_events"] == [{"video": "b.mp4", "start_sec": 0.0, "end_sec": 10.0}]
+    assert set(report["by_event_type"]) == {"person_movement", "person_lying"}
+
+
+def test_missing_responses_raise_unless_allowed():
+    cases = [Case("a", [Event("x.mp4", 0, 5)]), Case("b", [Event("x.mp4", 0, 5)])]
+    with pytest.raises(ValueError):
+        evaluate(cases, {"a": []})
+    report = evaluate(cases, {"a": []}, allow_missing=True)
+    assert report["not_measured"][0]["query"] == "b" and report["summary"]["chunks"]["positive_queries"] == 1
+
+
+def test_recording_declares_its_index_and_v2_run_is_honest(capsys):
+    assert json.loads(RECORDING.read_text(encoding="utf-8"))["indexed_videos"] == ["cam1_lobby.mp4", "cam2_carpark.mp4"]
+    assert evaluate_search.main(["--ground-truth", str(EVENTS_V2), "--allow-missing", "--json"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["summary"]["merged"]["positive_queries"] == 3 and len(report["not_indexed_events"]) == 12
+    reasons = {m["query"]: m["reason"] for m in report["not_measured"]}
+    assert reasons["a person falling down"] == "its videos were not in the recorded index"
+    assert reasons["a dog running"] == "no recorded response"
+    assert evaluate_search.main(["--ground-truth", str(EVENTS_V2)]) == 2       # missing responses refused by default

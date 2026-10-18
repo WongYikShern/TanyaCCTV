@@ -46,6 +46,23 @@ but hasn't been needed.
 | `GET /api/videos/<id>/frames?page=3` (60 frames) | 3.5 ms |
 | One frame JPEG | 7.0 ms |
 
+## Investigations and reports (19 October 2026)
+
+An investigation with 50 clips from the two demo recordings, using an in-process test client.
+Median of 5 runs.
+
+| Operation | Time |
+|---|---|
+| Add one clip (validation, server-side source lookup, audit entry) | 19 ms (mean of 50) |
+| Open the investigation (sources resolved, timeline ordered) | 14 ms |
+| Export JSON report (sources re-hashed) | 47 ms |
+| Export HTML report (with 50 embedded frames) | 68 ms, 1.2 MB (about 24 KB per clip) |
+| SHA-256 throughput on this laptop | about 1,000 MB/s |
+
+Export re-hashes each source video once to verify it. At about 1 GB/s, a 2 GB recording adds
+about 2 seconds to an export. Reports embed one frame per clip, so a 500-clip report would be
+roughly 12 MB.
+
 ## Known limits
 
 - **Indexing and AI preparation run inside the web request.** The page shows a progress message

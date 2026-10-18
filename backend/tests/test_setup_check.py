@@ -160,3 +160,21 @@ def test_startup_summary_shows_key_presence_only(tmp_path, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", FAKE_KEY)
     lines = "\n".join(run_web.startup_lines(settings_in(tmp_path), SearchSettings(None, tmp_path / "b.py")))
     assert "Gemini key:    set" in lines and FAKE_KEY not in lines and "localhost:5001" in lines
+
+
+def test_investigation_and_review_files_are_checked_read_only(tmp_path):
+    checks = {c.name: c for c in setup_check.check_data(settings_in(tmp_path))}
+    assert checks["Investigations file"].status == PASS and "created when first used" in checks["Investigations file"].detail
+    bad = tmp_path / "investigations.db"
+    bad.write_bytes(b"garbage" * 100)
+    before = bad.read_bytes()
+    checks = {c.name: c for c in setup_check.check_data(settings_in(tmp_path))}
+    assert checks["Investigations file"].status == WARN and "move it aside" in checks["Investigations file"].fix
+    assert bad.read_bytes() == before
+    import sqlite3
+    good = tmp_path / "search_feedback.db"                     # any valid SQLite file passes
+    conn = sqlite3.connect(good)
+    conn.execute("CREATE TABLE t (x)")
+    conn.commit()
+    conn.close()
+    assert {c.name: c for c in setup_check.check_data(settings_in(tmp_path))}["Search reviews file"].status == PASS

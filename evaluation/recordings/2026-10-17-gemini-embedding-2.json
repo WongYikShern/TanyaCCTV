@@ -2,6 +2,10 @@
   "recorded_at": "2026-10-17",
   "engine": "SentrySearch d3efd6a, Gemini Embedding 2 (gemini backend), 10 s chunks / 2 s overlap",
   "index": "synthetic trial footage only (cam1_lobby.mp4 60 s, cam2_carpark.mp4 40 s): 13 chunks",
+  "indexed_videos": [
+    "cam1_lobby.mp4",
+    "cam2_carpark.mp4"
+  ],
   "notes": "Top-5 ranked chunks per query from the bridge (dedupe disabled). Local paths replaced by {VIDEO_DIR}.",
   "responses": {
     "a person walking": [

@@ -111,7 +111,7 @@ $("search-form").onsubmit=async event=>{
   if(visual && !approved){notice("Approve the sampled-frame check, or uncheck image checking to see rankings only.");return;}
   busy(true);$("results").replaceChildren(element("p",visual ? "Retrieving candidates and checking their sampled images… This can take a few minutes." : "Searching prepared videos only…","muted"));
   try{
-    const data=await api("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:$("query").value,visual_check:visual,approve_frame_upload:approved})});
+    const data=await api("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:$("query").value,visual_check:visual,approve_frame_upload:approved,...(saveToId() ? {investigation_id:saveToId()} : {})})});
     $("results").replaceChildren(element("p",data.note,"muted"));
     $("results").append(element("p",visual ? "AI-supported candidates are based only on sampled images. They can be wrong and are not confirmed detections." : "Rankings only: nearest clips can appear even when the described event is absent. No image matching check was performed.","warning"));
     for(const warning of data.warnings)$("results").append(element("p",warning,"warning"));
@@ -120,13 +120,17 @@ $("search-form").onsubmit=async event=>{
       $("results").append(element("p",`${data.visual_review.sampled_frames} images checked from ${data.visual_review.checked_candidates} retrieved windows.`,"muted"));
     }
     if(!data.hits.length)$("results").append(element("p",visual ? "No visually supported match in the checked samples. "+(data.unclear_hits?.length ? "Review unclear candidates below. " : "")+"This does not prove the event is absent from the recording." : "No ranked clips returned from your indexed library.","muted"));
-    for(const hit of data.hits)$("results").append(resultCard(hit, data.query, visual));
+    const ranked=[...data.hits,...(data.unclear_hits||[]),...(data.rejected_hits||[])];
+    if(data.saved_query)$("results").append(element("p",`Saved to the selected investigation as “${data.saved_query.query}”.`,"muted"));
+    for(const hit of data.hits)$("results").append(resultCard(hit, data.query, visual, ranked.indexOf(hit)+1));
     for(const [key,title] of [["unclear_hits","Unclear or not checked — review manually"],["rejected_hits","Not supported by sampled images"]]){
-      if(data[key]?.length){const details=element("details");details.append(element("summary",`${title} (${data[key].length})`));for(const hit of data[key])details.append(resultCard(hit, data.query, visual));$("results").append(details);}
+      if(data[key]?.length){const details=element("details");details.append(element("summary",`${title} (${data[key].length})`));for(const hit of data[key])details.append(resultCard(hit, data.query, visual, ranked.indexOf(hit)+1));$("results").append(details);}
     }
+    if(saveToId() && window.refreshInvestigation)window.refreshInvestigation();
   }catch(error){$("results").replaceChildren(element("p",error.message+" No visual result was confirmed.","warning"));}finally{$("visual-consent").checked=false;busy(false);}
 };
-function resultCard(hit, query, visual){
+function saveToId(){ const value=$("save-to").value; return value ? Number(value) : null; }
+function resultCard(hit, query, visual, rank){
   const card=element("article",undefined,"result");
   if(hit.thumbnail_url){const img=element("img");img.src=hit.thumbnail_url;img.alt=`Candidate frame from ${hit.filename}`;card.append(img);}
   const info=element("div"),review=hit.visual_review;
@@ -142,6 +146,7 @@ function resultCard(hit, query, visual){
     for(const t of review.evidence_timestamps){const button=element("button",`Review evidence at ${time(t)}`);button.className="secondary evidence";button.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,t,hit.end_sec);info.append(button);}
   }
   const button=element("button","Review clip →");button.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,hit.start_sec,hit.end_sec);info.append(button);
+  if(window.investigationClipButton)info.append(window.investigationClipButton(hit, query, visual, rank));
   const feedback=element("div",undefined,"review-feedback");
   feedback.append(element("p","Does this clip match your search? Your review stays on this computer."));
   const saved=element("span",hit.human_review ? `Earlier review saved ${new Date(hit.human_review.reviewed_at).toLocaleString()}. Choose again to change it.` : "","muted");saved.setAttribute("role","status");
