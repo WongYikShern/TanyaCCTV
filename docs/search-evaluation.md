@@ -70,6 +70,29 @@ How to read this:
 `test_evaluation.py` locks these numbers as a regression baseline. They should change only with a
 new recording.
 
+## Event types, errors and the extended dataset (Phase 7)
+
+- `evaluation/synthetic_events_v2.json` annotates **16 queries** (11 positive, 5 negative)
+  across all five synthetic clips (`make_demo_footage.py --set all`). The event types are:
+  person moving, lying, entry, exit, loitering, fall, vehicle present, vehicle entry, vehicle
+  parked, vehicle exit, and negative.
+- Reports now include a breakdown by event type, and for every query:
+  - the non-matching windows in the top 5, each labelled as overlapping another annotated
+    event (a confusion) or as "background"
+  - any annotated events that were missed.
+- A recording lists the videos its index contained (`indexed_videos`). Events in other videos are
+  excluded rather than counted as misses. Queries without a response are reported as
+  **not measured**, never scored.
+
+Running v2 against the current recording measures only the 3 queries that recording covers:
+
+```powershell
+.\.venv\Scripts\python.exe backend\scripts\evaluate_search.py --ground-truth evaluation\synthetic_events_v2.json --allow-missing
+```
+
+See [event-support.md](event-support.md) for which event types are measured, unmeasured or
+unsupported. It also gives the approval request (about US$0.15) needed to measure the rest.
+
 ## What this does not show
 
 - **Accuracy on real CCTV.** Three positive queries on cartoon scenes cannot predict performance

@@ -15,13 +15,17 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 
 from .config import SUPPORTED_EXTENSIONS, SEARCHABLE_EXTENSIONS, load_settings, load_search_settings
-from .indexer import Indexer, sha256_file
+from .indexer import Indexer, scan_video_dir, sha256_file
+from . import playback
 from .search import search_videos
 from .sentry_client import SearchError, redact
 from . import sentry_client
 from .search_sync import build_plan, load_manifest, apply_plan, sentry_cli_command
 from .visual_review import review_results
 from . import feedback
+from . import case_report
+from .investigations import (InvestigationError, NotFound, Store, StoreUnavailable, resolve_sources,
+                             timeline, verify_sources)
 
 
 def safe_upload_name(original):
@@ -69,6 +73,13 @@ def create_app(settings=None, search_settings=None):
     def feedback_path():
         return settings.db_path.with_name("search_feedback.db")
 
+    store = Store(settings.db_path.with_name("investigations.db"))
+
+    def search_run_settings(visual_check):
+        return {"chunks_requested": 10, "merge_ratio": search_settings.merge_ratio,
+                "merge_gap_sec": search_settings.merge_gap_sec, "visual_check": visual_check,
+                "engine": "SentrySearch d3efd6a (Gemini Embedding 2), 10 s chunks / 2 s overlap"}
+
     def search_state(video, manifest):
         if video["status"] != "done":
             return "local_index_needed"
@@ -90,7 +101,7 @@ def create_app(settings=None, search_settings=None):
         # Reject DNS rebinding and cross-site mutation requests, even on localhost.
         if request.host not in {"localhost:5001", "127.0.0.1:5001", "localhost", "127.0.0.1"}:
             abort(403)
-        if request.method == "POST":
+        if request.method not in ("GET", "HEAD", "OPTIONS"):  # every state-changing method needs the token
             token = session.get("csrf")
             if not token or not secrets.compare_digest(request.headers.get("X-CSRF-Token", ""), token):
                 abort(403, description="Refresh the page before trying again.")
@@ -107,6 +118,14 @@ def create_app(settings=None, search_settings=None):
     @app.errorhandler(HTTPException)
     def http_error(error):
         return jsonify(error=error.description), error.code
+
+    @app.errorhandler(InvestigationError)
+    def investigation_error(error):
+        return jsonify(error=str(error)), 404 if isinstance(error, NotFound) else 400
+
+    @app.errorhandler(StoreUnavailable)
+    def store_unavailable(error):
+        return jsonify(error=str(error)), 503
 
     @app.get("/")
     def home():
@@ -126,6 +145,35 @@ def create_app(settings=None, search_settings=None):
         return jsonify(engine_ready=engine, key_ready=key, search_ready=engine and key,
                        busy=lock.locked(), max_upload_mb=512, coverage=search_coverage())
 
+    playback_dir = settings.db_path.with_name("playback")
+
+    def source_path(video):
+        """The original recording's path, or None if it is missing or outside the video folder."""
+        root = settings.video_dir.resolve()
+        path = (root / video["rel_path"]).resolve()
+        return path if path.is_relative_to(root) and path.is_file() else None
+
+    def playback_info(video):
+        """How the browser can play this recording. Never modifies anything."""
+        source = source_path(video)
+        if source is None:
+            return {"status": "missing", "url": None, "codec": None, "codec_name": None,
+                    "message": "The original file is no longer in the video folder. Restore it, or re-index "
+                               "to update the library."}
+        code = playback.codec_of(source)
+        info = {"codec": code, "codec_name": playback.codec_name(code)}
+        if playback.browser_playable(source, code):
+            return dict(info, status="playable", url=url_for("video_file", video_id=video["id"]), message=None)
+        if playback.copy_path(playback_dir, video["sha256"]).is_file():
+            return dict(info, status="copy_ready", url=url_for("playback_file", video_id=video["id"]),
+                        message=f"Playing a browser copy; the original uses {info['codec_name']}.")
+        container = source.suffix.lower()
+        reason = (f"{container.upper().lstrip('.')} files" if container not in playback.BROWSER_CONTAINERS
+                  else f"{info['codec_name']} video")
+        return dict(info, status="needs_copy", url=None,
+                    message=f"Browsers cannot play {reason}. A browser-playable copy can be made on this "
+                            "computer (the original is not changed).")
+
     @app.get("/api/videos")
     def videos():
         result = rows("SELECT * FROM videos ORDER BY id DESC")
@@ -136,7 +184,53 @@ def create_app(settings=None, search_settings=None):
                          (video["id"],))
             video["thumbnail_url"] = url_for("frame_file", rel=frame[0]["image_path"]) if frame else None
             video["video_url"] = url_for("video_file", video_id=video["id"])
-        return jsonify(videos=result)
+            video["playback"] = playback_info(video)
+        # Files already in the video folder but not yet indexed would otherwise be invisible.
+        known = {v["rel_path"] for v in result}
+        waiting, unsupported = [], []
+        try:
+            supported, other, _outside = scan_video_dir(settings.video_dir)
+            root = settings.video_dir.resolve()
+            waiting = [p.relative_to(root).as_posix() for p in supported if p.relative_to(root).as_posix() not in known]
+            unsupported = [p.relative_to(root).as_posix() for p in other]
+        except (OSError, ValueError):
+            pass
+        return jsonify(videos=result, waiting_files=waiting, unsupported_files=unsupported)
+
+    @app.get("/api/videos/<int:video_id>/playback")
+    def video_playback(video_id):
+        video = rows("SELECT id, sha256, rel_path, filename, duration_sec FROM videos WHERE id=?", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        info = playback_info(video[0])
+        if info["status"] == "needs_copy":
+            info["ffmpeg_available"] = playback.find_ffmpeg(search_settings.sentry_python) is not None
+        return jsonify(info)
+
+    @app.post("/api/videos/<int:video_id>/playback-copy")
+    def make_playback_copy(video_id):
+        video = rows("SELECT id, sha256, rel_path, filename, duration_sec FROM videos WHERE id=?", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        video = video[0]
+        info = playback_info(video)
+        if info["status"] != "needs_copy":
+            return jsonify(info)
+        ffmpeg = playback.find_ffmpeg(search_settings.sentry_python)
+        if not ffmpeg:
+            abort(503, description="FFmpeg was not found, so a browser copy cannot be made. Install FFmpeg (or set "
+                                   "TANYA_FFMPEG / TANYA_SENTRY_PYTHON), or convert the video to H.264 MP4. The "
+                                   "extracted frames below can still be reviewed.")
+        if not lock.acquire(blocking=False):
+            abort(409, description="Another operation is running. Try again when it finishes.")
+        try:
+            playback.make_copy(source_path(video), playback.copy_path(playback_dir, video["sha256"]), ffmpeg,
+                               video["duration_sec"])
+        except playback.PlaybackError as error:
+            return jsonify(error=str(error)), 500
+        finally:
+            lock.release()
+        return jsonify(playback_info(video))
 
     @app.get("/api/videos/<int:video_id>/frames")
     def frames(video_id):
@@ -164,6 +258,14 @@ def create_app(settings=None, search_settings=None):
         if not video:
             abort(404)
         return send_file(media_path(settings.video_dir, video[0]["rel_path"]), conditional=True)
+
+    @app.get("/media/playback/<int:video_id>")
+    def playback_file(video_id):
+        video = rows("SELECT sha256 FROM videos WHERE id=?", (video_id,))
+        if not video:
+            abort(404)
+        return send_file(media_path(playback_dir, f"{video[0]['sha256']}.mp4"), conditional=True,
+                         mimetype="video/mp4")
 
     @app.post("/api/upload")
     def upload():
@@ -218,6 +320,9 @@ def create_app(settings=None, search_settings=None):
             abort(400, description="visual_check must be true or false.")
         if visual_check and data.get("approve_frame_upload") is not True:
             abort(400, description="Approve sending sampled frames to Google before visual checking.")
+        investigation_id = data.get("investigation_id")
+        if investigation_id is not None and type(investigation_id) is not int:
+            abort(400, description="investigation_id must be a number.")
         if not lock.acquire(blocking=False):
             abort(409, description="Wait for local indexing to finish before searching.")
         try:
@@ -244,6 +349,13 @@ def create_app(settings=None, search_settings=None):
             hit["video_url"] = url_for("video_file", video_id=hit["video_id"])
             hit["thumbnail_url"] = url_for("frame_file", rel=hit["thumbnail"]) if hit["thumbnail"] else None
             hit["human_review"] = earlier.get((hit["video_id"], hit["start_sec"], hit["end_sec"]))
+        if investigation_id is not None:
+            # Save the query and the settings it ran with, so the investigation can re-run it.
+            try:
+                result["saved_query"] = store.save_query(
+                    investigation_id, query, mode, search_run_settings(visual_check), result_count=len(all_hits))
+            except (InvestigationError, StoreUnavailable) as error:
+                result["warnings"].insert(0, f"The search ran, but was not saved to the investigation: {error}")
         return jsonify(result)
 
     @app.post("/api/feedback")
@@ -320,5 +432,145 @@ def create_app(settings=None, search_settings=None):
             return jsonify(error=redact(str(error))), 503
         finally:
             lock.release()
+
+    # ------------------------------------------------------------------ investigations
+
+    def library_by_sha():
+        return {v["sha256"]: v for v in rows("SELECT id, sha256, filename, rel_path, duration_sec FROM videos "
+                                             "WHERE status = 'done'")}
+
+    def body():
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            abort(400, description="Send a JSON object.")
+        return data
+
+    def investigation_view(inv_id):
+        """Investigation with source-resolved, chronologically ordered evidence and media URLs."""
+        inv = store.get(inv_id)
+        items, basis = timeline(resolve_sources(inv["evidence"], library_by_sha(), settings.video_dir),
+                                inv["recording_clocks"])
+        for e in items:
+            available = e["source_status"] != "missing"
+            e["video_url"] = url_for("video_file", video_id=e["current_video_id"]) if available else None
+            e["thumbnail_url"] = (url_for("frame_file", rel=e["thumbnail"])
+                                  if available and e["thumbnail"] else None)
+        inv["evidence"], inv["timeline_basis"] = items, basis
+        recordings = {}
+        for e in items:
+            recordings.setdefault(e["video_sha256"], {"video_sha256": e["video_sha256"],
+                                                      "filename": e["current_filename"] or e["video_filename"],
+                                                      "recorded_start": inv["recording_clocks"].get(e["video_sha256"])})
+        inv["recordings"] = list(recordings.values())
+        return inv
+
+    @app.get("/api/investigations")
+    def list_investigations():
+        return jsonify(investigations=store.list())
+
+    @app.post("/api/investigations")
+    def create_investigation():
+        data = body()
+        inv = store.create(data.get("title"), data.get("description", ""))
+        return jsonify(investigation_view(inv["id"])), 201
+
+    @app.get("/api/investigations/<int:inv_id>")
+    def get_investigation(inv_id):
+        return jsonify(investigation_view(inv_id))
+
+    @app.post("/api/investigations/<int:inv_id>")
+    def update_investigation(inv_id):
+        data = body()
+        store.update(inv_id, title=data.get("title"), description=data.get("description"))
+        return jsonify(investigation_view(inv_id))
+
+    @app.post("/api/investigations/<int:inv_id>/status")
+    def investigation_status(inv_id):
+        store.set_status(inv_id, body().get("status"))
+        return jsonify(investigation_view(inv_id))
+
+    @app.post("/api/investigations/<int:inv_id>/queries/<int:query_id>/remove")
+    def remove_saved_query(inv_id, query_id):
+        store.remove_query(inv_id, query_id)
+        return jsonify(investigation_view(inv_id))
+
+    @app.post("/api/investigations/<int:inv_id>/evidence")
+    def add_evidence(inv_id):
+        data = body()
+        if type(data.get("video_id")) is not int:
+            abort(400, description="Choose a clip from an indexed video.")
+        video = rows("SELECT id, sha256, filename, rel_path, duration_sec FROM videos WHERE id=? AND status='done'",
+                     (data["video_id"],))
+        if not video:
+            abort(404, description="This video is no longer indexed.")
+        video = video[0]
+        # The source reference and thumbnail come from the server's own records, never the client.
+        thumbnail = data.get("thumbnail")
+        if not isinstance(thumbnail, str) or not rows("SELECT 1 FROM frames WHERE video_id=? AND image_path=?",
+                                                      (video["id"], thumbnail)):
+            thumbnail = None  # anything that is not one of this video's own frames is dropped
+        store.add_evidence(inv_id, dict(
+            video_sha256=video["sha256"], video_filename=video["filename"], video_rel_path=video["rel_path"],
+            video_duration_sec=video["duration_sec"], start_sec=data.get("start_sec"), end_sec=data.get("end_sec"),
+            query=redact(data.get("query", "").strip()) if isinstance(data.get("query"), str) else data.get("query"),
+            search_mode=data.get("search_mode"), rank=data.get("rank"), best_score=data.get("best_score"),
+            score_above_median=data.get("score_above_median"), visual_verdict=data.get("visual_verdict"),
+            visual_reason=redact(data["visual_reason"]) if isinstance(data.get("visual_reason"), str) else None,
+            thumbnail=thumbnail))
+        return jsonify(investigation_view(inv_id)), 201
+
+    @app.post("/api/investigations/<int:inv_id>/evidence/<int:ev_id>/remove")
+    def remove_evidence(inv_id, ev_id):
+        store.remove_evidence(inv_id, ev_id, body().get("reason", ""))
+        return jsonify(investigation_view(inv_id))
+
+    @app.post("/api/investigations/<int:inv_id>/evidence/<int:ev_id>/review")
+    def review_evidence(inv_id, ev_id):
+        data = body()
+        updated = store.review_evidence(inv_id, ev_id, decision=data.get("decision"), note=data.get("note"))
+        # Mirror the decision into search feedback so result cards show it ("Your earlier review").
+        current = library_by_sha().get(updated["video_sha256"])
+        warning = None
+        if (data.get("decision") and current and updated["search_mode"] != "manual"
+                and updated["end_sec"] <= (current["duration_sec"] or 0)):
+            try:
+                feedback.save(feedback_path(), dict(
+                    query=updated["query"], video_id=current["id"], filename=current["filename"],
+                    start_sec=updated["start_sec"], end_sec=updated["end_sec"],
+                    search_mode=updated["search_mode"], assessment=updated["decision"]))
+            except sqlite3.Error:
+                # The investigation decision is already saved; only the search-card mirror failed.
+                warning = ("Your decision was saved in the investigation, but the search review file "
+                           "(search_feedback.db) could not be updated. It was left unchanged.")
+        view = investigation_view(inv_id)
+        if warning:
+            view["warning"] = warning
+        return jsonify(view)
+
+    @app.post("/api/investigations/<int:inv_id>/clock")
+    def recording_clock(inv_id):
+        data = body()
+        store.set_recording_start(inv_id, data.get("video_sha256"), data.get("recorded_start"))
+        return jsonify(investigation_view(inv_id))
+
+    @app.get("/api/investigations/<int:inv_id>/audit")
+    def investigation_audit(inv_id):
+        return jsonify(audit=store.audit(inv_id))
+
+    @app.post("/api/investigations/<int:inv_id>/report")
+    def investigation_report(inv_id):
+        fmt = body().get("format")
+        if fmt not in ("html", "json"):
+            abort(400, description="Choose an HTML or JSON report.")
+        inv = investigation_view(inv_id)
+        store.record_export(inv_id, fmt)  # recorded before rendering, so the report includes it
+        items = verify_sources(inv["evidence"], settings.video_dir, sha256_file)
+        report = case_report.build_report(inv, items, inv["timeline_basis"], store.audit(inv_id))
+        text = (case_report.render_html(report, settings.frames_dir) if fmt == "html"
+                else case_report.render_json(report))
+        name = f"investigation-{inv_id}-report.{fmt}"
+        return app.response_class(text, mimetype="text/html" if fmt == "html" else "application/json",
+                                  headers={"Content-Disposition": f'attachment; filename="{name}"',
+                                           "Cache-Control": "no-store"})
 
     return app

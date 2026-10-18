@@ -1,5 +1,35 @@
 # Continue TanyaCCTV work from another device
 
+## Latest checkpoint: branch `feature/investigation-casework` (19 October 2026)
+
+This branch is based on `main` at `d1e51db`. It is not committed or pushed without the owner's
+approval. It adds Phases 6–9 (details in `docs/progress.md`):
+
+- **Investigations.** Saved searches, evidence clips referenced by content hash, a chronological
+  timeline (optional camera start times), decisions and notes, an append-only history enforced
+  by SQLite, and HTML/JSON reports with source verification at export.
+- **Event evaluation.** A 5-clip synthetic event dataset (`--set events`) and 16 annotated
+  queries. Per-type metrics, error analysis, and honest "not measured" handling.
+- **Polish.** Setup checks for the new data files, report loading states, and both demo parts as
+  automated tests.
+
+Tests (Windows, no key):
+
+- backend: **295 passed, 10 skipped, 0 failed**
+- with `TANYA_SENTRY_PYTHON`: **302 passed, 3 skipped**
+- bridge offline: **29 passed, 4 skipped**
+
+No Google calls were made.
+
+Pending, and needing the owner:
+
+- approval to measure the new event types (about US$0.15, synthetic clips only; see
+  `docs/event-support.md`)
+- approval to AI-prepare the demo footage (about US$0.10)
+- authorised real CCTV clips with annotations
+- private key rotation
+- committing and pushing this branch
+
 ## Latest checkpoint: branch `feature/investigation-workspace` (18 October 2026)
 
 This branch is based on `main` at `3bdb1df`. It is not committed or pushed until the project
