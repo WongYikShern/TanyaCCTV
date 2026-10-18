@@ -1,5 +1,33 @@
 # Continue TanyaCCTV work from another device
 
+## Current checkpoint: macOS validation (19 October 2026)
+
+Branch `feature/macos-workflow-validation`, based on merged main `4922b36` (PRs #2–#4 are
+already merged). Earlier checkpoint language about unpushed branches below is historical.
+
+- Setup checker and dependency integrity pass; existing local key presence is not proof of
+  private key rotation, API access, or billing availability. No Google requests were made.
+- Fixed strict media URL rejection (no double-slash redirect), a Windows-specific fake encoder
+  in a Mac test, and the CLI-unconfigured test ignoring an installed auto-discovered environment.
+- Added `run_offline_demo.py`: isolated synthetic clips and four recorded queries, server-blocked
+  image checking and AI preparation, visible replay banner and appropriate example queries.
+- Browser: created an investigation, saved search, added evidence, played at 16 s, sought to 25 s,
+  saved decision/note, downloaded HTML and JSON and checked their contents. No console errors.
+- Phone width 390 px: investigations/search/library had no horizontal overflow. Upload picker
+  automation was blocked by extension file-URL access; no permissions were changed. API tests
+  cover upload/indexing, duplicates, corrupt/missing/unsupported files and error handling.
+- Backend with the configured pinned environment: **300 passed, 6 skipped** (four trial-index
+  cases require exactly the original synthetic index; two junction cases are Windows-only).
+- Bridge offline: **15 passed, 14 skipped, 4 live tests deselected** (original trial index
+  unavailable). Full detail: `docs/macos-validation.md`.
+- Offline recorded baseline reproduced: merged P@5 0.50, R@5 1.00, mean IoU 0.867 over just three
+  positive synthetic queries. Entry/exit/loitering/fall/new vehicle queries remain unmeasured.
+
+Run the offline demo per README; each launch creates a fresh workspace and does not touch the
+real four-video library. Pending: separately approved live evaluation, representative real CCTV
+annotations, private key rotation verification, and teammate PR review. Do not merge automatically.
+
+
 ## Latest checkpoint: branch `feature/investigation-casework` (19 October 2026)
 
 This branch is based on `main` at `d1e51db`. It is not committed or pushed without the owner's

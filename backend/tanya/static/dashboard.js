@@ -42,16 +42,23 @@ function openVideo(id,name,url,start=0,end=null) {
 // ---------------------------------------------------------------- status
 async function status() {
   const data=await api("/api/status"); connection=data;
+  if(data.offline_demo){$("visual-check").checked=false;$("visual-consent").checked=false;
+    const examples=["a person walking","a red car","a person lying on the floor","fire and smoke"];
+    document.querySelectorAll("#examples .chip").forEach((chip,i)=>{chip.textContent=examples[i];});
+  }
   const prepared=data.coverage.prepared.length, pending=data.coverage.needs_preparation.length;
   $("ai-pill").textContent=data.search_ready ? `AI search: ${prepared} video(s) prepared` : "AI search: setup needed";
   $("ai-pill").classList.toggle("ready",data.search_ready);
+  if(data.offline_demo) $("ai-pill").textContent="Offline replay · no live AI";
   $("setup").textContent=data.search_ready ? (prepared ? `Search covers ${prepared} prepared video(s). New uploads need AI preparation (System & AI setup) before they can be searched.` : "Your AI connection is configured, but no videos are prepared for search yet. Open System & AI setup to review the AI indexing plan.") : "Local indexing and playback work now. AI search needs "+(!data.engine_ready?"the SentrySearch environment":"")+(!data.engine_ready&&!data.key_ready?" and ":"")+(!data.key_ready?"a Gemini API key":"")+" (see System & AI setup).";
   $("coverage").textContent=pending ? `${pending} video(s) still need AI preparation: ${data.coverage.needs_preparation.join(", ")}.` : "";
+  if(data.offline_demo) $("setup").textContent="Offline replay: try a red car, a person walking, a person lying on the floor, or fire and smoke. Only these recorded queries are available; no API key is used.";
   $("setup-details").open=!data.search_ready;
   renderStatusList($("system-status")); updateControls();
 }
 function statusItems() {
   if(!connection) return [["warn","Checking…"]];
+  if(connection.offline_demo) return [["ok","Offline synthetic replay is active; no API key or live AI is used."],["ok","Playback, investigations, decisions and report export work locally."],["warn","Image checking and AI preparation are disabled. New uploads are not in the recorded search."]];
   const c=connection.coverage, items=[];
   items.push(["ok","Local library, frame extraction and playback work offline."]);
   items.push([connection.engine_ready?"ok":"warn",connection.engine_ready?"SentrySearch environment found.":"SentrySearch environment not configured (TANYA_SENTRY_PYTHON)."]);
@@ -70,7 +77,8 @@ function updateControls() {
   $("search-button").textContent=visual ? "Search & check matches" : "Search ranked clips";
   $("visual-consent-panel").hidden=!visual;
   for(const id of ["visual-check","visual-consent","query","index-button","upload-button"]) $(id).disabled=operationRunning;
-  $("plan-button").disabled=operationRunning || !connection?.engine_ready;
+  if(connection?.offline_demo) $("visual-check").disabled=true;
+  $("plan-button").disabled=operationRunning || !connection?.engine_ready || connection?.offline_demo;
   $("sync-button").disabled=operationRunning || !planHasChanges;
   $("busy-pill").hidden=!operationRunning;
 }
@@ -94,7 +102,7 @@ async function renderDashboard() {
     stat("Videos",videosCache.length,`${time(videosCache.reduce((s,v)=>s+(v.duration_sec||0),0))} of footage`+(waitingFiles.length?` · ${waitingFiles.length} waiting to index`:""),"#library","primary"),
     stat("Frames ready",done,`${videosCache.reduce((s,v)=>s+v.frame_count,0).toLocaleString()} frames extracted`,"#library"),
     stat("Problems",failed,failed?"failed or missing originals":"none","#library",failed?"alert":""),
-    stat("AI-prepared",prepared,`of ${videosCache.length} video(s) searchable`,"#system"),
+    stat(connection?.offline_demo?"Replay clips":"AI-prepared",prepared,`of ${videosCache.length} video(s) searchable`,"#system"),
     stat("Investigations",cases.length,`${open.length} open · ${unreviewed} unreviewed clip(s)`,"#investigations",unreviewed?"attention":""));
   const recent=$("dash-videos"); recent.replaceChildren();
   if(!videosCache.length) recent.append(element("p","No recordings yet. Add footage in the Video Library.","empty"));
@@ -158,7 +166,7 @@ function renderLibrary() {
     const badges=element("div");
     badges.append(element("span",v.status==="done"?"Frames ready":v.status==="failed"?"Indexing failed":"Processing","badge"+(v.status==="done"?"":v.status==="failed"?" failed":" pending")));
     const [pl,pk]=playLabels[v.playback?.status]||["Playback unknown","neutral"]; badges.append(element("span",pl,"badge "+pk));
-    const [sl,sk]=searchLabels[v.search_state]; badges.append(element("span",sl,"badge "+sk));
+    const [sl,sk]=searchLabels[v.search_state]; badges.append(element("span",connection?.offline_demo && v.search_state==="prepared"?"Recorded replay available":sl,"badge "+sk));
     body.append(badges);
     if(v.error) body.append(element("p",v.error,"error-text"));
     if(v.playback?.status==="missing") body.append(element("p",v.playback.message,"error-text"));

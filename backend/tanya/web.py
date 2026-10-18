@@ -45,10 +45,12 @@ def safe_upload_name(original):
     return name
 
 
-def create_app(settings=None, search_settings=None):
+def create_app(settings=None, search_settings=None, *, offline_search=None):
     settings = settings or load_settings()
     search_settings = search_settings or load_search_settings()
     app = Flask(__name__)
+    # Do not normalize double-slash media paths from invalid absolute DB references.
+    app.url_map.merge_slashes = False
     app.config.update(SECRET_KEY=secrets.token_hex(32), MAX_CONTENT_LENGTH=512 * 1024 * 1024,
                       SESSION_COOKIE_SAMESITE="Strict")
     lock = threading.Lock()
@@ -98,6 +100,8 @@ def create_app(settings=None, search_settings=None):
 
     @app.before_request
     def local_requests_only():
+        if offline_search is not None and request.path in {"/api/search/plan", "/api/search/sync"}:
+            abort(403, description="AI preparation is disabled in the offline replay demo.")
         # Reject DNS rebinding and cross-site mutation requests, even on localhost.
         if request.host not in {"localhost:5001", "127.0.0.1:5001", "localhost", "127.0.0.1"}:
             abort(403)
@@ -130,7 +134,7 @@ def create_app(settings=None, search_settings=None):
     @app.get("/")
     def home():
         session.setdefault("csrf", secrets.token_hex(32))
-        return render_template("dashboard.html", csrf=session["csrf"])
+        return render_template("dashboard.html", csrf=session["csrf"], offline_demo=offline_search is not None)
 
     @app.get("/api/status")
     def status():
@@ -142,7 +146,8 @@ def create_app(settings=None, search_settings=None):
             except SearchError:
                 engine = False
         key = bool(os.environ.get("GEMINI_API_KEY"))
-        return jsonify(engine_ready=engine, key_ready=key, search_ready=engine and key,
+        return jsonify(offline_demo=offline_search is not None, engine_ready=engine, key_ready=key,
+                       search_ready=(offline_search is not None) or (engine and key),
                        busy=lock.locked(), max_upload_mb=512, coverage=search_coverage())
 
     playback_dir = settings.db_path.with_name("playback")
@@ -318,6 +323,8 @@ def create_app(settings=None, search_settings=None):
         visual_check = data.get("visual_check", False)
         if type(visual_check) is not bool:
             abort(400, description="visual_check must be true or false.")
+        if visual_check and offline_search is not None:
+            abort(403, description="Image checking is disabled in the offline replay demo; no Google calls are made.")
         if visual_check and data.get("approve_frame_upload") is not True:
             abort(400, description="Approve sending sampled frames to Google before visual checking.")
         investigation_id = data.get("investigation_id")
@@ -326,7 +333,7 @@ def create_app(settings=None, search_settings=None):
         if not lock.acquire(blocking=False):
             abort(409, description="Wait for local indexing to finish before searching.")
         try:
-            result = search_videos(query.strip(), settings, search_settings).to_dict()
+            result = (offline_search or search_videos)(query.strip(), settings, search_settings).to_dict()
             coverage = search_coverage()
             if coverage["needs_preparation"]:
                 result["warnings"].insert(0, "These videos are not prepared for current AI search: "

@@ -176,7 +176,9 @@ def test_cli_text_output(cli_env, capsys):
     assert "cam1_lobby.mp4  00:16-00:42" in out and "[uncertain]" in out and "needs review" in out
 
 
-def test_cli_not_configured(cli_env, monkeypatch, capsys):
+def test_cli_not_configured(cli_env, monkeypatch, capsys, tmp_path):
+    # A developer checkout may have the auto-discovered search environment installed.
+    monkeypatch.setattr("tanya.config.local_sentry_python", lambda: tmp_path / "missing-python")
     monkeypatch.setenv("TANYA_SENTRY_PYTHON", "")
     assert search_cli.main(["x"]) == 2
     assert "TANYA_SENTRY_PYTHON" in capsys.readouterr().err

@@ -46,6 +46,7 @@
   </header>
 
   <main>
+    {% if offline_demo %}<div class="banner warn" role="status"><strong>OFFLINE REPLAY DEMO — no live AI.</strong> Search replays four recorded queries on synthetic footage. Image checking and AI preparation are disabled. Demo uploads are local and are not added to recorded search results.</div>{% endif %}
     <!-- Dashboard -->
     <section class="page" data-page="dashboard">
       <div class="page-head"><div><p class="eyebrow">OVERVIEW</p><h1>CCTV investigation workspace</h1><p class="muted">Find footage worth checking, review it, and keep a traceable record. Search results are never treated as confirmed incidents.</p></div></div>

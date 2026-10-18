@@ -146,9 +146,11 @@ def test_failed_conversion_reports_error_and_leaves_no_partial_file(app, monkeyp
     make_video(ws.video_dir / "a.mp4", seconds=2)
     ws.run()
     vid = ws.videos()[0]["id"]
-    fake = tmp_path / "ffmpeg.cmd"
-    fake.write_text("@exit /b 1\n")
-    monkeypatch.setattr(playback, "find_ffmpeg", lambda *_: str(fake))
+    # Simulate a started encoder failing, independent of OS executable formats.
+    from types import SimpleNamespace
+    monkeypatch.setattr(playback, "find_ffmpeg", lambda *_: "fake-ffmpeg")
+    monkeypatch.setattr(playback.subprocess, "run", lambda *args, **kwargs:
+                        SimpleNamespace(returncode=1, stderr="synthetic conversion failure"))
     r = client.post(f"/api/videos/{vid}/playback-copy", headers=headers)
     assert r.status_code == 500 and "could not convert" in r.json["error"]
     folder = ws.db_path.with_name("playback")

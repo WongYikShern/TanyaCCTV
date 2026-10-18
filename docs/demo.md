@@ -9,6 +9,33 @@ folder. On macOS/Linux, use `.venv/bin/python` instead.
 > are ranked by similarity, not detected incidents. Every result stays unverified until a person
 > reviews it, and a low or missing result does not prove that something did not happen.
 
+## Free offline rehearsal (recommended when internet is unreliable)
+
+1. Stop the existing website (Ctrl+C in its terminal).
+2. On macOS/Linux run `.venv/bin/python backend/scripts/run_offline_demo.py`.
+   On Windows run `.\.venv\Scripts\python.exe backend\scripts\run_offline_demo.py`.
+3. Open http://localhost:5001/. Check the **OFFLINE REPLAY DEMO** banner. This generates the two
+   synthetic clips in a new temporary workspace and indexes them locally. It does not load
+   `.env`, use a key, call Google, or change the real library.
+4. Create an investigation, then select it under **Save searches and clips to**. Run `a red car`,
+   add the first candidate, open at 0:16 and seek to 0:25. Mark it Correct with a synthetic-demo
+   note. Search `a person walking` and add that candidate too; set camera times if desired.
+5. Export JSON and HTML reports; inspect decisions, source verification and history. Try
+   `fire and smoke` to show unrelated nearest results rather than a detection. Try an unknown
+   query to show the explicit unavailable-recording message. Image checks and AI preparation
+   are disabled, including at the API.
+
+Only four exact queries are replayed: `a red car`, `a person walking`, `a person lying on the floor`,
+and `fire and smoke`. The results were recorded earlier; they are not new model predictions.
+Uploaded videos can be locally indexed but are not in these recorded results. Each launcher
+run uses a new folder and fresh investigations. Export your work before stopping, and retain
+its printed workspace path if you need the raw local data. `--workspace` accepts a new empty
+folder only and never overwrites an existing rehearsal.
+
+The browser extension may refuse automated file selection unless it has file-URL access.
+Manual local upload still works; this setting is unrelated to TanyaCCTV or Gemini. The current
+Mac verification covered upload/indexing through the API rather than changing extension access.
+
 ## One-time preparation
 
 1. **Check the setup.** This is read-only and never shows the key:

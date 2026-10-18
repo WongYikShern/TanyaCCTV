@@ -23,6 +23,28 @@ review. Telegram alerts and monitoring rules remain future work.
 - [Validating on real CCTV](docs/cctv-accuracy-checklist.md)
 - [Handover notes](docs/continue-work.md) and [Phases 6–9 progress](docs/progress.md)
 
+## Offline hackathon demonstration (no Gemini calls)
+
+To rehearse with synthetic footage and recorded search results, stop any existing website and run:
+
+```bash
+.venv/bin/python backend/scripts/run_offline_demo.py
+```
+
+On Windows use `.\.venv\Scripts\python.exe backend\scripts\run_offline_demo.py`.
+Open **http://localhost:5001/**. The banner says **OFFLINE REPLAY DEMO**. Search examples are
+exactly `a red car`, `a person walking`, `a person lying on the floor`, and `fire and smoke`.
+You can create investigations, save searches, add evidence, seek, record decisions, and export
+HTML/JSON reports. Unknown queries return an explanatory error. Image checking and AI
+preparation are blocked by the server, even if an API key exists in the parent environment.
+This is a workflow demonstration, not a fresh AI measurement.
+
+A new temporary workspace is printed at startup; your real library and `.env` stay untouched.
+Each launch starts a fresh workspace, so export reports before stopping. To choose where the
+new demo data is saved, add `--workspace /path/to/new-empty-folder`. Non-empty folders are
+refused. H.264 generation uses a local FFmpeg when available (including the copy inside
+`.venv/sentry`); otherwise frame review still works. See [demo guide](docs/demo.md).
+
 ## Local website (macOS / Linux)
 
 Run these commands from the project folder:
