@@ -117,6 +117,19 @@ already provides `google-genai`; no extra backend dependency is required.
 The model can be set with `TANYA_VERIFY_MODEL` (default `gemini-3.8-flash`). The default was
 checked for API availability; other models need separate compatibility and cost validation.
 
+### Save your own search reviews
+
+Each result has **Correct**, **Wrong**, and **Unsure** buttons answering whether that clip
+matches the original query. Reviews save locally in `search_feedback.db` beside your video
+index; choosing again updates the same query/window/mode review. This does not retrain the AI
+or change search results. Reviews remain after restarting the website, although new result
+cards do not preload previous selections.
+
+Select **Export my search reviews (CSV)** to download queries, video filenames, time windows,
+search mode, assessment and review time. Review the file before sharing; it may contain
+private descriptions or filenames. The feedback database is ignored by Git. Exported text
+cells that could be spreadsheet formulas are escaped. Empty exports include the column names.
+
 ## Project layout
 
 ```

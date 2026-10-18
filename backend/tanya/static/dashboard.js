@@ -116,13 +116,13 @@ $("search-form").onsubmit=async event=>{
       $("results").append(element("p",`${data.visual_review.sampled_frames} images checked from ${data.visual_review.checked_candidates} retrieved windows.`,"muted"));
     }
     if(!data.hits.length)$("results").append(element("p",visual ? "No visually supported match in the checked samples. "+(data.unclear_hits?.length ? "Review unclear candidates below. " : "")+"This does not prove the event is absent from the recording." : "No ranked clips returned from your indexed library.","muted"));
-    for(const hit of data.hits)$("results").append(resultCard(hit));
+    for(const hit of data.hits)$("results").append(resultCard(hit, data.query, visual));
     for(const [key,title] of [["unclear_hits","Unclear or not checked — review manually"],["rejected_hits","Not supported by sampled images"]]){
-      if(data[key]?.length){const details=element("details");details.append(element("summary",`${title} (${data[key].length})`));for(const hit of data[key])details.append(resultCard(hit));$("results").append(details);}
+      if(data[key]?.length){const details=element("details");details.append(element("summary",`${title} (${data[key].length})`));for(const hit of data[key])details.append(resultCard(hit, data.query, visual));$("results").append(details);}
     }
   }catch(error){$("results").replaceChildren(element("p",error.message+" No visual result was confirmed.","warning"));}finally{$("visual-consent").checked=false;busy(false);}
 };
-function resultCard(hit){
+function resultCard(hit, query, visual){
   const card=element("article",undefined,"result");
   if(hit.thumbnail_url){const img=element("img");img.src=hit.thumbnail_url;img.alt=`Candidate frame from ${hit.filename}`;card.append(img);}
   const info=element("div"),review=hit.visual_review;
@@ -134,7 +134,21 @@ function resultCard(hit){
     info.append(element("p","Sampled times: "+(review.sampled_timestamps.map(time).join(", ") || "none"),"muted"));
     for(const t of review.evidence_timestamps){const button=element("button",`Review evidence at ${time(t)}`);button.className="secondary evidence";button.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,t,hit.end_sec);info.append(button);}
   }
-  const button=element("button","Review clip →");button.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,hit.start_sec,hit.end_sec);info.append(button);card.append(info);return card;
+  const button=element("button","Review clip →");button.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,hit.start_sec,hit.end_sec);info.append(button);
+  const feedback=element("div",undefined,"review-feedback");
+  feedback.append(element("p","Does this clip match your search? Your review stays on this computer."));
+  const saved=element("span","","muted");saved.setAttribute("role","status");
+  const buttons=[];
+  for(const [value,label] of [["correct","Correct"],["wrong","Wrong"],["unsure","Unsure"]]){
+    const choice=element("button",label,"secondary");choice.type="button";choice.setAttribute("aria-pressed","false");buttons.push(choice);
+    choice.onclick=async()=>{
+      buttons.forEach(b=>b.disabled=true);saved.textContent="Saving…";
+      try{await api("/api/feedback",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,video_id:hit.video_id,start_sec:hit.start_sec,end_sec:hit.end_sec,search_mode:visual?"visual":"ranked",assessment:value})});
+        buttons.forEach(b=>b.setAttribute("aria-pressed",String(b===choice)));saved.textContent=`Saved: ${label}.`;
+      }catch(error){saved.textContent=error.message;}finally{buttons.forEach(b=>b.disabled=false);}
+    };feedback.append(choice);
+  }
+  feedback.append(saved);info.append(feedback);card.append(info);return card;
 }
 Promise.all([library(),status()]).catch(error=>notice(error.message));
 

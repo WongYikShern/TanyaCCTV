@@ -8,6 +8,7 @@ import threading
 import uuid
 import hashlib
 import json
+import math
 
 from flask import Flask, abort, jsonify, render_template, request, send_file, session, url_for
 from werkzeug.exceptions import HTTPException
@@ -20,6 +21,7 @@ from .sentry_client import SearchError, redact
 from . import sentry_client
 from .search_sync import build_plan, load_manifest, apply_plan, sentry_cli_command
 from .visual_review import review_results
+from . import feedback
 
 
 def create_app(settings=None, search_settings=None):
@@ -209,6 +211,36 @@ def create_app(settings=None, search_settings=None):
             hit["video_url"] = url_for("video_file", video_id=hit["video_id"])
             hit["thumbnail_url"] = url_for("frame_file", rel=hit["thumbnail"]) if hit["thumbnail"] else None
         return jsonify(result)
+
+    @app.post("/api/feedback")
+    def save_feedback():
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            abort(400, description="Send a review object.")
+        query = data.get("query")
+        if not isinstance(query, str) or not 1 <= len(query.strip()) <= 500:
+            abort(400, description="A review needs its original search query.")
+        if data.get("assessment") not in ("correct", "wrong", "unsure") or data.get("search_mode") not in ("visual", "ranked"):
+            abort(400, description="Choose Correct, Wrong, or Unsure for a valid search mode.")
+        if type(data.get("video_id")) is not int:
+            abort(400, description="Choose an indexed video.")
+        videos = rows("SELECT filename,duration_sec FROM videos WHERE id=?", (data["video_id"],))
+        if not videos:
+            abort(404, description="This video is no longer indexed.")
+        start, end = data.get("start_sec"), data.get("end_sec")
+        if (any(type(t) not in (int, float) or not math.isfinite(t) for t in (start, end))
+                or not 0 <= start < end <= (videos[0]["duration_sec"] or 0)):
+            abort(400, description="Review times must be inside the indexed video.")
+        feedback.save(settings.db_path.with_name("search_feedback.db"), dict(
+            query=redact(query.strip()), video_id=data["video_id"], filename=videos[0]["filename"],
+            start_sec=start, end_sec=end, search_mode=data["search_mode"], assessment=data["assessment"]))
+        return jsonify(ok=True)
+
+    @app.get("/api/feedback/export")
+    def export_feedback():
+        return app.response_class(feedback.export_csv(settings.db_path.with_name("search_feedback.db")),
+            mimetype="text/csv", headers={"Content-Disposition": 'attachment; filename="search-feedback.csv"',
+                                          "Cache-Control": "no-store"})
 
     def current_plan():
         if not settings.db_path.exists():

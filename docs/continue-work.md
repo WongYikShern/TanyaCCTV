@@ -43,8 +43,22 @@ All underlying result statuses remain uncertain. Missing frames or malformed out
 be turned into supported matches. Unchecking image checking retains the old ranking-only flow.
 
 Files: `backend/tanya/visual_review.py`, `search_engine/visual_review_bridge.py`, web routes,
-dashboard UI, and regression tests. Offline suite: **151 passed, 4 skipped**. The skipped tests
+dashboard UI, and regression tests. Offline suite: **163 passed, 4 skipped**. The skipped tests
 need the original synthetic trial index. Browser consent controls were checked.
+
+## Latest addition: local search feedback
+
+Correct/Wrong/Unsure buttons now save the original query, indexed filename, video id, window,
+search mode and UTC review time in `search_feedback.db` beside the index. A repeated choice
+updates the same query/window/mode record. CSV export is available even before any reviews.
+Reviews do not retrain the AI; new cards do not preload old selections. No new Google calls
+were made for this work. No new footage has been supplied. Key replacement is still unverified.
+
+Validation: offline persistence/update/CSV and invalid-input checks; browser saved Correct,
+changed to Wrong and downloaded CSV using an isolated synthetic fixture. The real four-video
+application was restored afterward. All data from that UI fixture stayed outside the real
+library. See README for use. Next: get real authorised footage, verify private key rotation,
+and have the teammate review PR #2. Do not merge automatically.
 
 ## Earlier limited single-frame checks
 

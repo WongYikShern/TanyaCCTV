@@ -208,3 +208,45 @@ def test_visual_search_samples_and_serves_all_review_groups(web, monkeypatch):
         assert hit["status"] == "uncertain"
         assert client.get(hit["thumbnail_url"]).status_code == 200
         assert client.get(hit["video_url"], headers={"Range": "bytes=0-9"}).status_code == 206
+
+
+def test_feedback_persists_updates_and_exports_without_changing_index(web):
+    import csv
+    from io import StringIO
+    from tanya.web import create_app
+    client, headers, ws = web
+    assert len(list(csv.reader(StringIO(client.get('/api/feedback/export').text)))) == 1
+    make_video(ws.video_dir / 'camera.mp4', seconds=3)
+    ws.run()
+    video = ws.videos()[0]
+    original = ws.db_path.read_bytes()
+    review = dict(query='=HYPERLINK("bad")', video_id=video['id'], start_sec=0, end_sec=3,
+                  search_mode='visual', assessment='correct')
+    assert client.post('/api/feedback', json=review).status_code == 403
+    assert client.post('/api/feedback', headers=headers, json=review).json == {'ok': True}
+    review['assessment'] = 'wrong'
+    assert client.post('/api/feedback', headers=headers, json=review).status_code == 200
+    # A new app instance still sees the saved review, with updates replacing duplicates.
+    other = create_app(ws.settings(), SearchSettings(None, ws.video_dir / 'bridge.py')).test_client()
+    response = other.get('/api/feedback/export')
+    records = list(csv.DictReader(StringIO(response.text)))
+    assert len(records) == 1 and records[0]['assessment'] == 'wrong'
+    assert records[0]['query'].startswith("'=")
+    assert records[0]['filename'] == 'camera.mp4'
+    assert 'attachment' in response.headers['Content-Disposition']
+    assert ws.db_path.read_bytes() == original
+
+
+@pytest.mark.parametrize('change', [dict(query=''), dict(query=[]), dict(assessment=[]),
+    dict(assessment='confirmed'), dict(search_mode='other'), dict(video_id=True),
+    dict(start_sec=-1), dict(end_sec=99), dict(start_sec=2, end_sec=1),
+    dict(start_sec=float('nan')), dict(end_sec=float('inf'))])
+def test_invalid_feedback_is_not_saved(web, change):
+    client, headers, ws = web
+    make_video(ws.video_dir / 'camera.mp4', seconds=3)
+    ws.run()
+    review = dict(query='person', video_id=ws.videos()[0]['id'], start_sec=0, end_sec=3,
+                  search_mode='visual', assessment='unsure')
+    review.update(change)
+    assert client.post('/api/feedback', headers=headers, json=review).status_code == 400
+    assert not ws.db_path.with_name('search_feedback.db').exists()
