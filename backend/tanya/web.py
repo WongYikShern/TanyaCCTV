@@ -19,6 +19,7 @@ from .search import search_videos
 from .sentry_client import SearchError, redact
 from . import sentry_client
 from .search_sync import build_plan, load_manifest, apply_plan, sentry_cli_command
+from .visual_review import review_results
 
 
 def create_app(settings=None, search_settings=None):
@@ -183,6 +184,11 @@ def create_app(settings=None, search_settings=None):
         query = data.get("query", "")
         if not isinstance(query, str) or not 1 <= len(query.strip()) <= 500:
             abort(400, description="Enter a description between 1 and 500 characters.")
+        visual_check = data.get("visual_check", False)
+        if type(visual_check) is not bool:
+            abort(400, description="visual_check must be true or false.")
+        if visual_check and data.get("approve_frame_upload") is not True:
+            abort(400, description="Approve sending sampled frames to Google before visual checking.")
         if not lock.acquire(blocking=False):
             abort(409, description="Wait for local indexing to finish before searching.")
         try:
@@ -193,11 +199,13 @@ def create_app(settings=None, search_settings=None):
                                           + ", ".join(coverage["needs_preparation"])
                                           + ". Review the AI indexing plan to include them.")
             result["coverage"] = coverage
+            if visual_check:
+                result = review_results(result, settings, search_settings)
         except (SearchError, ValueError) as error:
             return jsonify(error=redact(str(error))), 503
         finally:
             lock.release()
-        for hit in result["hits"]:
+        for hit in result["hits"] + result.get("unclear_hits", []) + result.get("rejected_hits", []):
             hit["video_url"] = url_for("video_file", video_id=hit["video_id"])
             hit["thumbnail_url"] = url_for("frame_file", rel=hit["thumbnail"]) if hit["thumbnail"] else None
         return jsonify(result)

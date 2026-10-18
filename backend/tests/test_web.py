@@ -151,3 +151,26 @@ def test_search_warns_that_new_uploads_are_missing_from_ai_search(web, monkeypat
     assert response.json["coverage"]["needs_preparation"] == ["new_upload.mp4"]
     assert "new_upload.mp4" in response.json["warnings"][0]
     assert "Review the AI indexing plan" in response.json["warnings"][0]
+
+
+def test_visual_search_requires_specific_consent_before_any_query(web, monkeypatch):
+    client, headers, ws = web
+    def forbidden(*args):
+        pytest.fail("No search or image request is allowed before consent")
+    monkeypatch.setattr("tanya.web.search_videos", forbidden)
+    for data in ({"query": "black shirt", "visual_check": True},
+                 {"query": "black shirt", "visual_check": True, "approve_frame_upload": "yes"},
+                 {"query": "black shirt", "visual_check": "true"}):
+        assert client.post("/api/search", headers=headers, json=data).status_code == 400
+
+
+def test_visual_search_failure_does_not_fall_back_to_ranked_matches(web, monkeypatch):
+    from tanya.sentry_client import SearchError
+    client, headers, ws = web
+    monkeypatch.setattr("tanya.web.search_videos", lambda *args: SearchResponse("black shirt", []))
+    def failed(*args):
+        raise SearchError("Visual checker unavailable")
+    monkeypatch.setattr("tanya.web.review_results", failed)
+    response = client.post("/api/search", headers=headers,
+                           json={"query": "black shirt", "visual_check": True, "approve_frame_upload": True})
+    assert response.status_code == 503 and "hits" not in response.json

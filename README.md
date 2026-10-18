@@ -82,6 +82,39 @@ CCTV validation is still pending.
 The existing CLI-generated HTML review pages use local file links and should be opened
 directly from disk. The new dashboard serves its own media URLs with video byte-range support.
 
+### Check visual evidence after search
+
+**Experimental; live validation is pending.** Initial visual requests were rejected because
+the first model was unavailable to this account. The current default passed a text-only model
+access check, but its image-review path still needs live testing. See [current handoff](docs/continue-work.md).
+
+The website defaults to **Search & check matches**. This first retrieves ranked windows, then
+uses Gemini 3.8 Flash to review up to six extracted images from each of the first five windows.
+For each search, tick the approval box to send those images and your query to Google. This
+adds API usage and may incur charges; free-tier data use follows Google's applicable terms.
+Changing the query or finishing a search resets approval. No visual request is sent without it.
+
+- **AI-supported candidate:** sampled images support the visible description; still requires
+  human review and keeps the underlying `uncertain` status.
+- **Unclear:** an attribute is hidden/ambiguous, frames are unavailable, or a window is beyond
+  the first five checked candidates. These remain available in a separate review section.
+- **Not supported:** the sampled images do not support the description. These are separated
+  from the candidate matches and can be inspected with the model's explanation.
+
+Evidence buttons open the video at a sampled timestamp. A black hoodie/jacket is not silently
+treated as evidence of a black shirt hidden underneath. If no candidate is supported, the page
+says no visually supported match was found **in the samples**, not that the event is absent.
+Checker failures return an error instead of silently displaying rankings as checked matches.
+
+Uncheck image checking for **Search ranked clips** (the original behaviour, also retained by
+the CLI). Rankings alone can include unrelated footage. This feature is a sampled-image
+review aid, not a trained clothing detector, continuous video analysis, or a bounding-box
+tracker. Model errors and missed events remain possible. The separate search environment
+already provides `google-genai`; no extra backend dependency is required.
+
+The model can be set with `TANYA_VERIFY_MODEL` (default `gemini-3.8-flash`). The default was
+checked for API availability; other models need separate compatibility and cost validation.
+
 ## Project layout
 
 ```

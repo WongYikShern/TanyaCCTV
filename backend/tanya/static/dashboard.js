@@ -24,13 +24,20 @@ async function status() {
   updateControls();
 }
 function updateControls() {
-  $("search-button").disabled=operationRunning || !connection?.search_ready || !connection?.coverage.prepared.length;
+  const visual=$("visual-check").checked;
+  $("search-button").disabled=operationRunning || !connection?.search_ready || !connection?.coverage.prepared.length || (visual && !$("visual-consent").checked);
+  $("search-button").textContent=visual ? "Search & check matches ↗" : "Search ranked clips ↗";
+  $("visual-consent-panel").hidden=!visual;
+  $("visual-check").disabled=operationRunning;$("visual-consent").disabled=operationRunning;$("query").disabled=operationRunning;
   $("plan-button").disabled=operationRunning || !connection?.engine_ready;
   $("sync-button").disabled=operationRunning || !planHasChanges;
   $("index-button").disabled=operationRunning;
   $("upload-button").disabled=operationRunning;
 }
 function busy(value) { operationRunning=value;updateControls(); }
+$("visual-check").onchange=()=>{$("visual-consent").checked=false;updateControls();};
+$("visual-consent").onchange=updateControls;
+$("query").addEventListener("input",()=>{$("visual-consent").checked=false;updateControls();});
 async function library() {
   const {videos}=await api("/api/videos");
   $("video-count").textContent=videos.length;
@@ -95,22 +102,40 @@ $("upload-form").onsubmit=async event=>{
   catch(error){notice(error.message);}finally{busy(false);}
 };
 $("search-form").onsubmit=async event=>{
-  event.preventDefault();busy(true);$("results").replaceChildren(element("p","Searching prepared videos only…","muted"));
+  event.preventDefault();
+  const visual=$("visual-check").checked, approved=$("visual-consent").checked;
+  if(visual && !approved){notice("Approve the sampled-frame check, or uncheck image checking to see rankings only.");return;}
+  busy(true);$("results").replaceChildren(element("p",visual ? "Retrieving candidates and checking their sampled images… This can take a few minutes." : "Searching prepared videos only…","muted"));
   try{
-    const data=await api("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:$("query").value})});
+    const data=await api("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:$("query").value,visual_check:visual,approve_frame_upload:approved})});
     $("results").replaceChildren(element("p",data.note,"muted"));
-    $("results").append(element("p","Nearest clips can appear even when the described event is absent. Check the video before deciding that a result matches.","warning"));
+    $("results").append(element("p",visual ? "AI-supported candidates are based only on sampled images. They can be wrong and are not confirmed detections." : "Rankings only: nearest clips can appear even when the described event is absent. No image matching check was performed.","warning"));
     for(const warning of data.warnings)$("results").append(element("p",warning,"warning"));
-    if(!data.hits.length)$("results").append(element("p","No matching clips in your indexed TanyaCCTV library. Check that your footage has been added to the AI search index.","muted"));
-    for(const hit of data.hits){
-      const card=element("article",undefined,"result");
-      if(hit.thumbnail_url){const img=element("img");img.src=hit.thumbnail_url;img.alt=`Matched frame from ${hit.filename}`;card.append(img);}
-      const info=element("div");info.append(element("h3",hit.filename),element("span","Unverified · human review required","badge"));
-      info.append(element("p",`${time(hit.start_sec)}–${time(hit.end_sec)} · Ranking score ${hit.best_score.toFixed(3)} (not a probability)`));
-      const button=element("button","Review clip →");button.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,hit.start_sec,hit.end_sec);info.append(button);card.append(info);$("results").append(card);
+    if(data.visual_review){
+      $("results").append(element("h3",`${data.visual_review.supported} supported · ${data.visual_review.unclear} unclear · ${data.visual_review.rejected} not supported`));
+      $("results").append(element("p",`${data.visual_review.sampled_frames} images checked from ${data.visual_review.checked_candidates} retrieved windows.`,"muted"));
     }
-  }catch(error){$("results").replaceChildren(element("p",error.message,"warning"));}finally{busy(false);}
+    if(!data.hits.length)$("results").append(element("p",visual ? "No visually supported match in the checked samples. Review unclear candidates below; this does not prove the event is absent from the recording." : "No ranked clips returned from your indexed library.","muted"));
+    for(const hit of data.hits)$("results").append(resultCard(hit));
+    for(const [key,title] of [["unclear_hits","Unclear or not checked — review manually"],["rejected_hits","Not supported by sampled images"]]){
+      if(data[key]?.length){const details=element("details");details.append(element("summary",`${title} (${data[key].length})`));for(const hit of data[key])details.append(resultCard(hit));$("results").append(details);}
+    }
+  }catch(error){$("results").replaceChildren(element("p",error.message+" No visual result was confirmed.","warning"));}finally{$("visual-consent").checked=false;busy(false);}
 };
+function resultCard(hit){
+  const card=element("article",undefined,"result");
+  if(hit.thumbnail_url){const img=element("img");img.src=hit.thumbnail_url;img.alt=`Candidate frame from ${hit.filename}`;card.append(img);}
+  const info=element("div"),review=hit.visual_review;
+  const labels={supported:"AI-supported candidate · human review required",not_supported:"Not supported in samples",unclear:"Unclear · manual review needed"};
+  info.append(element("h3",hit.filename),element("span",review ? labels[review.verdict] : "Ranked candidate · not visually checked","badge"));
+  info.append(element("p",`${time(hit.start_sec)}–${time(hit.end_sec)} · Ranking score ${hit.best_score.toFixed(3)} (not a probability)`));
+  if(review){
+    info.append(element("p",review.reason));
+    info.append(element("p","Sampled times: "+(review.sampled_timestamps.map(time).join(", ") || "none"),"muted"));
+    for(const t of review.evidence_timestamps){const button=element("button",`Review evidence at ${time(t)}`);button.className="secondary evidence";button.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,t,hit.end_sec);info.append(button);}
+  }
+  const button=element("button","Review clip →");button.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,hit.start_sec,hit.end_sec);info.append(button);card.append(info);return card;
+}
 Promise.all([library(),status()]).catch(error=>notice(error.message));
 
 $("plan-button").onclick=async()=>{
