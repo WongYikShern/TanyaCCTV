@@ -15,7 +15,8 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 
 from .config import SUPPORTED_EXTENSIONS, SEARCHABLE_EXTENSIONS, load_settings, load_search_settings
-from .indexer import Indexer, sha256_file
+from .indexer import Indexer, scan_video_dir, sha256_file
+from . import playback
 from .search import search_videos
 from .sentry_client import SearchError, redact
 from . import sentry_client
@@ -144,6 +145,35 @@ def create_app(settings=None, search_settings=None):
         return jsonify(engine_ready=engine, key_ready=key, search_ready=engine and key,
                        busy=lock.locked(), max_upload_mb=512, coverage=search_coverage())
 
+    playback_dir = settings.db_path.with_name("playback")
+
+    def source_path(video):
+        """The original recording's path, or None if it is missing or outside the video folder."""
+        root = settings.video_dir.resolve()
+        path = (root / video["rel_path"]).resolve()
+        return path if path.is_relative_to(root) and path.is_file() else None
+
+    def playback_info(video):
+        """How the browser can play this recording. Never modifies anything."""
+        source = source_path(video)
+        if source is None:
+            return {"status": "missing", "url": None, "codec": None, "codec_name": None,
+                    "message": "The original file is no longer in the video folder. Restore it, or re-index "
+                               "to update the library."}
+        code = playback.codec_of(source)
+        info = {"codec": code, "codec_name": playback.codec_name(code)}
+        if playback.browser_playable(source, code):
+            return dict(info, status="playable", url=url_for("video_file", video_id=video["id"]), message=None)
+        if playback.copy_path(playback_dir, video["sha256"]).is_file():
+            return dict(info, status="copy_ready", url=url_for("playback_file", video_id=video["id"]),
+                        message=f"Playing a browser copy; the original uses {info['codec_name']}.")
+        container = source.suffix.lower()
+        reason = (f"{container.upper().lstrip('.')} files" if container not in playback.BROWSER_CONTAINERS
+                  else f"{info['codec_name']} video")
+        return dict(info, status="needs_copy", url=None,
+                    message=f"Browsers cannot play {reason}. A browser-playable copy can be made on this "
+                            "computer (the original is not changed).")
+
     @app.get("/api/videos")
     def videos():
         result = rows("SELECT * FROM videos ORDER BY id DESC")
@@ -154,7 +184,53 @@ def create_app(settings=None, search_settings=None):
                          (video["id"],))
             video["thumbnail_url"] = url_for("frame_file", rel=frame[0]["image_path"]) if frame else None
             video["video_url"] = url_for("video_file", video_id=video["id"])
-        return jsonify(videos=result)
+            video["playback"] = playback_info(video)
+        # Files already in the video folder but not yet indexed would otherwise be invisible.
+        known = {v["rel_path"] for v in result}
+        waiting, unsupported = [], []
+        try:
+            supported, other, _outside = scan_video_dir(settings.video_dir)
+            root = settings.video_dir.resolve()
+            waiting = [p.relative_to(root).as_posix() for p in supported if p.relative_to(root).as_posix() not in known]
+            unsupported = [p.relative_to(root).as_posix() for p in other]
+        except (OSError, ValueError):
+            pass
+        return jsonify(videos=result, waiting_files=waiting, unsupported_files=unsupported)
+
+    @app.get("/api/videos/<int:video_id>/playback")
+    def video_playback(video_id):
+        video = rows("SELECT id, sha256, rel_path, filename, duration_sec FROM videos WHERE id=?", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        info = playback_info(video[0])
+        if info["status"] == "needs_copy":
+            info["ffmpeg_available"] = playback.find_ffmpeg(search_settings.sentry_python) is not None
+        return jsonify(info)
+
+    @app.post("/api/videos/<int:video_id>/playback-copy")
+    def make_playback_copy(video_id):
+        video = rows("SELECT id, sha256, rel_path, filename, duration_sec FROM videos WHERE id=?", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        video = video[0]
+        info = playback_info(video)
+        if info["status"] != "needs_copy":
+            return jsonify(info)
+        ffmpeg = playback.find_ffmpeg(search_settings.sentry_python)
+        if not ffmpeg:
+            abort(503, description="FFmpeg was not found, so a browser copy cannot be made. Install FFmpeg (or set "
+                                   "TANYA_FFMPEG / TANYA_SENTRY_PYTHON), or convert the video to H.264 MP4. The "
+                                   "extracted frames below can still be reviewed.")
+        if not lock.acquire(blocking=False):
+            abort(409, description="Another operation is running. Try again when it finishes.")
+        try:
+            playback.make_copy(source_path(video), playback.copy_path(playback_dir, video["sha256"]), ffmpeg,
+                               video["duration_sec"])
+        except playback.PlaybackError as error:
+            return jsonify(error=str(error)), 500
+        finally:
+            lock.release()
+        return jsonify(playback_info(video))
 
     @app.get("/api/videos/<int:video_id>/frames")
     def frames(video_id):
@@ -182,6 +258,14 @@ def create_app(settings=None, search_settings=None):
         if not video:
             abort(404)
         return send_file(media_path(settings.video_dir, video[0]["rel_path"]), conditional=True)
+
+    @app.get("/media/playback/<int:video_id>")
+    def playback_file(video_id):
+        video = rows("SELECT sha256 FROM videos WHERE id=?", (video_id,))
+        if not video:
+            abort(404)
+        return send_file(media_path(playback_dir, f"{video[0]['sha256']}.mp4"), conditional=True,
+                         mimetype="video/mp4")
 
     @app.post("/api/upload")
     def upload():
@@ -447,7 +531,8 @@ def create_app(settings=None, search_settings=None):
         # Mirror the decision into search feedback so result cards show it ("Your earlier review").
         current = library_by_sha().get(updated["video_sha256"])
         warning = None
-        if data.get("decision") and current and updated["end_sec"] <= (current["duration_sec"] or 0):
+        if (data.get("decision") and current and updated["search_mode"] != "manual"
+                and updated["end_sec"] <= (current["duration_sec"] or 0)):
             try:
                 feedback.save(feedback_path(), dict(
                     query=updated["query"], video_id=current["id"], filename=current["filename"],

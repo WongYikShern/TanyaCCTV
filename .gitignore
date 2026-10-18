@@ -20,6 +20,7 @@ data/videos/*
 !data/videos/.gitkeep
 data/frames/*
 !data/frames/.gitkeep
+data/playback/
 *.db
 data/search_index_manifest.json
 data/*.html

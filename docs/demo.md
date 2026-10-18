@@ -44,7 +44,7 @@ folder. On macOS/Linux, use `.venv/bin/python` instead.
    Open http://localhost:5001/ and select **Index local videos**. Frames are extracted locally,
    in seconds.
 
-4. **Prepare AI search (needs approval, costs money).** Select **Review AI indexing plan**. For
+4. **Prepare AI search (needs approval, costs money).** On **System & AI setup**, select **Review AI indexing plan**. For
    the two demo clips it should list 2 videos and about 122 frames, which is about **US$0.10** on
    the paid tier (an estimate, not a spending cap). This sends the video to Google. Tick the
    approval box and select **Prepare AI search** only if you accept that. Do it once, well
@@ -65,7 +65,7 @@ folder. On macOS/Linux, use `.venv/bin/python` instead.
 | 2. Check readiness | Show the badges **Frames ready** and **AI prepared**, and the search panel's coverage line. | Extracting frames and preparing AI search are separate, explicit steps. |
 | 3. Search | Untick image checking, then search **a red car**. | Ranked mode sends only the query text to Google. |
 | 4. Ranked results | Point at **cam2_carpark.mp4, 0:16–0:40**, the "Ranked candidate · not visually checked" and "Not yet reviewed by a person" badges, and "Ranking score … (not a probability)". | Lower cards (for example the empty car park at 0:00–0:18) show that nearest neighbours always appear. That's why nothing is auto-confirmed. |
-| 5. Open the footage | **Review clip →** opens the player at 0:16. | It plays the original recording, not a copy. |
+| 5. Open the footage | **Play from 0:16** opens the player at 0:16 with the result window shown. | It plays the original H.264 recording; other codecs get a local browser copy, the original is unchanged. |
 | 6. Inspect frames | Scroll the **Frame timeline** and select a frame to jump to it. | The extracted frames are the evidence a person checks. |
 | 7. Record a review | Select **Correct** on the car clip and **Wrong** on the empty car park. Run the same search again: the badges now read "Your earlier review: …". | Reviews are stored locally, don't retrain anything, and don't change ranking. |
 | 8. Export | **Export my search reviews (CSV)**. | Spreadsheet formulas in exported text are neutralised. Check the file before sharing it. |
@@ -103,10 +103,10 @@ A fresh index can differ slightly. See `docs/search-evaluation.md`.
 
 | Problem | What to do |
 |---|---|
-| "Setup needed" in the search panel | The key or search environment isn't visible to the website. Stop it, set both in the same PowerShell window, and start it again. Run `check_setup.py`. |
+| "AI search: setup needed" in the top bar | The key or search environment isn't visible to the website. Stop it, set both in the same PowerShell window, and start it again. Run `check_setup.py`. |
 | "Cannot start: 127.0.0.1:5001 is already in use" | A website is already running: open http://localhost:5001/, or close the other window. |
 | Search fails or times out (network) | Local features still work: library, frames, playback, reviews and export. Show the saved `data\demo_*.html` pages and `docs/search-evaluation.md` instead. |
-| The clip shows black / doesn't play | The video isn't H.264. Use the frame timeline, or regenerate the footage with FFmpeg available. |
+| The clip shows black / doesn't play | The video isn't H.264 and FFmpeg wasn't found for the browser copy. Set `TANYA_SENTRY_PYTHON` or `TANYA_FFMPEG`, or use the frame timeline. |
 | A video is listed as "AI preparation needed" | Review and approve the AI indexing plan (costs money), or demo only the prepared clips. |
 | "This investigation is closed" | Select **Reopen**: closed investigations are read-only on purpose. |
 | A clip says **SOURCE MISSING** | Its recording was deleted or moved out of the library. The reference is kept; restore the original file to review it. |

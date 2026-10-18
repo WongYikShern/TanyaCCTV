@@ -22,6 +22,8 @@ from pathlib import Path
 
 DECISIONS = ("correct", "wrong", "unsure")
 MODES = ("ranked", "visual")
+# Evidence can also be a moment an operator chose by hand in the video player (not a search result).
+EVIDENCE_MODES = MODES + ("manual",)
 VISUAL_VERDICTS = ("supported", "not_supported", "unclear")
 STATUSES = ("open", "closed")
 
@@ -316,8 +318,8 @@ class Store:
             raise InvestigationError("The clip must lie inside the recording.")
         query = _text(item.get("query"), "Query", 1, 500)
         mode = item.get("search_mode")
-        if mode not in MODES:
-            raise InvestigationError("Search mode must be ranked or visual.")
+        if mode not in EVIDENCE_MODES:
+            raise InvestigationError("Search mode must be ranked, visual or manual.")
         rank = item.get("rank")
         if rank is not None and (type(rank) is not int or rank < 1):
             raise InvestigationError("rank must be a positive integer.")

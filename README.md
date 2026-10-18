@@ -64,16 +64,17 @@ It checks Python, packages, data folders, the database, disk space, OneDrive, po
 pinned SentrySearch install and the key. Each problem comes with a "fix:" line. Exit code 1
 means something required is missing.
 
-Expected test result on Windows without SentrySearch configured (checked 18 October 2026):
-**279 passed, 8 skipped, 0 failed**. The skips are:
+Expected test result on Windows without SentrySearch configured (checked 19 October 2026):
+**295 passed, 10 skipped, 0 failed**. The skips are:
 
+- 2 playback-copy tests that need FFmpeg (on PATH, `TANYA_FFMPEG`, or bundled with SentrySearch).
 - 4 end-to-end tests that need `TANYA_SENTRY_PYTHON` and the synthetic SentrySearch trial index.
 - 1 setup check that needs `TANYA_SENTRY_PYTHON` (it verifies the pinned SentrySearch install).
 - 3 symlink tests. Windows refuses to create symlinks without Developer Mode or admin rights
   (`WinError 1314`). Directory-junction tests, which need no special rights, check the same
   "no escaping the video or frames folder" protections on Windows.
 
-With `TANYA_SENTRY_PYTHON` set and the trial index present, the result is 284 passed and
+With `TANYA_SENTRY_PYTHON` set and the trial index present, the result is 302 passed and
 3 skipped. On macOS/Linux, the 3 symlink tests run and the junction tests are skipped.
 
 **Semantic search on Windows** needs the separate Python 3.12 SentrySearch environment
@@ -105,13 +106,28 @@ says which video it matches and keeps no second copy. Only the newly uploaded co
 discarded; existing files are never touched. To create the synthetic demo footage, see the
 [demo guide](docs/demo.md).
 
-The dashboard offers:
+The dashboard has a sidebar with six pages (the address bar shows `#dashboard`, `#library`, …,
+so the browser Back button works):
 
-- Upload authorised footage (up to 512 MB per file), then extract frames locally.
-- Index videos copied directly into `data/videos` with **Index local videos**.
-- Browse the video library; select a video to play it and review its frame timeline.
-- Search prepared footage with natural language and open matching time windows for review.
-- Review an AI indexing plan before explicitly approving the Google transfer and API charges.
+- **Dashboard**: counts from the database (videos, frames ready, problems, files waiting to be
+  indexed, AI-prepared videos, investigations, unreviewed clips), recent recordings, recent
+  investigations and system status. Nothing is hard-coded; empty libraries show an empty state.
+- **Video Library**: upload authorised footage (up to 512 MB per file) and extract frames locally;
+  **Index local videos** for files copied into `data/videos` (files waiting to be indexed are
+  listed at the top); filter by name or status; each card shows frames, playback and AI status.
+- **Video player** (`#watch/<id>?t=<seconds>`): plays the recording, starts at a search result's
+  time, shows the result window, and has a frame timeline that seeks the video. **Add current
+  moment** saves the 10 seconds around the playback position to an investigation, labelled
+  "chosen manually in the video player (not a search result)".
+- **Search**: natural-language search of prepared footage, with example queries. Each result
+  opens the player at its timestamp and can be added to an investigation.
+- **Investigations**: evidence timeline, Correct / Wrong / Unsure decisions, notes, HTML and
+  JSON exports (see below).
+- **System & AI setup**: readiness, the AI indexing plan (review it before explicitly approving
+  the Google transfer and API charges) and the search-review CSV export.
+
+The blue top bar has a quick find for video and investigation names (it does not search inside
+footage; use **Search** for that).
 
 Each video has separate labels for **Frames ready** and **AI prepared**. Uploading/extracting
 frames does not prepare a video for semantic search. The search panel lists videos still
@@ -120,9 +136,17 @@ can have local frames but require conversion to MP4/MOV for this search engine. 
 label reflects the recorded content hash; if the shared SentrySearch index is changed outside
 TanyaCCTV, review the indexing plan to verify it again.
 
-H.264 MP4 is recommended for playback. Some video codecs (including the default synthetic
-`mp4v` sample) will not play in a browser; extracted images still work, and the original video
-can be downloaded. Original videos are never overwritten by uploads.
+**Playback.** Browsers play only H.264, VP8/VP9 or AV1 video in MP4/MOV/M4V files. Many CCTV
+exports, AVI/MKV files and the synthetic `make_test_video.py` sample (OpenCV `mp4v`, i.e.
+MPEG-4 Part 2) cannot play in a browser: the player stays black with "no supported streams".
+For those videos the player automatically makes a **browser copy**: an H.264 file in
+`data\playback\<sha256>.mp4`, written locally with FFmpeg. It is free, takes a few seconds per
+minute of footage, is used only for playback, and the original recording is never changed;
+search, investigations and reports keep referring to the original's content hash. FFmpeg is
+found from `TANYA_FFMPEG`, then `PATH`, then the copy bundled with the SentrySearch
+environment (`TANYA_SENTRY_PYTHON`). Without FFmpeg, the player explains what to install and
+the frame timeline still works. Delete `data\playback\` at any time to reclaim space.
+Original videos are never overwritten by uploads.
 
 This server binds only to `127.0.0.1:5001`. It is a local development workspace, with no user
 accounts; do not expose it publicly. Run only one website process and avoid running the CLI
@@ -149,7 +173,7 @@ Set `GEMINI_API_KEY` privately in your terminal or your ignored `.env` file, the
 website from that terminal. Never put the key in source code or commit it. See the existing
 “Natural-language search” section for privacy, indexing behaviour, and Windows setup.
 
-In the website, select **Review AI indexing plan**. Review its video list, removals and estimated
+In the website, open **System & AI setup** and select **Review AI indexing plan**. Review its video list, removals and estimated
 cost before approving **Prepare AI search**. Search preparation sends video to Google; local
 upload and frame extraction do not. The estimate is not a billing cap. Scores are ranking
 signals, not calibrated probabilities, and every result requires human review. Real authorised
@@ -351,7 +375,7 @@ FFmpeg does **not** need to be installed: OpenCV's wheel bundles its own decoder
 python -m pytest backend -v
 ```
 
-Expected on Windows: 279 passed, 8 skipped, 0 failed. Skips explained in
+Expected on Windows: 295 passed, 10 skipped, 0 failed. Skips explained in
 [Local website (Windows PowerShell)](#local-website-windows-powershell). Tests use temporary
 folders and synthetic videos; they never touch `data/`.
 
@@ -484,6 +508,8 @@ No secrets are needed for this milestone. `.env` is git-ignored; never commit se
 | A video shows **Failed: OpenCV could not open the file** | file is corrupt, still downloading/copying, or uses an unusual codec. Try re-exporting it as H.264 `.mp4` |
 | Lines like `moov atom not found` appear | harmless FFmpeg messages printed for corrupt files; the summary has the real result |
 | `PermissionError` / `[WinError 5]` / `[WinError 32]` on frames | another program (often **OneDrive** sync, antivirus or Explorer preview) is holding the files. Re-run the indexer (failed videos are retried). Because this project is in a OneDrive folder, consider pausing OneDrive while indexing or setting `TANYA_FRAMES_DIR` to a folder outside OneDrive |
+| Video is black / "cannot play this video format" in the website | the codec is not browser-playable and FFmpeg was not found for the browser copy. Install FFmpeg, set `TANYA_FFMPEG` to `ffmpeg.exe`, or set `TANYA_SENTRY_PYTHON`, then reopen the video. The frame timeline still works |
+| "The original file is no longer in the video folder" | the recording was moved or deleted. Restore it, or run **Index local videos** |
 | `database is locked` | close DB Browser / other scripts using `data\tanya.db`, and don't run two indexers at once |
 
 ### Using Python 3.12 (only if dependencies fail on your Python)
@@ -716,7 +742,7 @@ files and open without internet (the videos are local).
   re-indexing, which costs money), and keeps one index per Windows user, shared with other uses.
 - Search and indexing need internet and a Gemini key. On the free tier, Google may use the content.
 - The local Flask website/API is a development prototype, without accounts or production hosting.
-- In the browser, clips play only for browser-supported codecs (H.264).
+- In the browser, other codecs play through a local H.264 browser copy, which needs FFmpeg.
 
 ## Footage policy
 

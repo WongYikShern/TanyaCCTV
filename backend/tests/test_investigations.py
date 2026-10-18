@@ -453,3 +453,22 @@ def test_non_string_thumbnail_is_dropped_not_a_server_error(api, thumbnail):
     view = post(f"/api/investigations/{iid}/evidence", dict(video_id=videos["lobby.mp4"]["id"], start_sec=0, end_sec=4,
                                                             query="q", search_mode="ranked", thumbnail=thumbnail), expect=201)
     assert view["evidence"][0]["thumbnail"] is None
+
+
+def test_manual_moment_from_player_is_labelled_and_not_mirrored(api):
+    client, post, ws, videos = api
+    iid = post("/api/investigations", {"title": "Case"}, expect=201)["id"]
+    view = post(f"/api/investigations/{iid}/evidence", dict(video_id=videos["lobby.mp4"]["id"], start_sec=5, end_sec=15,
+                                                            query="Moment chosen in the video player",
+                                                            search_mode="manual"), expect=201)
+    ev = view["evidence"][0]
+    assert ev["search_mode"] == "manual" and ev["rank"] is None and ev["best_score"] is None
+    post(f"/api/investigations/{iid}/evidence/{ev['id']}/review", {"decision": "correct"})
+    assert not ws.db_path.with_name("search_feedback.db").exists()          # not mirrored into search reviews
+    report = post(f"/api/investigations/{iid}/report", {"format": "json"})
+    assert report["evidence"][0]["found_by"]["search_mode"] == "manual"
+    html = client.post(f"/api/investigations/{iid}/report", headers={"X-CSRF-Token": _token(client)},
+                       json={"format": "html"}).data.decode()
+    assert "chosen manually in the video player (not a search result)" in html
+    post(f"/api/investigations/{iid}/evidence", dict(video_id=videos["lobby.mp4"]["id"], start_sec=0, end_sec=2,
+                                                     query="q", search_mode="automatic"), expect=400)

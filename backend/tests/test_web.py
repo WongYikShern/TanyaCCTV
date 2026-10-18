@@ -81,9 +81,11 @@ def test_search_validation_unconfigured_and_translated_media_urls(web, monkeypat
 
 def test_empty_library_and_missing_media(web):
     client, _, _ = web
-    assert client.get("/api/videos").json == {"videos": []}
+    assert client.get("/api/videos").json == {"videos": [], "waiting_files": [], "unsupported_files": []}
     assert client.get("/api/videos/999/frames").status_code == 404
     assert client.get("/media/videos/999").status_code == 404
+    assert client.get("/media/playback/999").status_code == 404
+    assert client.get("/api/videos/999/playback").status_code == 404
     assert not client.get("/api/status").json["search_ready"]
 
 

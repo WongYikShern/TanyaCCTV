@@ -49,6 +49,7 @@ async function openCase(id) {
   if (activeCase.status === "open") $("save-to").value = String(id);
 }
 
+window.openInvestigation = id => openCase(id);
 window.refreshInvestigation = async function () {
   await loadInvestigations();
   if (activeCase) { activeCase = await api(`/api/investigations/${activeCase.id}`); renderCase(); }
@@ -56,7 +57,7 @@ window.refreshInvestigation = async function () {
 
 function renderCase() {
   const c = activeCase, open = c.status === "open";
-  $("case").hidden = false;
+  $("case").hidden = false; $("case-empty").hidden = true;
   $("case-title").textContent = c.title;
   $("case-description").textContent = c.description;
   $("case-status").textContent = open ? "OPEN INVESTIGATION" : "CLOSED · REOPEN TO MAKE CHANGES";
@@ -87,7 +88,7 @@ function renderQueries(c, open) {
       if ($("visual-check").checked !== (q.search_mode === "visual")) $("visual-check").click();
       $("save-to").value = String(c.id);
       updateControls();
-      $("search").scrollIntoView({behavior: "smooth"});
+      location.hash = "#search";
       notice(q.search_mode === "visual" ? "Tick the image-check approval, then search." : "Press search to run this saved query again.");
     };
     const remove = element("button", "Remove", "secondary");
@@ -124,7 +125,7 @@ function evidenceCard(e, open) {
   info.append(element("h3", e.current_filename && e.current_filename !== e.video_filename ? `${e.video_filename} (now ${e.current_filename})` : e.video_filename));
   info.append(element("span", category, "badge" + (e.decision ? "" : " pending")), element("span", sourceNames[e.source_status], "badge" + (e.source_status === "missing" ? " failed" : "")));
   info.append(element("p", `${time(e.start_sec)}–${time(e.end_sec)} in the recording` + (e.absolute_start ? ` · camera time ${e.absolute_start.replace("T", " ").slice(0, 19)}` : "")));
-  const how = `Found by “${e.query}” (${e.search_mode === "visual" ? "with image check" : "ranked"}${e.rank ? `, rank ${e.rank}` : ""}${e.best_score !== null ? `, ranking score ${e.best_score.toFixed(3)} — not a probability` : ""})` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "");
+  const how = e.search_mode === "manual" ? "Chosen manually in the video player (not a search result)" : `Found by “${e.query}” (${e.search_mode === "visual" ? "with image check" : "ranked"}${e.rank ? `, rank ${e.rank}` : ""}${e.best_score !== null ? `, ranking score ${e.best_score.toFixed(3)} — not a probability` : ""})` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "");
   info.append(element("p", how, "muted"));
   if (e.source_status === "missing") info.append(element("p", `The recording with content hash ${e.video_sha256.slice(0, 16)}… is no longer in the library. The reference is kept; restore the original file to review it.`, "warning"));
   if (e.video_url) {

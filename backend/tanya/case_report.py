@@ -160,7 +160,9 @@ def render_html(report: dict, frames_dir: Path | None = None) -> str:
                              "hash below — do not rely on it without checking the original</span>"}[src["status"]]
         if src.get("content_verified_at_export"):
             status += " · content verified against the hash at export"
-        found = (f"query “{escape(f['query'])}” ({escape(f['search_mode'])} search)"
+        found = ("chosen manually in the video player (not a search result)" if f["search_mode"] == "manual" else
+                 f"query “{escape(f['query'])}” ({escape(f['search_mode'])} search)")
+        found = (found
                  + (f", rank {f['rank']}" if f["rank"] else "")
                  + (f", ranking score {f['ranking_score']:.3f} (not a probability)" if f["ranking_score"] is not None else ""))
         if f["ai_image_check"]:
