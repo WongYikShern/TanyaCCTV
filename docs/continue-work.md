@@ -2,6 +2,8 @@
 
 ## Current checkpoint: macOS validation (19 October 2026)
 
+Review PR: https://github.com/WongYikShern/TanyaCCTV/pull/5 (open, not merged).
+
 Branch `feature/macos-workflow-validation`, based on merged main `4922b36` (PRs #2–#4 are
 already merged). Earlier checkpoint language about unpushed branches below is historical.
 
