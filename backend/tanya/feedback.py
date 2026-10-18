@@ -32,6 +32,32 @@ def save(path, review):
         conn.close()
 
 
+def lookup(path, query, search_mode, windows):
+    """Earlier human reviews for (query, mode) and the given (video_id, start, end) windows.
+
+    Read-only: never creates the database. Returns {(video_id, start, end): {assessment,
+    reviewed_at}}. Times are compared to the millisecond, as sent back by the dashboard.
+    """
+    if not path.exists() or not windows:
+        return {}
+    conn = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        found = {}
+        for video_id, start, end in windows:
+            row = conn.execute(
+                "SELECT assessment, reviewed_at FROM feedback WHERE query=? AND search_mode=? AND video_id=? "
+                "AND ROUND(start_sec, 3)=ROUND(?, 3) AND ROUND(end_sec, 3)=ROUND(?, 3)",
+                (query, search_mode, video_id, start, end)).fetchone()
+            if row:
+                found[(video_id, start, end)] = dict(row)
+        return found
+    except sqlite3.Error:
+        return {}  # an unreadable review file must never break searching
+    finally:
+        conn.close()
+
+
 def export_csv(path):
     output = io.StringIO(newline='')
     writer = csv.writer(output)

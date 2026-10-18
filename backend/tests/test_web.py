@@ -366,3 +366,90 @@ def test_video_and_frames_behind_a_junction_are_not_served(web, tmp_path):
     _set(ws, "UPDATE videos SET rel_path = ? WHERE id = ?", ("linked/outside.mp4", video_id))
     assert client.get(f"/media/videos/{video_id}").status_code == 404
     assert client.get("/media/frames/linked/private.jpg").status_code == 404
+
+
+# --------------------------------------------------------------------------- duplicate uploads
+
+
+def test_identical_upload_of_indexed_video_is_not_stored_twice(web, tmp_path):
+    client, headers, ws = web
+    source = make_video(tmp_path / "source.mp4", seconds=2)
+    first = client.post("/api/upload", headers=headers, data={
+        "authorized": "yes", "video": (BytesIO(source.read_bytes()), "lobby.mp4")})
+    assert first.status_code == 201
+    assert client.post("/api/index", headers=headers).status_code == 200
+    stored = ws.video_dir / first.json["filename"]
+    original = stored.read_bytes()
+
+    again = client.post("/api/upload", headers=headers, data={
+        "authorized": "yes", "video": (BytesIO(source.read_bytes()), "renamed copy.mp4")})
+    assert again.status_code == 200
+    assert again.json == {"filename": None, "duplicate_of": first.json["filename"]}
+    assert [p.name for p in ws.video_dir.iterdir()] == [first.json["filename"]]   # no second copy
+    assert stored.read_bytes() == original                                       # existing file untouched
+
+    different = make_video(tmp_path / "other.mp4", seconds=2, seed=7)
+    response = client.post("/api/upload", headers=headers, data={
+        "authorized": "yes", "video": (BytesIO(different.read_bytes()), "lobby.mp4")})
+    assert response.status_code == 201 and len(list(ws.video_dir.iterdir())) == 2
+
+
+# --------------------------------------------------------------------------- earlier human reviews on results
+
+
+@pytest.fixture
+def reviewed_search(web, monkeypatch):
+    client, headers, ws = web
+    make_video(ws.video_dir / "camera.mp4", seconds=6)
+    ws.run()
+    video = ws.videos()[0]
+    hits = [SearchHit(video["id"], "camera.mp4", "camera.mp4", 0, 3, .41, .1, [Chunk(1, 0, 3, .41, .1)]),
+            SearchHit(video["id"], "camera.mp4", "camera.mp4", 3, 6, .33, .02, [Chunk(2, 3, 6, .33, .02)])]
+    monkeypatch.setattr("tanya.web.search_videos", lambda q, *a: SearchResponse(q, [h for h in hits]))
+
+    def search(query="person", **extra):
+        response = client.post("/api/search", headers=headers, json={"query": query, **extra})
+        assert response.status_code == 200
+        return response.json["hits"]
+
+    def review(assessment, start=0, end=3, query="person", mode="ranked"):
+        assert client.post("/api/feedback", headers=headers, json=dict(
+            query=query, video_id=video["id"], start_sec=start, end_sec=end,
+            search_mode=mode, assessment=assessment)).status_code == 200
+    return search, review
+
+
+def test_results_start_unreviewed_and_show_the_earlier_review(reviewed_search):
+    search, review = reviewed_search
+    assert [h["human_review"] for h in search()] == [None, None]
+    review("wrong")
+    first, second = search()
+    assert first["human_review"]["assessment"] == "wrong" and first["human_review"]["reviewed_at"]
+    assert second["human_review"] is None                                  # a different window
+    review("correct")                                                      # changing it updates
+    assert search()[0]["human_review"]["assessment"] == "correct"
+
+
+def test_reviews_do_not_leak_across_queries_or_modes(reviewed_search):
+    search, review = reviewed_search
+    review("correct")
+    assert search("a different query")[0]["human_review"] is None
+    review("unsure", mode="visual")
+    assert search()[0]["human_review"]["assessment"] == "correct"          # ranked mode unchanged
+
+
+def test_reviews_never_change_ranking_scores_or_status(reviewed_search):
+    search, review = reviewed_search
+    before = [(h["start_sec"], h["best_score"], h["status"]) for h in search()]
+    review("wrong")
+    review("correct", start=3, end=6)
+    after = search()
+    assert [(h["start_sec"], h["best_score"], h["status"]) for h in after] == before
+    assert {h["status"] for h in after} == {"uncertain"}
+
+
+def test_unreadable_review_file_does_not_break_search(reviewed_search, web):
+    search, _ = reviewed_search
+    _, _, ws = web
+    (ws.db_path.with_name("search_feedback.db")).write_bytes(b"not a database" * 50)
+    assert [h["human_review"] for h in search()] == [None, None]

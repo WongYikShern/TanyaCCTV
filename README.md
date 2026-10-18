@@ -14,6 +14,14 @@ with Google's Gemini Embedding 2, in a separate Python 3.12 environment. See
 A local Flask website and API now provide video upload, frame browsing, and semantic-search
 review. Telegram alerts and monitoring rules remain future work.
 
+**Guides:**
+
+- [Demo guide](docs/demo.md): the 8-step demo with synthetic footage
+- [Search evaluation](docs/search-evaluation.md): measured ranking quality and its limits
+- [Performance](docs/performance.md): measured indexing and search times
+- [Validating on real CCTV](docs/cctv-accuracy-checklist.md)
+- [Handover notes](docs/continue-work.md)
+
 ## Local website (macOS / Linux)
 
 Run these commands from the project folder:
@@ -41,23 +49,36 @@ python -m venv .venv
 .\.venv\Scripts\python.exe backend\scripts\run_web.py
 ```
 
-Open **http://localhost:5001/** and keep PowerShell open; Ctrl+C stops the server.
+Open **http://localhost:5001/** and keep PowerShell open; Ctrl+C stops the server. On startup,
+the website prints whether the search engine was found and whether a key is set (never the key
+itself). If port 5001 is busy, it says so and exits instead of crashing.
+
+**Check your setup** at any time. This is read-only and shows only whether a key is set:
+
+```powershell
+.\.venv\Scripts\python.exe backend\scripts\check_setup.py
+```
+
+It checks Python, packages, data folders, the database, disk space, OneDrive, port 5001, the
+pinned SentrySearch install and the key. Each problem comes with a "fix:" line. Exit code 1
+means something required is missing.
 
 Expected test result on Windows without SentrySearch configured (checked 18 October 2026):
-**185 passed, 7 skipped, 0 failed**. The skips are:
+**227 passed, 8 skipped, 0 failed**. The skips are:
 
 - 4 end-to-end tests that need `TANYA_SENTRY_PYTHON` and the synthetic SentrySearch trial index.
+- 1 setup check that needs `TANYA_SENTRY_PYTHON` (it verifies the pinned SentrySearch install).
 - 3 symlink tests. Windows refuses to create symlinks without Developer Mode or admin rights
   (`WinError 1314`). Directory-junction tests, which need no special rights, check the same
   "no escaping the video or frames folder" protections on Windows.
 
-With `TANYA_SENTRY_PYTHON` set and the trial index present, the result is 189 passed and
+With `TANYA_SENTRY_PYTHON` set and the trial index present, the result is 232 passed and
 3 skipped. On macOS/Linux, the 3 symlink tests run and the junction tests are skipped.
 
 **Semantic search on Windows** needs the separate Python 3.12 SentrySearch environment
-(see [one-time setup](#one-time-setup-outside-this-project)). `run_web.py` automatically uses
-`.venv\sentry\Scripts\python.exe` if it exists. Otherwise, set the interpreter yourself before
-starting the website, for example for the setup used on the development laptop:
+(see [one-time setup](#one-time-setup-outside-this-project)). The website and the command-line
+tools automatically use `.venv\sentry\Scripts\python.exe` if it exists. Otherwise, set the
+interpreter yourself before starting, for example for the setup used on the development laptop:
 
 ```powershell
 $env:TANYA_SENTRY_PYTHON = "$HOME\sentrysearch-trial\tools\sentrysearch\Scripts\python.exe"
@@ -77,6 +98,11 @@ or a different terminal) do not see a key set in another PowerShell window.
 Uploaded file names in Chinese, Tamil or other non-Latin scripts are accepted. Characters
 that are unsafe in file names are removed; if nothing usable remains, the file is stored as
 `<random id>_video.<extension>`. The extension must still be MP4, MOV, AVI, MKV or M4V.
+
+If you upload a video whose content is identical to one already in the library, the website
+says which video it matches and keeps no second copy. Only the newly uploaded copy is
+discarded; existing files are never touched. To create the synthetic demo footage, see the
+[demo guide](docs/demo.md).
 
 The dashboard offers:
 
@@ -115,8 +141,8 @@ uv pip install --python .venv/sentry/bin/python 'git+https://github.com/ssrajadh
 export TANYA_SENTRY_PYTHON="$PWD/.venv/sentry/bin/python"
 ```
 
-`run_web.py` automatically discovers `.venv/sentry` when no explicit search interpreter is
-configured. The export above is still needed for the existing command-line search tools.
+The website and command-line tools automatically use `.venv/sentry` when
+`TANYA_SENTRY_PYTHON` is not set, so the export is optional.
 
 Set `GEMINI_API_KEY` privately in your terminal or your ignored `.env` file, then start the
 website from that terminal. Never put the key in source code or commit it. See the existing
@@ -170,9 +196,12 @@ checked for API availability; other models need separate compatibility and cost 
 
 Each result has **Correct**, **Wrong**, and **Unsure** buttons answering whether that clip
 matches the original query. Reviews save locally in `search_feedback.db` beside your video
-index; choosing again updates the same query/window/mode review. This does not retrain the AI
-or change search results. Reviews remain after restarting the website, although new result
-cards do not preload previous selections.
+index; choosing again updates the same query/window/mode review.
+
+When the same query returns the same window again (in the same mode), its card shows **"Your
+earlier review: …"** with that choice pre-selected. Other cards say **"Not yet reviewed by a
+person"**. Reviews are display-only: they never retrain the AI, change ranking, or change the
+system status, which stays `uncertain`.
 
 Select **Export my search reviews (CSV)** to download queries, video filenames, time windows,
 search mode, assessment and review time. Review the file before sharing; it may contain
@@ -195,11 +224,18 @@ TanyaCCTV/
 │   │   ├── search.py           # maps results to videos, merges chunks, thumbnails
 │   │   ├── search_sync.py      # opt-in sync of the search index (plan, then apply)
 │   │   ├── report.py           # HTML review page for search results
+│   │   ├── evaluation.py       # ranking metrics against annotated ground truth
+│   │   ├── feedback.py         # local human reviews and CSV export
+│   │   ├── setup_check.py      # read-only readiness checks
+│   │   ├── visual_review.py    # optional image check of sampled frames (with consent)
 │   │   ├── web.py              # local Flask website and API
 │   │   ├── templates/          # dashboard HTML
 │   │   └── static/             # dashboard CSS and JavaScript
 │   ├── scripts/
 │   │   ├── run_web.py          # local website at http://localhost:5001
+│   │   ├── check_setup.py      # readiness report (read-only)
+│   │   ├── make_demo_footage.py # synthetic demo clips with known events
+│   │   ├── evaluate_search.py  # recall/precision/timing evaluation
 │   │   ├── index_videos.py     # run the indexer
 │   │   ├── show_index.py       # read-only view of the database
 │   │   ├── make_test_video.py  # create a synthetic test video
@@ -208,7 +244,10 @@ TanyaCCTV/
 │   └── tests/                  # pytest, synthetic videos + fake search bridge
 ├── search_engine/
 │   ├── tanya_bridge.py         # runs INSIDE the SentrySearch env; prints one JSON line
+│   ├── visual_review_bridge.py # image check, runs INSIDE the SentrySearch env
 │   └── tests/                  # bridge tests (run with the SentrySearch env)
+├── evaluation/                 # ground truth + recorded responses for evaluate_search.py
+├── docs/                       # demo, evaluation, performance, validation, handover
 ├── data/
 │   ├── videos/                 # put authorised sample footage here (git-ignored)
 │   ├── frames/                 # generated JPEG frames (git-ignored)
@@ -278,7 +317,7 @@ FFmpeg does **not** need to be installed: OpenCV's wheel bundles its own decoder
 python -m pytest backend -v
 ```
 
-Expected on Windows: 185 passed, 7 skipped, 0 failed. Skips explained in
+Expected on Windows: 227 passed, 8 skipped, 0 failed. Skips explained in
 [Local website (Windows PowerShell)](#local-website-windows-powershell). Tests use temporary
 folders and synthetic videos; they never touch `data/`.
 
