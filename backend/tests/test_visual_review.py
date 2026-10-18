@@ -7,7 +7,7 @@ import pytest
 from tanya.config import SearchSettings
 from tanya.sentry_client import SearchError
 from tanya.visual_review import frame_samples, review_results
-from tests.conftest import make_video
+from tests.conftest import junction_or_skip, make_video, symlink_or_skip
 
 
 @pytest.fixture
@@ -95,5 +95,51 @@ def test_symlinked_frame_outside_root_is_not_transmitted(sample, tmp_path):
     outside.write_bytes(first.read_bytes())
     for image in ws.frames_dir.rglob("*.jpg"):
         image.unlink()
-        image.symlink_to(outside)
+        symlink_or_skip(image, outside)
     assert frame_samples(ws.settings(), original["hits"][0]) == []
+
+
+# --------------------------------------------------------------------------- outside paths (Windows-runnable)
+# Without symlink privileges the test above is skipped on Windows. These cover the same check in
+# frame_samples (resolve() + is_relative_to) via database paths and Windows junctions, and confirm
+# that nothing is handed to the reviewer (the step that would send frames to Google).
+
+
+def _frames_point_to(ws, image_path):
+    import sqlite3
+    conn = sqlite3.connect(ws.db_path)
+    with conn:
+        conn.execute("UPDATE frames SET image_path = ?", (image_path,))
+    conn.close()
+
+
+def _reviewer_calls(sample):
+    calls = []
+    result = run(sample, lambda payload, settings: calls.append(payload) or decision(payload))
+    return calls, result
+
+
+def test_db_frame_paths_outside_root_are_not_transmitted(sample, tmp_path):
+    ws, original = sample
+    assert frame_samples(ws.settings(), original["hits"][0])           # control: real frames are sampled
+    private = tmp_path / "private.jpg"                                  # readable JPEG outside frames/
+    private.write_bytes(next(ws.frames_dir.rglob("*.jpg")).read_bytes())
+    for image_path in ("../private.jpg", str(private), str(private).replace("\\", "/")):
+        _frames_point_to(ws, image_path)
+        assert frame_samples(ws.settings(), original["hits"][0]) == [], image_path
+        calls, result = _reviewer_calls(sample)
+        assert calls == [], image_path                                  # nothing sent for review
+        assert result["hits"] == [] and result["unclear_hits"][0]["visual_review"]["verdict"] == "unclear"
+
+
+def test_frames_behind_a_junction_are_not_transmitted(sample, tmp_path):
+    ws, original = sample
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
+    (outside_dir / "private.jpg").write_bytes(next(ws.frames_dir.rglob("*.jpg")).read_bytes())
+    junction_or_skip(ws.frames_dir / "linked", outside_dir)
+    assert (ws.frames_dir / "linked" / "private.jpg").is_file()         # readable through the junction
+    _frames_point_to(ws, "linked/private.jpg")
+    assert frame_samples(ws.settings(), original["hits"][0]) == []
+    calls, _ = _reviewer_calls(sample)
+    assert calls == []

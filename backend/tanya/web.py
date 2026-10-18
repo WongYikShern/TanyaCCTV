@@ -24,6 +24,23 @@ from .visual_review import review_results
 from . import feedback
 
 
+def safe_upload_name(original):
+    """Sanitised upload name with an allowed video extension, or None if the type is not allowed.
+
+    secure_filename() drops non-ASCII characters, so "监控录像.mp4" becomes "mp4" and would lose its
+    extension. The extension is therefore validated on the original name (basename only), and a
+    generic "video<ext>" name is used when sanitising leaves no usable name.
+    """
+    base = (original or "").replace("\\", "/").rsplit("/", 1)[-1].strip().rstrip(".")
+    extension = Path(base).suffix.lower()
+    if not Path(base).stem or extension not in SUPPORTED_EXTENSIONS:
+        return None
+    name = secure_filename(base)
+    if Path(name).suffix.lower() != extension or not Path(name).stem:
+        name = "video" + extension
+    return name
+
+
 def create_app(settings=None, search_settings=None):
     settings = settings or load_settings()
     search_settings = search_settings or load_search_settings()
@@ -150,8 +167,8 @@ def create_app(settings=None, search_settings=None):
         if request.form.get("authorized") != "yes":
             abort(400, description="Confirm you have permission to use this footage.")
         file = request.files.get("video")
-        name = secure_filename(file.filename or "") if file else ""
-        if not name or Path(name).suffix.lower() not in SUPPORTED_EXTENSIONS:
+        name = safe_upload_name(file.filename if file else "")
+        if name is None:
             abort(400, description="Choose an MP4, MOV, AVI, MKV or M4V video.")
         if not lock.acquire(blocking=False):
             abort(409, description="Indexing is running. Please try again when it finishes.")

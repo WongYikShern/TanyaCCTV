@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
 from pathlib import Path
 
 import cv2
@@ -66,3 +68,31 @@ def workspace(tmp_path: Path):
     ws = Workspace()
     ws.video_dir.mkdir()
     return ws
+
+
+WINDOWS_SYMLINK_PRIVILEGE_ERROR = 1314  # ERROR_PRIVILEGE_NOT_HELD
+
+
+def symlink_or_skip(link: Path, target: Path) -> None:
+    """Create a symlink; skip only when Windows genuinely refuses (no Developer Mode / admin).
+
+    Any other error is a real failure. On Windows, junction_or_skip() tests link escapes instead.
+    """
+    try:
+        link.symlink_to(target)
+    except OSError as error:
+        if os.name == "nt" and getattr(error, "winerror", None) == WINDOWS_SYMLINK_PRIVILEGE_ERROR:
+            pytest.skip("Windows denies symlink creation without Developer Mode or admin rights "
+                        "(WinError 1314); the junction tests cover link escapes on Windows")
+        raise
+
+
+def junction_or_skip(link: Path, target_dir: Path) -> None:
+    """Create a Windows directory junction (no admin needed). Skips on other systems,
+    where the symlink tests cover link escapes."""
+    if os.name != "nt":
+        pytest.skip("directory junctions are Windows-only; symlink tests cover this elsewhere")
+    proc = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target_dir)],
+                          capture_output=True, text=True)
+    if proc.returncode != 0 or not link.is_dir():
+        raise RuntimeError(f"could not create junction {link}: {proc.stdout} {proc.stderr}")

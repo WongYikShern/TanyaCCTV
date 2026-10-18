@@ -6,7 +6,7 @@ import pytest
 from tanya.config import SearchSettings
 from tanya.search import SearchResponse, SearchHit, Chunk
 from tanya.web import create_app
-from tests.conftest import make_video
+from tests.conftest import junction_or_skip, make_video, symlink_or_skip
 
 
 @pytest.fixture
@@ -57,9 +57,8 @@ def test_media_cannot_escape_video_folder(web, tmp_path):
     ws.run()
     video = ws.videos()[0]
     (ws.video_dir / "inside.mp4").unlink()
-    (ws.video_dir / "inside.mp4").symlink_to(outside)
+    symlink_or_skip(ws.video_dir / "inside.mp4", outside)
     assert client.get(f'/media/videos/{video["id"]}').status_code == 404
-    assert client.get("/media/frames/../../README.md").status_code == 404
 
 
 def test_search_validation_unconfigured_and_translated_media_urls(web, monkeypatch):
@@ -250,3 +249,120 @@ def test_invalid_feedback_is_not_saved(web, change):
     review.update(change)
     assert client.post('/api/feedback', headers=headers, json=review).status_code == 400
     assert not ws.db_path.with_name('search_feedback.db').exists()
+
+
+# --------------------------------------------------------------------------- non-Latin upload names
+
+
+@pytest.mark.parametrize("original, expected", [
+    ("监控录像.mp4", "video.mp4"),            # regression: was rejected ("mp4" had no extension)
+    ("கண்காணிப்பு.MOV", "video.mov"),          # Tamil
+    ("كاميرا.avi", "video.avi"),               # Arabic
+    ("カメラ1.MOV", "1.MOV"),                  # some ASCII survives: keep it
+    ("lobby cam.mp4", "lobby_cam.mp4"),
+    ("../../监控.mp4", "video.mp4"),           # directories are never kept
+    (r"..\..\camera.m4v", "camera.m4v"),
+    ("C:evil.mkv", "Cevil.mkv"),
+    ("clip.mp4.", "clip.mp4"),                 # Windows drops trailing dots
+])
+def test_safe_upload_name_keeps_allowed_extension(original, expected):
+    from tanya.web import safe_upload_name
+    assert safe_upload_name(original) == expected
+
+
+@pytest.mark.parametrize("original", [
+    "", ".mp4", "监控录像", "监控录像.exe", "clip.mp4.exe", "clip.mp4\x00.exe", "clip.html", "../.mp4", "clip.",
+])
+def test_safe_upload_name_still_rejects_disallowed_types(original):
+    from tanya.web import safe_upload_name
+    assert safe_upload_name(original) is None
+
+
+def test_non_latin_upload_is_accepted_indexed_and_never_overwrites(web, tmp_path):
+    client, headers, ws = web
+    source = make_video(tmp_path / "source.mp4", seconds=2)
+    names = []
+    for _ in range(2):  # same name twice: second upload must not replace the first
+        response = client.post("/api/upload", headers=headers, data={
+            "authorized": "yes", "video": (BytesIO(source.read_bytes()), "监控录像.mp4")})
+        assert response.status_code == 201, response.json
+        names.append(response.json["filename"])
+    assert names[0] != names[1] and all(n.endswith("_video.mp4") for n in names)
+    assert sorted(p.name for p in ws.video_dir.iterdir()) == sorted(names)   # nothing outside or extra
+    assert all((ws.video_dir / n).read_bytes() == source.read_bytes() for n in names)  # neither replaced
+    assert client.post("/api/index", headers=headers).status_code == 200
+    # Identical content is indexed once (Milestone 1 de-duplicates by SHA-256); frames are extracted.
+    videos = client.get("/api/videos").json["videos"]
+    assert len(videos) == 1 and videos[0]["filename"] in names and videos[0]["frame_count"] == 2
+
+
+def test_non_latin_name_with_disallowed_extension_is_rejected(web):
+    client, headers, ws = web
+    response = client.post("/api/upload", headers=headers, data={
+        "authorized": "yes", "video": (BytesIO(b"MZ"), "监控录像.exe")})
+    assert response.status_code == 400 and not list(ws.video_dir.iterdir())
+
+
+# --------------------------------------------------------------------------- outside paths (Windows-runnable)
+# The symlink test above is skipped on Windows without Developer Mode. These tests exercise the same
+# confinement (media_path: resolve() + is_relative_to) through database paths and, on Windows,
+# directory junctions, which need no special privilege. Each first proves the legitimate path works.
+
+
+def _set(ws, sql, params):
+    import sqlite3
+    conn = sqlite3.connect(ws.db_path)
+    with conn:
+        conn.execute(sql, params)
+    conn.close()
+
+
+def test_video_db_path_outside_video_folder_is_not_served(web, tmp_path):
+    client, _, ws = web
+    make_video(ws.video_dir / "inside.mp4")
+    outside = make_video(tmp_path / "outside.mp4", seed=9)        # exists, so a 404 is not "missing file"
+    ws.run()
+    video_id = ws.videos()[0]["id"]
+    assert client.get(f"/media/videos/{video_id}").status_code == 200   # control
+    for rel in ("../outside.mp4", str(outside), str(outside).replace("\\", "/")):
+        _set(ws, "UPDATE videos SET rel_path = ? WHERE id = ?", (rel, video_id))
+        assert (ws.video_dir / rel).resolve().is_file()                # the target really exists
+        assert client.get(f"/media/videos/{video_id}").status_code == 404, rel
+
+
+def test_frame_db_path_outside_frames_folder_is_not_served(web, tmp_path):
+    client, _, ws = web
+    make_video(ws.video_dir / "inside.mp4", seconds=2)
+    ws.run()
+    video_id = ws.videos()[0]["id"]
+    good = client.get("/api/videos").json["videos"][0]["thumbnail_url"]
+    assert client.get(good).status_code == 200                          # control
+    private = tmp_path / "private.jpg"                                  # a real JPEG outside frames/
+    private.write_bytes(next(ws.frames_dir.rglob("*.jpg")).read_bytes())
+    for rel in ("../private.jpg", str(private).replace("\\", "/")):
+        _set(ws, "UPDATE frames SET image_path = ? WHERE video_id = ?", (rel, video_id))
+        thumb = client.get("/api/videos").json["videos"][0]["thumbnail_url"]
+        listed = client.get(f"/api/videos/{video_id}/frames").json["frames"]
+        assert client.get(thumb).status_code == 404, rel
+        assert all(client.get(f["url"]).status_code == 404 for f in listed), rel
+    assert client.get("/media/frames/../../README.md").status_code == 404
+    assert client.get("/media/frames/..%2f..%2fprivate.jpg").status_code == 404
+
+
+def test_video_and_frames_behind_a_junction_are_not_served(web, tmp_path):
+    """Genuine link escape on Windows without admin rights: a junction inside the allowed folder."""
+    client, _, ws = web
+    make_video(ws.video_dir / "inside.mp4", seconds=2)
+    ws.run()
+    video_id = ws.videos()[0]["id"]
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
+    make_video(outside_dir / "outside.mp4", seed=9)
+    (outside_dir / "private.jpg").write_bytes(next(ws.frames_dir.rglob("*.jpg")).read_bytes())
+    junction_or_skip(ws.video_dir / "linked", outside_dir)
+    junction_or_skip(ws.frames_dir / "linked", outside_dir)
+    assert (ws.video_dir / "linked" / "outside.mp4").is_file()          # the junction really works
+
+    _set(ws, "UPDATE videos SET rel_path = ? WHERE id = ?", ("linked/outside.mp4", video_id))
+    assert client.get(f"/media/videos/{video_id}").status_code == 404
+    assert client.get("/media/frames/linked/private.jpg").status_code == 404

@@ -22,6 +22,10 @@ your own key privately. Then:
 .venv/bin/python backend/scripts/run_web.py
 ```
 
+On Windows PowerShell, use `.\.venv\Scripts\python.exe` instead of `.venv/bin/python`, and see
+README "Local website (Windows PowerShell)". Re-run `pip install -r backend\requirements.txt`
+first if your environment predates the website (Flask was missing on the Windows laptop).
+
 Open http://localhost:5001/. Your checkout will not contain this laptop's four videos or AI
 index. Upload authorised test footage, extract frames, review the AI preparation plan and
 approve its Google upload/cost before testing. Continue commits on this feature branch and
@@ -43,8 +47,9 @@ All underlying result statuses remain uncertain. Missing frames or malformed out
 be turned into supported matches. Unchecking image checking retains the old ranking-only flow.
 
 Files: `backend/tanya/visual_review.py`, `search_engine/visual_review_bridge.py`, web routes,
-dashboard UI, and regression tests. Offline suite: **163 passed, 4 skipped**. The skipped tests
-need the original synthetic trial index. Browser consent controls were checked.
+dashboard UI, and regression tests. Browser consent controls were checked.
+The originally reported offline result (163 passed, 4 skipped) was from macOS/Linux. See
+"Windows verification" below for the results on Windows.
 
 ## Latest addition: local search feedback
 
@@ -59,6 +64,31 @@ changed to Wrong and downloaded CSV using an isolated synthetic fixture. The rea
 application was restored afterward. All data from that UI fixture stayed outside the real
 library. See README for use. Next: get real authorised footage, verify private key rotation,
 and have the teammate review PR #2. Do not merge automatically.
+
+## Windows verification (18 October 2026)
+
+Checked on the Windows laptop (Python 3.14.5), with no API key present and no Google calls:
+
+- The environment lacked Flask; `pip install -r backend\requirements.txt` added only Flask
+  3.1.3 and its 6 dependencies.
+- Before fixes, `pytest backend\tests` gave **2 failed, 160 passed, 5 skipped**. The 2 failures
+  were symlink-based security tests crashing with `WinError 1314` instead of skipping.
+- Fixed: the symlink tests skip only for that specific Windows permission error. New
+  Windows-runnable tests cover the same protections using database paths that point outside
+  the folders and directory junctions (which need no special rights). They prove that media
+  outside `data/videos` and `data/frames` is neither served nor sent for visual review, and
+  each one fails if the protection is removed.
+- Fixed: uploads named only in non-Latin characters (e.g. `监控录像.mp4`) were rejected as
+  "Choose an MP4…". The extension is now validated on the original name, with a safe fallback
+  name `<id>_video.<ext>`.
+- After fixes: **185 passed, 7 skipped, 0 failed**. With `TANYA_SENTRY_PYTHON` and the trial
+  index, it is 189 passed, 3 skipped. The bridge offline tests give 29 passed, 4 skipped (the
+  live Gemini tests, without a key).
+- Isolated route and browser checks used copies of the synthetic clips and a fake search
+  bridge: upload, indexing, library, frames, range playback, traversal blocking, ranked
+  search, Correct feedback and the clip viewer all worked. The real `data/` was not modified.
+- `run_web.py` starts on Windows. Without a key, `/api/status` reports `key_ready: false`, and
+  the website still allows local upload, frame extraction and browsing.
 
 ## Earlier limited single-frame checks
 

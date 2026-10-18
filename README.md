@@ -26,8 +26,57 @@ python3 -m venv .venv
 ```
 
 Open **http://localhost:5001/**. Keep the Terminal running; Ctrl+C stops the server.
-To start again, run only the last command. On Windows, use `.venv\Scripts\python.exe`
-instead of `.venv/bin/python`.
+To start again, run only the last command. For Windows, see the next section.
+
+## Local website (Windows PowerShell)
+
+Run these from the project folder in PowerShell. Use Python 3.12 or newer (verified on
+3.14.5). If the virtual environment already exists, skip the first command. Re-running the
+install only adds missing packages; for example, older checkouts need Flask for the website.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+.\.venv\Scripts\python.exe -m pytest backend\tests -q
+.\.venv\Scripts\python.exe backend\scripts\run_web.py
+```
+
+Open **http://localhost:5001/** and keep PowerShell open; Ctrl+C stops the server.
+
+Expected test result on Windows without SentrySearch configured (checked 18 October 2026):
+**185 passed, 7 skipped, 0 failed**. The skips are:
+
+- 4 end-to-end tests that need `TANYA_SENTRY_PYTHON` and the synthetic SentrySearch trial index.
+- 3 symlink tests. Windows refuses to create symlinks without Developer Mode or admin rights
+  (`WinError 1314`). Directory-junction tests, which need no special rights, check the same
+  "no escaping the video or frames folder" protections on Windows.
+
+With `TANYA_SENTRY_PYTHON` set and the trial index present, the result is 189 passed and
+3 skipped. On macOS/Linux, the 3 symlink tests run and the junction tests are skipped.
+
+**Semantic search on Windows** needs the separate Python 3.12 SentrySearch environment
+(see [one-time setup](#one-time-setup-outside-this-project)). `run_web.py` automatically uses
+`.venv\sentry\Scripts\python.exe` if it exists. Otherwise, set the interpreter yourself before
+starting the website, for example for the setup used on the development laptop:
+
+```powershell
+$env:TANYA_SENTRY_PYTHON = "$HOME\sentrysearch-trial\tools\sentrysearch\Scripts\python.exe"
+```
+
+Set `GEMINI_API_KEY` in the **same** PowerShell window before starting the website (typing is
+hidden; the key is never written to disk):
+
+```powershell
+$env:GEMINI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host 'Gemini API key' -AsSecureString)))
+```
+
+Without the key, the website still runs: uploads, frame extraction and browsing work, and
+search shows "Setup needed". Applications started from elsewhere (for example a desktop app
+or a different terminal) do not see a key set in another PowerShell window.
+
+Uploaded file names in Chinese, Tamil or other non-Latin scripts are accepted. Characters
+that are unsafe in file names are removed; if nothing usable remains, the file is stored as
+`<random id>_video.<extension>`. The extension must still be MP4, MOV, AVI, MKV or M4V.
 
 The dashboard offers:
 
@@ -229,9 +278,9 @@ FFmpeg does **not** need to be installed: OpenCV's wheel bundles its own decoder
 python -m pytest backend -v
 ```
 
-Expected: all tests pass. One symlink test is skipped on Windows unless Developer Mode
-is enabled (creating symlinks needs that permission). Tests use temporary folders and
-synthetic videos; they never touch `data/`.
+Expected on Windows: 185 passed, 7 skipped, 0 failed. Skips explained in
+[Local website (Windows PowerShell)](#local-website-windows-powershell). Tests use temporary
+folders and synthetic videos; they never touch `data/`.
 
 ### 4. Add sample videos
 
