@@ -151,7 +151,15 @@ def build_hits(results: list[dict], settings: Settings, search_settings: SearchS
         if row is None:
             skipped.setdefault(r["filename"], reason)
             continue
-        chunk = Chunk(r["rank"], float(r["start_sec"]), float(r["end_sec"]),
+        start, end = float(r["start_sec"]), float(r["end_sec"])
+        # The bridge rounds timestamps; e.g. a 5.875 s file can end at 5.88 s.
+        # Keep playback windows inside the actual indexed recording.
+        if row["duration_sec"] is not None:
+            end = min(end, float(row["duration_sec"]))
+        if start >= end:
+            skipped.setdefault(r["filename"], "search time window is outside the video duration")
+            continue
+        chunk = Chunk(r["rank"], start, end,
                       float(r["score"]), float(r["score_above_median"]))
         by_video.setdefault(row["id"], (row, []))[1].append(chunk)
     for name, reason in skipped.items():

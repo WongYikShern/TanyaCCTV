@@ -11,7 +11,173 @@ timestamps in SQLite.
 with Google's Gemini Embedding 2, in a separate Python 3.12 environment. See
 [Natural-language search](#natural-language-search-milestone-2).
 
-Flask API, React frontend, Telegram alerts and monitoring rules come in later milestones.
+A local Flask website and API now provide video upload, frame browsing, and semantic-search
+review. Telegram alerts and monitoring rules remain future work.
+
+## Local website (macOS / Linux)
+
+Run these commands from the project folder:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r backend/requirements.txt
+.venv/bin/python -m pytest backend -q
+.venv/bin/python backend/scripts/run_web.py
+```
+
+Open **http://localhost:5001/**. Keep the Terminal running; Ctrl+C stops the server.
+To start again, run only the last command. For Windows, see the next section.
+
+## Local website (Windows PowerShell)
+
+Run these from the project folder in PowerShell. Use Python 3.12 or newer (verified on
+3.14.5). If the virtual environment already exists, skip the first command. Re-running the
+install only adds missing packages; for example, older checkouts need Flask for the website.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+.\.venv\Scripts\python.exe -m pytest backend\tests -q
+.\.venv\Scripts\python.exe backend\scripts\run_web.py
+```
+
+Open **http://localhost:5001/** and keep PowerShell open; Ctrl+C stops the server.
+
+Expected test result on Windows without SentrySearch configured (checked 18 October 2026):
+**185 passed, 7 skipped, 0 failed**. The skips are:
+
+- 4 end-to-end tests that need `TANYA_SENTRY_PYTHON` and the synthetic SentrySearch trial index.
+- 3 symlink tests. Windows refuses to create symlinks without Developer Mode or admin rights
+  (`WinError 1314`). Directory-junction tests, which need no special rights, check the same
+  "no escaping the video or frames folder" protections on Windows.
+
+With `TANYA_SENTRY_PYTHON` set and the trial index present, the result is 189 passed and
+3 skipped. On macOS/Linux, the 3 symlink tests run and the junction tests are skipped.
+
+**Semantic search on Windows** needs the separate Python 3.12 SentrySearch environment
+(see [one-time setup](#one-time-setup-outside-this-project)). `run_web.py` automatically uses
+`.venv\sentry\Scripts\python.exe` if it exists. Otherwise, set the interpreter yourself before
+starting the website, for example for the setup used on the development laptop:
+
+```powershell
+$env:TANYA_SENTRY_PYTHON = "$HOME\sentrysearch-trial\tools\sentrysearch\Scripts\python.exe"
+```
+
+Set `GEMINI_API_KEY` in the **same** PowerShell window before starting the website (typing is
+hidden; the key is never written to disk):
+
+```powershell
+$env:GEMINI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host 'Gemini API key' -AsSecureString)))
+```
+
+Without the key, the website still runs: uploads, frame extraction and browsing work, and
+search shows "Setup needed". Applications started from elsewhere (for example a desktop app
+or a different terminal) do not see a key set in another PowerShell window.
+
+Uploaded file names in Chinese, Tamil or other non-Latin scripts are accepted. Characters
+that are unsafe in file names are removed; if nothing usable remains, the file is stored as
+`<random id>_video.<extension>`. The extension must still be MP4, MOV, AVI, MKV or M4V.
+
+The dashboard offers:
+
+- Upload authorised footage (up to 512 MB per file), then extract frames locally.
+- Index videos copied directly into `data/videos` with **Index local videos**.
+- Browse the video library; select a video to play it and review its frame timeline.
+- Search prepared footage with natural language and open matching time windows for review.
+- Review an AI indexing plan before explicitly approving the Google transfer and API charges.
+
+Each video has separate labels for **Frames ready** and **AI prepared**. Uploading/extracting
+frames does not prepare a video for semantic search. The search panel lists videos still
+needing preparation; results also warn when those uploads are not covered. AVI/MKV/M4V videos
+can have local frames but require conversion to MP4/MOV for this search engine. A prepared
+label reflects the recorded content hash; if the shared SentrySearch index is changed outside
+TanyaCCTV, review the indexing plan to verify it again.
+
+H.264 MP4 is recommended for playback. Some video codecs (including the default synthetic
+`mp4v` sample) will not play in a browser; extracted images still work, and the original video
+can be downloaded. Original videos are never overwritten by uploads.
+
+This server binds only to `127.0.0.1:5001`. It is a local development workspace, with no user
+accounts; do not expose it publicly. Run only one website process and avoid running the CLI
+indexer/sync simultaneously. Long indexing operations keep the browser waiting; do not close
+the page while they run. The website does not alter the existing command-line workflows.
+
+### Enable semantic search on macOS / Linux
+
+Search needs a separate Python 3.12 environment with the pinned SentrySearch version, plus
+your own Gemini key. The basic website and local frame extraction work without these.
+
+With `uv` installed, create the separate environment inside the ignored `.venv` folder:
+
+```bash
+uv venv --python 3.12 .venv/sentry
+uv pip install --python .venv/sentry/bin/python 'git+https://github.com/ssrajadh/sentrysearch@d3efd6a4351251084dc101a24970e40a38e1426d'
+export TANYA_SENTRY_PYTHON="$PWD/.venv/sentry/bin/python"
+```
+
+`run_web.py` automatically discovers `.venv/sentry` when no explicit search interpreter is
+configured. The export above is still needed for the existing command-line search tools.
+
+Set `GEMINI_API_KEY` privately in your terminal or your ignored `.env` file, then start the
+website from that terminal. Never put the key in source code or commit it. See the existing
+“Natural-language search” section for privacy, indexing behaviour, and Windows setup.
+
+In the website, select **Review AI indexing plan**. Review its video list, removals and estimated
+cost before approving **Prepare AI search**. Search preparation sends video to Google; local
+upload and frame extraction do not. The estimate is not a billing cap. Scores are ranking
+signals, not calibrated probabilities, and every result requires human review. Real authorised
+CCTV validation is still pending.
+
+The existing CLI-generated HTML review pages use local file links and should be opened
+directly from disk. The new dashboard serves its own media URLs with video byte-range support.
+
+### Check visual evidence after search
+
+**Experimental; representative CCTV accuracy is not established.** Provider/model compatibility
+errors have been corrected. The default multi-frame website checks distinguish visible black
+outer clothing from an unseen shirt in the existing short sample collection. These are limited
+workflow checks, not general CCTV accuracy measurements.
+See [current handoff](docs/continue-work.md) for results and limitations.
+
+The website defaults to **Search & check matches**. This first retrieves ranked windows, then
+uses Gemini 3.8 Flash to review up to six extracted images from each of the first five windows.
+For each search, tick the approval box to send those images and your query to Google. This
+adds API usage and may incur charges; free-tier data use follows Google's applicable terms.
+Changing the query or finishing a search resets approval. No visual request is sent without it.
+
+- **AI-supported candidate:** sampled images support the visible description; still requires
+  human review and keeps the underlying `uncertain` status.
+- **Unclear:** an attribute is hidden/ambiguous, frames are unavailable, or a window is beyond
+  the first five checked candidates. These remain available in a separate review section.
+- **Not supported:** the sampled images do not support the description. These are separated
+  from the candidate matches and can be inspected with the model's explanation.
+
+Evidence buttons open the video at a sampled timestamp. A black hoodie/jacket is not silently
+treated as evidence of a black shirt hidden underneath. If no candidate is supported, the page
+says no visually supported match was found **in the samples**, not that the event is absent.
+Checker failures return an error instead of silently displaying rankings as checked matches.
+
+Uncheck image checking for **Search ranked clips** (the original behaviour, also retained by
+the CLI). Rankings alone can include unrelated footage. This feature is a sampled-image
+review aid, not a trained clothing detector, continuous video analysis, or a bounding-box
+tracker. Model errors and missed events remain possible. The separate search environment
+already provides `google-genai`; no extra backend dependency is required.
+
+The model can be set with `TANYA_VERIFY_MODEL` (default `gemini-3.8-flash`). The default was
+checked for API availability; other models need separate compatibility and cost validation.
+
+### Save your own search reviews
+
+Each result has **Correct**, **Wrong**, and **Unsure** buttons answering whether that clip
+matches the original query. Reviews save locally in `search_feedback.db` beside your video
+index; choosing again updates the same query/window/mode review. This does not retrain the AI
+or change search results. Reviews remain after restarting the website, although new result
+cards do not preload previous selections.
+
+Select **Export my search reviews (CSV)** to download queries, video filenames, time windows,
+search mode, assessment and review time. Review the file before sharing; it may contain
+private descriptions or filenames. The feedback database is ignored by Git. Exported text
+cells that could be spreadsheet formulas are escaped. Empty exports include the column names.
 
 ## Project layout
 
@@ -20,7 +186,7 @@ TanyaCCTV/
 ├── backend/
 │   ├── requirements.txt
 │   ├── pytest.ini
-│   ├── tanya/                  # plain Python package (no Flask)
+│   ├── tanya/                  # indexing/search package plus Flask dashboard
 │   │   ├── config.py           # settings from env vars / .env, validation
 │   │   ├── db.py               # SQLite schema
 │   │   ├── frames.py           # OpenCV frame extraction
@@ -28,8 +194,12 @@ TanyaCCTV/
 │   │   ├── sentry_client.py    # runs the search bridge as a subprocess, checks its JSON
 │   │   ├── search.py           # maps results to videos, merges chunks, thumbnails
 │   │   ├── search_sync.py      # opt-in sync of the search index (plan, then apply)
-│   │   └── report.py           # HTML review page for search results
+│   │   ├── report.py           # HTML review page for search results
+│   │   ├── web.py              # local Flask website and API
+│   │   ├── templates/          # dashboard HTML
+│   │   └── static/             # dashboard CSS and JavaScript
 │   ├── scripts/
+│   │   ├── run_web.py          # local website at http://localhost:5001
 │   │   ├── index_videos.py     # run the indexer
 │   │   ├── show_index.py       # read-only view of the database
 │   │   ├── make_test_video.py  # create a synthetic test video
@@ -108,9 +278,9 @@ FFmpeg does **not** need to be installed: OpenCV's wheel bundles its own decoder
 python -m pytest backend -v
 ```
 
-Expected: all tests pass. One symlink test is skipped on Windows unless Developer Mode
-is enabled (creating symlinks needs that permission). Tests use temporary folders and
-synthetic videos; they never touch `data/`.
+Expected on Windows: 185 passed, 7 skipped, 0 failed. Skips explained in
+[Local website (Windows PowerShell)](#local-website-windows-powershell). Tests use temporary
+folders and synthetic videos; they never touch `data/`.
 
 ### 4. Add sample videos
 
@@ -415,7 +585,7 @@ are grouped into windows. They never change a result's status. See `.env.example
 
 ## Hackathon demo (command line)
 
-There is no web frontend yet: the demo is the command line plus the HTML review page. Allow about
+The command-line demo below remains available alongside the local website. Allow about
 5 minutes.
 
 **Before the demo (once, needs internet and your key):**
@@ -455,12 +625,14 @@ files and open without internet (the videos are local).
 | Ranking, real Gemini (bridge live tests, 2026-10-17) | synthetic lobby/car-park clips | top 3 chunks inside the event for walking, lying and red car; "fire and smoke" only weak matches; all `uncertain` |
 | TanyaCCTV CLI end to end with real Gemini (`search_videos.py`, 2026-10-17) | same | 4/4 ground-truth checks passed. Top windows: walking 16–42 s, lying 40–60 s, red car 16–40 s (events 20–40, 40–60, 20–40). "fire and smoke" got weak matches only. All `uncertain`, all with thumbnails. |
 | End-to-end through the real bridge and index, no key | same | correct video IDs, windows inside videos, thumbnails, read-only |
-| **Real authorised CCTV footage** | **none available yet** | **not validated**; see limitations |
+| Uploaded-clip spot checks, real Gemini (2026-10-18) | short boat and room clips, plus synthetic controls | 6/6 positive queries ranked the expected video first; hand-raising window overlapped the observed later action. Negative query still returned uncertain rankings. See [validation report](docs/search-validation.md). |
+| **Representative real-world CCTV footage** | **not established by the short uploaded samples** | **not validated broadly**; see limitations |
 
 ## Known limitations
 
-- **Not validated on real CCTV footage.** Every quality result above comes from simple synthetic
-  scenes. Lighting, camera angle, resolution and crowded scenes may rank very differently.
+- **Not broadly validated on representative CCTV footage.** Quality checks cover synthetic
+  scenes and two short uploaded clips. Lighting, camera angle, resolution and crowded scenes
+  may rank very differently. The uploaded-clip checks are not an accuracy benchmark.
 - **No automatic incident detection.** Every result is `uncertain`. In testing, an irrelevant
   "fire and smoke" clip (0.34) scored close to a correct "red car" clip (0.36), so no score cutoff
   is safe.
@@ -470,7 +642,7 @@ files and open without internet (the videos are local).
 - SentrySearch indexes only `.mp4` and `.mov`, identifies videos by path (a rename means
   re-indexing, which costs money), and keeps one index per Windows user, shared with other uses.
 - Search and indexing need internet and a Gemini key. On the free tier, Google may use the content.
-- There is no web frontend or API server yet: the demo uses the CLI and a static HTML page.
+- The local Flask website/API is a development prototype, without accounts or production hosting.
 - In the browser, clips play only for browser-supported codecs (H.264).
 
 ## Footage policy
