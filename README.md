@@ -14,6 +14,12 @@ with Google's Gemini Embedding 2, in a separate Python 3.12 environment. See
 A local Flask website and API now provide video upload, frame browsing, and semantic-search
 review. Telegram alerts and monitoring rules remain future work.
 
+Latest synthetic live evaluation (19 October 2026): all 16 labelled queries were measured on
+five cartoon clips. Merged hit@1 was 9/11 positive queries, precision@5 0.508 and recall@5 1.000;
+mean temporal IoU was only 0.453. Broad windows inflate overlap-based recall, and all five
+negative queries returned irrelevant clips. See the event-support guide for details. Real CCTV
+accuracy and reliable event localization remain unverified.
+
 **Guides:**
 
 - [Demo guide](docs/demo.md): search, review, then an investigation and its report, on synthetic footage

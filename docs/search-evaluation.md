@@ -25,7 +25,30 @@ Metrics are reported twice:
 **Negative queries** (no annotated event) have no precision or recall. The engine always returns
 its nearest clips, so they are listed separately and never counted as correct rejections.
 
-## Results: recorded real search, synthetic footage
+## Latest extended synthetic measurement — 19 October 2026
+
+The approved five-clip run now measures every query in `synthetic_events_v2.json`: 11 positive
+and 5 negative. It used 32 video embeddings and 16 query embeddings in a separate test index,
+with no automatic retries. These are fresh live retrieval responses, not offline mock predictions.
+
+```bash
+.venv/bin/python backend/scripts/evaluate_search.py --ground-truth evaluation/synthetic_events_v2.json --recorded evaluation/recordings/2026-10-19-events.json
+```
+
+| Level | hit@1 | P@5 | R@5 | MRR | Mean first-relevant IoU |
+|---|---:|---:|---:|---:|---:|
+| Raw chunks | 0.727 | 0.509 | 0.841 | 0.804 | 0.510 |
+| Merged windows | 0.818 | 0.508 | 1.000 | 0.882 | 0.453 |
+
+Relevance still means any time overlap: broad windows inflate recall and can merge distinct
+actions. Merging made mean IoU worse in this run, unlike the earlier smaller baseline below.
+Loitering was first relevant at rank 5; parked vehicles at rank 2. Entering returned the entire
+60 s entrance clip; a 3 s fall returned a 24 s window. All five negatives returned unrelated
+windows, which are not correct rejections. See [event-support.md](event-support.md) for per-type
+results, reproducibility settings and limitations. This run did not evaluate visual checking.
+No thresholds were tuned. Representative real CCTV accuracy remains unverified.
+
+## Earlier results: two synthetic clips (17 October 2026)
 
 Footage:
 
@@ -84,14 +107,15 @@ new recording.
   excluded rather than counted as misses. Queries without a response are reported as
   **not measured**, never scored.
 
-Running v2 against the current recording measures only the 3 queries that recording covers:
+Running v2 against the default **older** recording still measures only its 3 positive queries.
+Select `--recorded evaluation/recordings/2026-10-19-events.json` for the full new run:
 
 ```powershell
 .\.venv\Scripts\python.exe backend\scripts\evaluate_search.py --ground-truth evaluation\synthetic_events_v2.json --allow-missing
 ```
 
 See [event-support.md](event-support.md) for which event types are measured, unmeasured or
-unsupported. It also gives the approval request (about US$0.15) needed to measure the rest.
+unsupported. The extended synthetic run is now complete. Future uploads or live requests require a new plan and approval.
 
 ## What this does not show
 

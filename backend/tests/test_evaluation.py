@@ -261,3 +261,28 @@ def test_recording_declares_its_index_and_v2_run_is_honest(capsys):
     assert reasons["a person falling down"] == "its videos were not in the recorded index"
     assert reasons["a dog running"] == "no recorded response"
     assert evaluate_search.main(["--ground-truth", str(EVENTS_V2)]) == 2       # missing responses refused by default
+
+
+def test_extended_live_recording_preserves_scope_and_known_failures():
+    """Re-score saved responses offline; never replace observed failures with a perfect mock."""
+    path = PROJECT_ROOT / 'evaluation/recordings/2026-10-19-events.json'
+    recording = json.loads(path.read_text())
+    cases = load_ground_truth(PROJECT_ROOT / 'evaluation/synthetic_events_v2.json')
+    assert len(recording['responses']) == len(cases) == 16
+    assert len(recording['indexed_videos']) == 5
+    assert recording['provenance']['video_embedding_requests'] == 32
+    for results in recording['responses'].values():
+        assert all(r['status'] == 'uncertain' and r['source_file'].startswith('{VIDEO_DIR}/') for r in results)
+    report = evaluate(cases, recording['responses'], indexed_videos=recording['indexed_videos'])
+    summary = report['summary']['merged']
+    assert (summary['positive_queries'], summary['negative_queries']) == (11, 5)
+    assert summary['hit_rate_at'][1] == 0.818
+    assert summary['mean_precision_at'][5] == 0.508
+    assert summary['mean_recall_at'][5] == 1.0
+    assert summary['mean_iou'] == 0.453
+    assert not report['not_measured']
+    assert report['by_event_type']['loitering']['hit_rate_at'][1] == 0.0
+    assert report['by_event_type']['vehicle_parked']['hit_rate_at'][1] == 0.0
+    assert report['by_event_type']['fall']['mean_iou'] == 0.125
+    negatives = [a for a in report['analysis'] if a['negative']]
+    assert len(negatives) == 5 and all(a['false_positives'] for a in negatives)

@@ -1,5 +1,9 @@
 # macOS workflow verification — 19 October 2026
 
+This is the offline workflow checkpoint. A subsequent, separately approved live synthetic
+evaluation is recorded in `docs/event-support.md` and `evaluation/recordings/2026-10-19-events.json`.
+The results and no-call statements below refer to this earlier workflow verification only.
+
 Base: merged `main` at `4922b36`; work branch: `feature/macos-workflow-validation`.
 No Gemini calls or real CCTV processing were used. Local packages already satisfied the README;
 `pip check` reported no broken requirements. The setup checker found the pinned Python 3.12

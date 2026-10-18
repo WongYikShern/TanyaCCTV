@@ -1,6 +1,27 @@
 # Continue TanyaCCTV work from another device
 
-## Current checkpoint: macOS validation (19 October 2026)
+## Latest: approved synthetic live evaluation (19 October 2026)
+
+PR #5: https://github.com/WongYikShern/TanyaCCTV/pull/5, branch `feature/macos-workflow-validation`.
+User confirmed a new unshared key was saved and both shared keys revoked. The key from `.env`
+successfully completed the approved requests; revocation itself is user-confirmed, not independently
+verified. `.env` mode was 0600 and the credential was not printed or committed.
+
+- Approved: five synthetic clips (250 s; estimated 304 billed frames), 16 text queries, approx US$0.25.
+- Completed: 32 video embeddings and 16 text embeddings, no errors and no automatic retries.
+- Used an isolated temporary index, with all chunks included (no still skipping), 10 s / 2 s overlap,
+  480 px / 5 fps preprocessing, 10 results per query. No change to the real four-video library/index.
+- Saved sanitized recording and synthetic hashes at `evaluation/recordings/2026-10-19-events.json`.
+  Re-score using the command in `docs/event-support.md`. Do not repeat live API calls unnecessarily.
+- Merged: 9/11 hit@1, P@5 0.508, R@5 1.000, IoU 0.453. Recall uses any overlap, including broad windows.
+  Loitering ranked fifth; parked car second; fall localization was poor. All five negatives returned
+  unrelated clips. No detection-accuracy or image-check-validation claim.
+- Offline regression verification after saving this run: **301 passed, 6 skipped** (same trial-index
+  and Windows-only prerequisites as the earlier checkpoint).
+- No threshold/model changes. Pending: independent authorised real CCTV and labels, separate Google
+  approval for it, and teammate review. No additional real footage has been supplied.
+
+## Previous checkpoint: macOS validation (19 October 2026)
 
 Review PR: https://github.com/WongYikShern/TanyaCCTV/pull/5 (open, not merged).
 
