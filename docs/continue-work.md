@@ -1,5 +1,40 @@
 # Continue TanyaCCTV work from another device
 
+## Latest checkpoint: branch `feature/investigation-workspace` (18 October 2026)
+
+This branch is based on `main` at `3bdb1df`. It is not committed or pushed until the project
+owner approves. It adds:
+
+- **Setup check**: `backend/scripts/check_setup.py` gives read-only PASS/WARN/FAIL results with
+  fixes. It reports only whether a key is set.
+- **Startup**: `run_web.py` prints readiness, and exits cleanly with a message if port 5001 is
+  busy. The website and command-line tools all find `.venv/sentry` automatically.
+- **Duplicate uploads**: identical content already in the library is reported, and no second
+  copy is kept. Existing files are never touched.
+- **Earlier human reviews**: result cards show "Your earlier review: …" or "Not yet reviewed by a
+  person". This is display only and never changes ranking or status.
+- **Search evaluation**: `evaluate_search.py`, ground truth, and a recorded real-search baseline.
+  See `docs/search-evaluation.md`. Live mode refuses to send anything without
+  `--approve-api-calls`.
+- **Demo**: `make_demo_footage.py` (byte-identical to the evaluated clips when FFmpeg is
+  available), `docs/demo.md`, an automated 8-step demo workflow test, and
+  `docs/performance.md` with measured numbers.
+
+Tests (Windows, no key):
+
+- backend: **227 passed, 8 skipped, 0 failed**
+- with `TANYA_SENTRY_PYTHON`: **232 passed, 3 skipped**
+- bridge offline: **29 passed, 4 skipped**
+
+No Google calls were made, and the real `data/` was not modified.
+
+Pending, and needing the owner:
+
+- approval to AI-prepare demo footage (about US$0.10)
+- authorised real CCTV clips with annotations
+- private key rotation
+- a decision on committing and pushing this branch
+
 Checkpoint: 18 October 2026. Branch: `feature/local-web-dashboard`.
 Pull Request: https://github.com/WongYikShern/TanyaCCTV/pull/2
 

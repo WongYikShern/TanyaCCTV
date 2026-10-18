@@ -113,13 +113,29 @@ def _float_env(name: str, default: float, low: float, high: float) -> float:
     return value
 
 
+PINNED_SENTRYSEARCH_COMMIT = "d3efd6a4351251084dc101a24970e40a38e1426d"
+
+
+def local_sentry_python() -> Path:
+    """Interpreter of the optional project-local search environment (.venv/sentry)."""
+    sub = Path("Scripts/python.exe") if os.name == "nt" else Path("bin/python")
+    return PROJECT_ROOT / ".venv" / "sentry" / sub
+
+
 def load_search_settings() -> SearchSettings:
-    """Build SearchSettings from the environment (and PROJECT_ROOT/.env if it exists)."""
+    """Build SearchSettings from the environment (and PROJECT_ROOT/.env if it exists).
+
+    The search interpreter is TANYA_SENTRY_PYTHON if set, otherwise .venv/sentry if it exists.
+    """
     load_dotenv(PROJECT_ROOT / ".env")
     python = os.getenv("TANYA_SENTRY_PYTHON", "").strip()
     db = os.getenv("TANYA_SENTRY_DB", "").strip()
+    if python:
+        sentry_python = Path(python).expanduser()
+    else:
+        sentry_python = local_sentry_python() if local_sentry_python().is_file() else None
     return SearchSettings(
-        sentry_python=Path(python).expanduser() if python else None,
+        sentry_python=sentry_python,
         bridge_path=_resolve(os.getenv("TANYA_SENTRY_BRIDGE", "search_engine/tanya_bridge.py")),
         sentry_db=_resolve(db) if db else None,
         timeout_sec=_float_env("TANYA_SEARCH_TIMEOUT_SEC", 60.0, 1.0, 600.0),

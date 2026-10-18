@@ -1,0 +1,216 @@
+{
+  "recorded_at": "2026-10-17",
+  "engine": "SentrySearch d3efd6a, Gemini Embedding 2 (gemini backend), 10 s chunks / 2 s overlap",
+  "index": "synthetic trial footage only (cam1_lobby.mp4 60 s, cam2_carpark.mp4 40 s): 13 chunks",
+  "notes": "Top-5 ranked chunks per query from the bridge (dedupe disabled). Local paths replaced by {VIDEO_DIR}.",
+  "responses": {
+    "a person walking": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4013,
+        "score_above_median": 0.057,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3963,
+        "score_above_median": 0.052,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.3921,
+        "score_above_median": 0.0477,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.3469,
+        "score_above_median": 0.0026,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.345,
+        "score_above_median": 0.0006,
+        "status": "uncertain"
+      }
+    ],
+    "a person lying on the floor": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.4575,
+        "score_above_median": 0.1073,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 48.0,
+        "end_sec": 58.0,
+        "score": 0.4492,
+        "score_above_median": 0.099,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 56.0,
+        "end_sec": 60.0,
+        "score": 0.4416,
+        "score_above_median": 0.0913,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.3985,
+        "score_above_median": 0.0482,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.37,
+        "score_above_median": 0.0197,
+        "status": "uncertain"
+      }
+    ],
+    "a red car": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3644,
+        "score_above_median": 0.1202,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.3588,
+        "score_above_median": 0.1146,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.3567,
+        "score_above_median": 0.1125,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.2958,
+        "score_above_median": 0.0516,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.2847,
+        "score_above_median": 0.0405,
+        "status": "uncertain"
+      }
+    ],
+    "fire and smoke": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.3395,
+        "score_above_median": 0.0212,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.3352,
+        "score_above_median": 0.017,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.3303,
+        "score_above_median": 0.012,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.3232,
+        "score_above_median": 0.0049,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 48.0,
+        "end_sec": 58.0,
+        "score": 0.3213,
+        "score_above_median": 0.003,
+        "status": "uncertain"
+      }
+    ]
+  }
+}

@@ -86,9 +86,11 @@ $("more-frames").onclick=loadFrames;
 async function indexVideos() {
   const summary=await api("/api/index",{method:"POST"});
   const failed=summary.outcomes.filter(item=>item.status==="failed");
+  const duplicates=summary.outcomes.filter(item=>item.status==="skipped" && item.message.startsWith("duplicate content of"));
   await Promise.all([library(),status()]);
   $("sync-plan").hidden=true;$("results").replaceChildren();
-  notice(failed.length ? `Indexing finished with ${failed.length} failed video(s). Check the library for details.` : "Frames are ready. For new uploads, the next step is ‘Review AI indexing plan’, then approve preparation before searching.");
+  const duplicateNote=duplicates.length ? ` ${duplicates.length} file(s) were identical to videos already in the library and were not added again.` : "";
+  notice((failed.length ? `Indexing finished with ${failed.length} failed video(s). Check the library for details.` : "Frames are ready. For new uploads, the next step is ‘Review AI indexing plan’, then approve preparation before searching.")+duplicateNote);
 }
 $("index-button").onclick=async()=>{
   busy(true);notice("Extracting frames… Keep this page open.");
@@ -98,7 +100,9 @@ $("upload-form").onsubmit=async event=>{
   event.preventDefault();const file=$("video-file").files[0];
   if(file && file.size>512*1024*1024){notice("Choose a video smaller than 512 MB.");return;}
   busy(true);notice("Uploading your video…");
-  try{await api("/api/upload",{method:"POST",body:new FormData(event.target)});notice("Upload complete. Extracting frames…");await indexVideos();event.target.reset();}
+  try{const uploaded=await api("/api/upload",{method:"POST",body:new FormData(event.target)});
+    if(uploaded.duplicate_of){notice(`This video is already in your library as ${uploaded.duplicate_of}. No second copy was added.`);event.target.reset();return;}
+    notice("Upload complete. Extracting frames…");await indexVideos();event.target.reset();}
   catch(error){notice(error.message);}finally{busy(false);}
 };
 $("search-form").onsubmit=async event=>{
@@ -128,6 +132,9 @@ function resultCard(hit, query, visual){
   const info=element("div"),review=hit.visual_review;
   const labels={supported:"AI-supported candidate · human review required",not_supported:"Not supported in samples",unclear:"Unclear · manual review needed"};
   info.append(element("h3",hit.filename),element("span",review ? labels[review.verdict] : "Ranked candidate · not visually checked","badge"));
+  const reviewNames={correct:"Correct",wrong:"Wrong",unsure:"Unsure"};
+  const humanBadge=element("span",hit.human_review ? `Your earlier review: ${reviewNames[hit.human_review.assessment]}` : "Not yet reviewed by a person","badge "+(hit.human_review ? "" : "pending"));
+  info.append(humanBadge);
   info.append(element("p",`${time(hit.start_sec)}–${time(hit.end_sec)} · Ranking score ${hit.best_score.toFixed(3)} (not a probability)`));
   if(review){
     info.append(element("p",review.reason));
@@ -137,14 +144,15 @@ function resultCard(hit, query, visual){
   const button=element("button","Review clip →");button.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,hit.start_sec,hit.end_sec);info.append(button);
   const feedback=element("div",undefined,"review-feedback");
   feedback.append(element("p","Does this clip match your search? Your review stays on this computer."));
-  const saved=element("span","","muted");saved.setAttribute("role","status");
+  const saved=element("span",hit.human_review ? `Earlier review saved ${new Date(hit.human_review.reviewed_at).toLocaleString()}. Choose again to change it.` : "","muted");saved.setAttribute("role","status");
   const buttons=[];
   for(const [value,label] of [["correct","Correct"],["wrong","Wrong"],["unsure","Unsure"]]){
-    const choice=element("button",label,"secondary");choice.type="button";choice.setAttribute("aria-pressed","false");buttons.push(choice);
+    const choice=element("button",label,"secondary");choice.type="button";choice.setAttribute("aria-pressed",String(hit.human_review?.assessment===value));buttons.push(choice);
     choice.onclick=async()=>{
       buttons.forEach(b=>b.disabled=true);saved.textContent="Saving…";
       try{await api("/api/feedback",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,video_id:hit.video_id,start_sec:hit.start_sec,end_sec:hit.end_sec,search_mode:visual?"visual":"ranked",assessment:value})});
         buttons.forEach(b=>b.setAttribute("aria-pressed",String(b===choice)));saved.textContent=`Saved: ${label}.`;
+        humanBadge.textContent=`Your review: ${label}`;humanBadge.className="badge";
       }catch(error){saved.textContent=error.message;}finally{buttons.forEach(b=>b.disabled=false);}
     };feedback.append(choice);
   }

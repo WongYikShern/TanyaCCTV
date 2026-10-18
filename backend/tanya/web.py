@@ -15,7 +15,7 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 
 from .config import SUPPORTED_EXTENSIONS, SEARCHABLE_EXTENSIONS, load_settings, load_search_settings
-from .indexer import Indexer
+from .indexer import Indexer, sha256_file
 from .search import search_videos
 from .sentry_client import SearchError, redact
 from . import sentry_client
@@ -65,6 +65,9 @@ def create_app(settings=None, search_settings=None):
         if not path.is_relative_to(root.resolve()) or not path.is_file():
             abort(404)
         return path
+
+    def feedback_path():
+        return settings.db_path.with_name("search_feedback.db")
 
     def search_state(video, manifest):
         if video["status"] != "done":
@@ -181,6 +184,13 @@ def create_app(settings=None, search_settings=None):
             except Exception:
                 target.unlink(missing_ok=True)
                 raise
+            # Identical footage already in the library: discard only the copy written by this
+            # request (never an existing file) and say which video it matches.
+            same = rows("SELECT filename FROM videos WHERE sha256 = ? AND status = 'done'",
+                        (sha256_file(target),))
+            if same:
+                target.unlink(missing_ok=True)
+                return jsonify(filename=None, duplicate_of=same[0]["filename"]), 200
             return jsonify(filename=target.name), 201
         finally:
             lock.release()
@@ -224,9 +234,16 @@ def create_app(settings=None, search_settings=None):
             return jsonify(error=redact(str(error))), 503
         finally:
             lock.release()
-        for hit in result["hits"] + result.get("unclear_hits", []) + result.get("rejected_hits", []):
+        all_hits = result["hits"] + result.get("unclear_hits", []) + result.get("rejected_hits", [])
+        # Show the reviewer's own earlier decision for the same query/window/mode. This is display
+        # only: it never changes ranking, grouping or the system status ("uncertain").
+        mode = "visual" if visual_check else "ranked"
+        earlier = feedback.lookup(feedback_path(), redact(query.strip()), mode,
+                                  [(h["video_id"], h["start_sec"], h["end_sec"]) for h in all_hits])
+        for hit in all_hits:
             hit["video_url"] = url_for("video_file", video_id=hit["video_id"])
             hit["thumbnail_url"] = url_for("frame_file", rel=hit["thumbnail"]) if hit["thumbnail"] else None
+            hit["human_review"] = earlier.get((hit["video_id"], hit["start_sec"], hit["end_sec"]))
         return jsonify(result)
 
     @app.post("/api/feedback")
@@ -248,14 +265,14 @@ def create_app(settings=None, search_settings=None):
         if (any(type(t) not in (int, float) or not math.isfinite(t) for t in (start, end))
                 or not 0 <= start < end <= (videos[0]["duration_sec"] or 0)):
             abort(400, description="Review times must be inside the indexed video.")
-        feedback.save(settings.db_path.with_name("search_feedback.db"), dict(
+        feedback.save(feedback_path(), dict(
             query=redact(query.strip()), video_id=data["video_id"], filename=videos[0]["filename"],
             start_sec=start, end_sec=end, search_mode=data["search_mode"], assessment=data["assessment"]))
         return jsonify(ok=True)
 
     @app.get("/api/feedback/export")
     def export_feedback():
-        return app.response_class(feedback.export_csv(settings.db_path.with_name("search_feedback.db")),
+        return app.response_class(feedback.export_csv(feedback_path()),
             mimetype="text/csv", headers={"Content-Disposition": 'attachment; filename="search-feedback.csv"',
                                           "Cache-Control": "no-store"})
 

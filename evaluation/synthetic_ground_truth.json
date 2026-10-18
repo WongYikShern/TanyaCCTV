@@ -1,0 +1,9 @@
+{
+  "description": "Known events in the synthetic demo footage made by backend/scripts/make_demo_footage.py (cartoon scenes; no real people). Times in seconds.",
+  "cases": [
+    {"query": "a person walking", "events": [{"video": "cam1_lobby.mp4", "start_sec": 20, "end_sec": 40}]},
+    {"query": "a person lying on the floor", "events": [{"video": "cam1_lobby.mp4", "start_sec": 40, "end_sec": 60}]},
+    {"query": "a red car", "events": [{"video": "cam2_carpark.mp4", "start_sec": 20, "end_sec": 40}]},
+    {"query": "fire and smoke", "events": []}
+  ]
+}
