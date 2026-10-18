@@ -51,7 +51,7 @@ confirmed-incident labels are justified by these checks.
 
 After explicit approval to send sampled images to Google, limited smoke tests checked two
 retrieved windows with one frame each per query. Production defaults remain five windows and
-six frames per window; that complete flow has not passed live validation.
+six frames per window. The subsequent default-flow checks below supersede that workflow gap.
 
 - “people wearing black shirt”: both checked room windows were unclear. Visible zipped black
   outerwear does not establish a black shirt underneath.
@@ -65,5 +65,28 @@ Provider compatibility failures were corrected by changing the default model to
 and an image-request timeout also occurred. The final bounded fire/smoke retry succeeded with
 a longer timeout. Provider failures return an error without accepting any visual matches.
 
-These are small smoke checks, not accuracy measurements. Full multi-frame website validation,
-representative authorised CCTV testing, and private credential replacement remain pending.
+These are small smoke checks, not accuracy measurements. Representative authorised CCTV testing and private credential replacement remain pending.
+
+## Default website multi-frame checks
+
+With separate approval for three queries and up to 90 images, the actual website completed
+all three searches using unchanged sampling defaults, with no retries:
+
+| Query | Images | Retrieved windows checked | Supported / unclear / not supported |
+|---|---:|---:|---|
+| people wearing black shirt | 29 | 5 | 0 / 2 / 3 |
+| person wearing black clothing | 23 | 4 | 1 / 0 / 3 |
+| fire and smoke | 29 | 5 | 0 / 0 / 5 |
+
+Total: 81 sampled images. The shirt remained unclear behind zipped black outerwear. Black
+clothing supported the person clip and rejected the unrelated controls. Fire/smoke was not
+supported in any checked image. This does not establish absence between sampled frames.
+The supported evidence button at 6 seconds opened the H.264 room video at 6 seconds with
+media ready and no reported playback error. Consent reset after each completed search.
+A minor empty-results wording issue was corrected: a prompt to review unclear candidates
+is now shown only when unclear candidates exist.
+
+Offline suite: 151 passed, 4 skipped (original synthetic trial index unavailable). A new
+integration check exercises the route, actual frame sampling, all three review groups,
+thumbnail retrieval and byte-range playback, with only the provider mocked. For broader
+validation, follow `cctv-accuracy-checklist.md`; no representative CCTV benchmark was run.

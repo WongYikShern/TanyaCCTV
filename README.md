@@ -84,9 +84,10 @@ directly from disk. The new dashboard serves its own media URLs with video byte-
 
 ### Check visual evidence after search
 
-**Experimental; full live validation is pending.** Initial provider/model compatibility errors
-have been corrected. Limited single-frame smoke checks distinguish black outer clothing from
-an unseen shirt, but do not establish multi-frame or general CCTV accuracy.
+**Experimental; representative CCTV accuracy is not established.** Provider/model compatibility
+errors have been corrected. The default multi-frame website checks distinguish visible black
+outer clothing from an unseen shirt in the existing short sample collection. These are limited
+workflow checks, not general CCTV accuracy measurements.
 See [current handoff](docs/continue-work.md) for results and limitations.
 
 The website defaults to **Search & check matches**. This first retrieves ranked windows, then

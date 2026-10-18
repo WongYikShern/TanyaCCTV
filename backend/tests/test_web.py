@@ -174,3 +174,37 @@ def test_visual_search_failure_does_not_fall_back_to_ranked_matches(web, monkeyp
     response = client.post("/api/search", headers=headers,
                            json={"query": "black shirt", "visual_check": True, "approve_frame_upload": True})
     assert response.status_code == 503 and "hits" not in response.json
+
+
+def test_visual_search_samples_and_serves_all_review_groups(web, monkeypatch):
+    """Exercise route -> real frame sampler -> validated decisions -> playable media."""
+    client, headers, ws = web
+    make_video(ws.video_dir / "camera.mp4", seconds=8)
+    ws.run()
+    video = ws.videos()[0]
+    frame = ws.frames(video["id"])[0]
+    hits = [SearchHit(video["id"], "camera.mp4", "camera.mp4", 0, 8, .4, .1,
+                      [Chunk(i + 1, 0, 8, .4, .1)], thumbnail=frame["image_path"])
+            for i in range(3)]
+    monkeypatch.setattr("tanya.web.search_videos", lambda *args: SearchResponse("clothing", hits))
+    calls = []
+    def reviewer(payload, settings):
+        calls.append(payload)
+        assert len(payload["candidates"]) == 3
+        assert all(len(c["frames"]) == 6 for c in payload["candidates"])
+        return [dict(id=c["id"], verdict=verdict, reason="Test evidence.",
+                     evidence_timestamps=[c["frames"][0]["timestamp_sec"]] if verdict == "supported" else [])
+                for c, verdict in zip(payload["candidates"], ["supported", "unclear", "not_supported"])]
+    monkeypatch.setattr("tanya.visual_review.run_review", reviewer)
+    response = client.post("/api/search", headers=headers, json={
+        "query": "clothing", "visual_check": True, "approve_frame_upload": True})
+    assert response.status_code == 200 and len(calls) == 1
+    result = response.json
+    assert result["visual_review"] == dict(checked_candidates=3, sampled_frames=18,
+                                           supported=1, unclear=1, rejected=1)
+    for group in ("hits", "unclear_hits", "rejected_hits"):
+        assert len(result[group]) == 1
+        hit = result[group][0]
+        assert hit["status"] == "uncertain"
+        assert client.get(hit["thumbnail_url"]).status_code == 200
+        assert client.get(hit["video_url"], headers={"Range": "bytes=0-9"}).status_code == 206

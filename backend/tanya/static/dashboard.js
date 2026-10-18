@@ -115,7 +115,7 @@ $("search-form").onsubmit=async event=>{
       $("results").append(element("h3",`${data.visual_review.supported} supported · ${data.visual_review.unclear} unclear · ${data.visual_review.rejected} not supported`));
       $("results").append(element("p",`${data.visual_review.sampled_frames} images checked from ${data.visual_review.checked_candidates} retrieved windows.`,"muted"));
     }
-    if(!data.hits.length)$("results").append(element("p",visual ? "No visually supported match in the checked samples. Review unclear candidates below; this does not prove the event is absent from the recording." : "No ranked clips returned from your indexed library.","muted"));
+    if(!data.hits.length)$("results").append(element("p",visual ? "No visually supported match in the checked samples. "+(data.unclear_hits?.length ? "Review unclear candidates below. " : "")+"This does not prove the event is absent from the recording." : "No ranked clips returned from your indexed library.","muted"));
     for(const hit of data.hits)$("results").append(resultCard(hit));
     for(const [key,title] of [["unclear_hits","Unclear or not checked — review manually"],["rejected_hits","Not supported by sampled images"]]){
       if(data[key]?.length){const details=element("details");details.append(element("summary",`${title} (${data[key].length})`));for(const hit of data[key])details.append(resultCard(hit));$("results").append(details);}

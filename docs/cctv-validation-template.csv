@@ -1,0 +1,1 @@
+case_id,query,expected_video_alias,expected_start_sec,expected_end_sec,visible_ground_truth,visibility_conditions,expected_review,observed_rank,observed_start_sec,observed_end_sec,observed_review,evidence_times,reviewer_notes
