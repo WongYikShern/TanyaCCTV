@@ -57,7 +57,7 @@ def run_review(payload, search_settings):
     try:
         proc = subprocess.run([str(search_settings.sentry_python), str(script)],
                               input=json.dumps(payload), capture_output=True, text=True,
-                              encoding="utf-8", timeout=120, env=dict(os.environ))
+                              encoding="utf-8", timeout=180, env=dict(os.environ))
     except (OSError, subprocess.TimeoutExpired):
         raise SearchError("Visual checking could not finish. No candidate was marked as a match.") from None
     try:
@@ -111,7 +111,7 @@ def review_results(result, settings, search_settings, reviewer=None):
     for i, hit in enumerate(original):
         ident = str(i)
         decision = decisions.get(ident, {"verdict": "unclear", "reason":
-            "Outside the first five candidates; not visually checked." if i >= MAX_CANDIDATES else
+            f"Outside the first {MAX_CANDIDATES} candidates; not visually checked." if i >= MAX_CANDIDATES else
             "No readable extracted frames in this time window.", "evidence_timestamps": []})
         hit["visual_review"] = dict(decision, sampled_timestamps=[f["timestamp_sec"] for f in samples.get(ident, [])])
         groups[decision["verdict"]].append(hit)

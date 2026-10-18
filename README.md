@@ -84,9 +84,10 @@ directly from disk. The new dashboard serves its own media URLs with video byte-
 
 ### Check visual evidence after search
 
-**Experimental; live validation is pending.** Initial visual requests were rejected because
-the first model was unavailable to this account. The current default passed a text-only model
-access check, but its image-review path still needs live testing. See [current handoff](docs/continue-work.md).
+**Experimental; full live validation is pending.** Initial provider/model compatibility errors
+have been corrected. Limited single-frame smoke checks distinguish black outer clothing from
+an unseen shirt, but do not establish multi-frame or general CCTV accuracy.
+See [current handoff](docs/continue-work.md) for results and limitations.
 
 The website defaults to **Search & check matches**. This first retrieves ranked windows, then
 uses Gemini 3.8 Flash to review up to six extracted images from each of the first five windows.

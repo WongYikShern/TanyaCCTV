@@ -46,3 +46,24 @@ Ten-second chunks with overlap do not provide frame-accurate event boundaries. V
 with a larger authorised collection, independent event annotations, varied lighting/camera
 angles, and separately reported retrieval and timing metrics. No automatic alarms or
 confirmed-incident labels are justified by these checks.
+
+## Experimental visual review follow-up
+
+After explicit approval to send sampled images to Google, limited smoke tests checked two
+retrieved windows with one frame each per query. Production defaults remain five windows and
+six frames per window; that complete flow has not passed live validation.
+
+- “people wearing black shirt”: both checked room windows were unclear. Visible zipped black
+  outerwear does not establish a black shirt underneath.
+- “person wearing black clothing”: the room sample at 0 seconds was supported; the checked
+  synthetic square sample was not supported.
+- “fire and smoke”: both checked synthetic square samples were not supported. The other
+  retrieved windows were not checked, so this does not establish absence across the library.
+
+Provider compatibility failures were corrected by changing the default model to
+`gemini-3.8-flash` and removing an unsupported thinking setting. A transient retrieval failure
+and an image-request timeout also occurred. The final bounded fire/smoke retry succeeded with
+a longer timeout. Provider failures return an error without accepting any visual matches.
+
+These are small smoke checks, not accuracy measurements. Full multi-frame website validation,
+representative authorised CCTV testing, and private credential replacement remain pending.

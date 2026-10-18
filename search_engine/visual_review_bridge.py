@@ -2,6 +2,7 @@
 import base64
 import json
 import os
+import re
 import sys
 
 SYSTEM = """Assess visual evidence for a user's video-search description, using only the supplied
@@ -43,11 +44,11 @@ def main():
             for frame in candidate["frames"]:
                 contents.append(types.Part.from_text(text=f"Timestamp: {frame['timestamp_sec']} seconds"))
                 contents.append(types.Part.from_bytes(data=base64.b64decode(frame["jpeg"], validate=True), mime_type="image/jpeg"))
-        with genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options=types.HttpOptions(timeout=90000)) as client:
+        with genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options=types.HttpOptions(timeout=150000)) as client:
             response = client.models.generate_content(model=os.getenv("TANYA_VERIFY_MODEL", "gemini-3.8-flash"),
                 contents=contents, config=types.GenerateContentConfig(system_instruction=SYSTEM,
                     response_mime_type="application/json", response_json_schema=SCHEMA,
-                    temperature=0, max_output_tokens=4096, thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel.MINIMAL)))
+                    temperature=0, max_output_tokens=4096))
         data = json.loads(response.text)
         print(json.dumps({"ok": True, "results": data["results"]}))
         return 0
@@ -55,8 +56,16 @@ def main():
         # SDK exceptions can contain credential-bearing URLs; do not echo their messages.
         code = getattr(error, "code", None)
         label = type(error).__name__ + (f", HTTP {code}" if type(code) is int else "")
+        detail = str(getattr(error, "message", ""))
+        if type(error).__name__ in {"ReadTimeout", "ConnectTimeout", "RemoteProtocolError", "ConnectError"}:
+            detail = "The connection to Google did not finish. No matches were accepted; you can retry after reviewing the frame-upload approval."
+        key = os.environ.get("GEMINI_API_KEY", "")
+        if key:
+            detail = detail.replace(key, "[REDACTED]")
+        detail = re.sub(r"https?://\S+", "[URL omitted]", detail)[:400]
         print(json.dumps({"ok": False, "error": "Visual checking failed (" + label
-                          + "). No visual match was confirmed. Check model access, quota, and your key."}))
+                          + "). No visual match was confirmed. "
+                          + (detail or "Check model access, quota, and your key.")}))
         return 1
 
 
