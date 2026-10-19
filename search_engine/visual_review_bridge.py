@@ -44,7 +44,9 @@ def main():
             for frame in candidate["frames"]:
                 contents.append(types.Part.from_text(text=f"Timestamp: {frame['timestamp_sec']} seconds"))
                 contents.append(types.Part.from_bytes(data=base64.b64decode(frame["jpeg"], validate=True), mime_type="image/jpeg"))
-        with genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options=types.HttpOptions(timeout=150000)) as client:
+        # Approval covers a bounded image send; retries need a new reviewed request.
+        http_options = types.HttpOptions(timeout=150000, retry_options=types.HttpRetryOptions(attempts=1))
+        with genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options=http_options) as client:
             response = client.models.generate_content(model=os.getenv("TANYA_VERIFY_MODEL", "gemini-3.8-flash"),
                 contents=contents, config=types.GenerateContentConfig(system_instruction=SYSTEM,
                     response_mime_type="application/json", response_json_schema=SCHEMA,

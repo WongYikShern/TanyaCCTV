@@ -43,13 +43,22 @@ Re-score offline, with no API calls:
 .venv/bin/python backend/scripts/evaluate_search.py --ground-truth evaluation/synthetic_events_v2.json --recorded evaluation/recordings/2026-10-19-events.json
 ```
 
+## Targeted image-check follow-up
+
+The separately approved 66-image run successfully filtered the three weak synthetic cases:
+loitering's correct rank-5 window and the parked car's rank-2 window became the first supported
+candidates; the correct falling sequence was supported while a discontinuous upright/lying
+lobby sequence remained unclear. Raw rankings and broad event windows are unchanged.
+See [targeted-visual-validation.md](targeted-visual-validation.md) for counts and limitations.
+This is not a new general accuracy benchmark or a fix for precise event timing.
+
 ## Interpretation and next steps
 
 - Broad windows cover the right recording but often include multiple actions; entering, falling
   and vehicle actions have poor temporal localization. They are not precise event detectors.
 - Loitering and parked vehicles failed to rank first. Further independent labelled examples are
   needed before changing rankings or thresholds; no model or threshold was tuned to these clips.
-- Negative queries always return neighbours. The run did not include the optional visual review
+- Negative queries always return neighbours. The retrieval run did not include the optional visual review
   stage: no claim of correct visual rejection or image-check accuracy follows from these results.
 - Real CCTV testing still needs authorised footage with independent annotations and separate
   permission for Google processing. Use `cctv-accuracy-checklist.md`.

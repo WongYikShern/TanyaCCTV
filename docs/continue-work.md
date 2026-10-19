@@ -1,6 +1,25 @@
 # Continue TanyaCCTV work from another device
 
-## Latest: bounded source-chunk review (19 October 2026)
+## Latest: approved targeted image checks (19 October 2026)
+
+Same PR #5 / branch `feature/macos-workflow-validation`. Owner approved 66 synthetic images
+for loitering, parked car and falling, using cached retrieval. All three calls completed with
+no retries; the allowance is consumed. No additional video/text embeddings or real CCTV.
+
+The correct loitering window (raw rank 5) and parked car (rank 2) became the first supported
+candidates. Falling was supported on the corridor's visible transition; the lobby's upright/
+lying samples stayed unclear rather than inventing a fall. Checked totals: 3 supported,
+7 not supported, 1 unclear; one additional candidate was not checked. Broad windows and raw
+ranking are unchanged. Saved recording and detailed limitations:
+`evaluation/recordings/2026-10-19-targeted-visual.json`, `docs/targeted-visual-validation.md`.
+
+Offline verification: **304 passed, 6 skipped**, with the same original trial-index and Windows-only prerequisites.
+SDK visual requests now allow one attempt; further sends require a fresh reviewed approval.
+Pending: authorised real CCTV/labels and separate upload approval, independent validation
+beyond these selected examples, precise timing, and teammate review. Do not claim reliable
+real-world detection or merge the PR automatically.
+
+## Previous: bounded source-chunk review (19 October 2026)
 
 Same branch/PR #5. Compared merge ratios on both recorded datasets, offline: narrower windows
 trade recall for timing, so no default/ranking change was justified. Added `review_focus` to API

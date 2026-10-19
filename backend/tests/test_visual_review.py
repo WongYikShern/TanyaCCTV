@@ -143,3 +143,27 @@ def test_frames_behind_a_junction_are_not_transmitted(sample, tmp_path):
     assert frame_samples(ws.settings(), original["hits"][0]) == []
     calls, _ = _reviewer_calls(sample)
     assert calls == []
+
+
+def test_recorded_targeted_visual_checks_keep_temporal_ambiguity_explicit():
+    """Protect the observed three-query sample results without making new API requests."""
+    import json
+    from tanya.config import PROJECT_ROOT
+    data = json.loads((PROJECT_ROOT / 'evaluation/recordings/2026-10-19-targeted-visual.json').read_text())
+    assert data['attempted_images'] == data['image_limit'] == 66
+    assert len(data['results']) == 3
+    expected = {'a person standing still for a long time': ('cam3_entrance.mp4', 5),
+                'a parked car': ('cam4_driveway.mp4', 2),
+                'a person falling down': ('cam5_corridor.mp4', 1)}
+    for result in data['results']:
+        assert 'error' not in result
+        supported = [c for c in result['candidates'] if c['visual_review']['verdict'] == 'supported']
+        assert len(supported) == 1
+        assert (supported[0]['filename'], supported[0]['retrieval_rank']) == expected[result['query']]
+        for candidate in result['candidates']:
+            review = candidate['visual_review']
+            assert set(review['evidence_timestamps']) <= set(review['sampled_timestamps'])
+    fall = next(r for r in data['results'] if r['query'] == 'a person falling down')
+    lobby = next(c for c in fall['candidates'] if c['filename'] == 'cam1_lobby.mp4')
+    assert lobby['visual_review']['verdict'] == 'unclear'
+    assert lobby['visual_review']['evidence_timestamps'] == []

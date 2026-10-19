@@ -18,7 +18,7 @@ def bridge(monkeypatch):
     calls = []
     class Client:
         def __init__(self, **kwargs):
-            pass
+            module.client_options = kwargs
         def __enter__(self):
             return self
         def __exit__(self, *args):
@@ -32,7 +32,7 @@ def bridge(monkeypatch):
                 raise module.fake_error
             return SimpleNamespace(text=json.dumps({"results": []}))
     types = SimpleNamespace(Part=SimpleNamespace(from_text=lambda **kw: kw, from_bytes=lambda **kw: kw),
-        HttpOptions=lambda **kw: kw, GenerateContentConfig=lambda **kw: kw,
+        HttpOptions=lambda **kw: kw, HttpRetryOptions=lambda **kw: kw, GenerateContentConfig=lambda **kw: kw,
         ThinkingConfig=lambda **kw: kw, ThinkingLevel=SimpleNamespace(MINIMAL="MINIMAL"))
     google = ModuleType("google")
     genai = ModuleType("google.genai")
@@ -54,6 +54,7 @@ def test_default_model_and_structured_request(bridge, capsys):
     assert module.main() == 0
     assert json.loads(capsys.readouterr().out) == {"ok": True, "results": []}
     assert calls[0]["model"] == "gemini-3.8-flash"
+    assert module.client_options["http_options"]["retry_options"] == {"attempts": 1}
     assert calls[0]["config"]["response_json_schema"] == module.SCHEMA
     # Model listing/countTokens did not establish that MINIMAL thinking was supported.
     # Let the provider use its supported default rather than forcing a rejected setting.

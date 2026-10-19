@@ -29,6 +29,10 @@ accuracy and reliable event localization remain unverified.
 - [Validating on real CCTV](docs/cctv-accuracy-checklist.md)
 - [Handover notes](docs/continue-work.md) and [Phases 6–9 progress](docs/progress.md)
 
+A separate approved 66-image check filtered the selected loitering, parked-car and fall samples:
+the expected candidate was first in the supported group for all three. This does not change
+raw rankings or establish real CCTV accuracy. See [targeted visual checks](docs/targeted-visual-validation.md).
+
 Merged search results keep the full-window **Play from…** button and offer **Inspect strongest
 chunk…** to review a shorter source chunk first. This changes navigation only: chunk boundaries
 are not event boundaries, and search rankings remain unchanged. See [window review](docs/window-review.md).
