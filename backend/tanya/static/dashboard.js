@@ -345,6 +345,13 @@ function resultCard(hit, query, visual, rank){
   }
   const actions=element("div",undefined,"actions"), watch=element("button",`Play from ${time(hit.start_sec)}`); watch.type="button"; watch.prepend(icon("play"));
   watch.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,hit.start_sec,hit.end_sec); actions.append(watch);
+  const focus=hit.review_focus;
+  if(focus && (focus.start_sec!==hit.start_sec || focus.end_sec!==hit.end_sec)){
+    const inspect=element("button",`Inspect strongest chunk ${time(focus.start_sec)}–${time(focus.end_sec)}`,"secondary");
+    inspect.type="button";inspect.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,focus.start_sec,focus.end_sec);
+    actions.append(inspect);
+    info.append(element("p","This window combines several source chunks. Inspect the strongest-scoring chunk first, then review the full window. Chunk times are not event boundaries.","muted"));
+  }
   if(window.investigationClipButton) actions.append(window.investigationClipButton(hit,query,visual,rank));
   info.append(actions);
   const feedback=element("div",undefined,"review-feedback");

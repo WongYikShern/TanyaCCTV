@@ -29,6 +29,10 @@ accuracy and reliable event localization remain unverified.
 - [Validating on real CCTV](docs/cctv-accuracy-checklist.md)
 - [Handover notes](docs/continue-work.md) and [Phases 6–9 progress](docs/progress.md)
 
+Merged search results keep the full-window **Play from…** button and offer **Inspect strongest
+chunk…** to review a shorter source chunk first. This changes navigation only: chunk boundaries
+are not event boundaries, and search rankings remain unchanged. See [window review](docs/window-review.md).
+
 ## Offline hackathon demonstration (no Gemini calls)
 
 To rehearse with synthetic footage and recorded search results, stop any existing website and run:

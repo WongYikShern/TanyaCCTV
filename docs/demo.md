@@ -92,7 +92,7 @@ Mac verification covered upload/indexing through the API rather than changing ex
 | 2. Check readiness | Show the badges **Frames ready** and **AI prepared**, and the search panel's coverage line. | Extracting frames and preparing AI search are separate, explicit steps. |
 | 3. Search | Untick image checking, then search **a red car**. | Ranked mode sends only the query text to Google. |
 | 4. Ranked results | Point at **cam2_carpark.mp4, 0:16–0:40**, the "Ranked candidate · not visually checked" and "Not yet reviewed by a person" badges, and "Ranking score … (not a probability)". | Lower cards (for example the empty car park at 0:00–0:18) show that nearest neighbours always appear. That's why nothing is auto-confirmed. |
-| 5. Open the footage | **Play from 0:16** opens the player at 0:16 with the result window shown. | It plays the original H.264 recording; other codecs get a local browser copy, the original is unchanged. |
+| 5. Open the footage | **Play from 0:16** opens the full 0:16–0:40 window. **Inspect strongest chunk 0:24–0:34** opens the shorter source chunk first. | It plays the original H.264 recording; other codecs get a local browser copy, the original is unchanged. |
 | 6. Inspect frames | Scroll the **Frame timeline** and select a frame to jump to it. | The extracted frames are the evidence a person checks. |
 | 7. Record a review | Select **Correct** on the car clip and **Wrong** on the empty car park. Run the same search again: the badges now read "Your earlier review: …". | Reviews are stored locally, don't retrain anything, and don't change ranking. |
 | 8. Export | **Export my search reviews (CSV)**. | Spreadsheet formulas in exported text are neutralised. Check the file before sharing it. |

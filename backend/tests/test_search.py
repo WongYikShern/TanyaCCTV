@@ -227,3 +227,25 @@ def test_missing_tanya_database_is_a_clear_error_and_engine_not_started(search_e
     with pytest.raises(SearchError, match="Run index_videos.py first"):
         search_videos("a red car", settings, search_env.search_settings)
     assert search_env.calls() == [] and not settings.db_path.exists()
+
+
+def test_review_focus_uses_strongest_chunk_without_changing_result(search_env):
+    response = search_videos('a red car', search_env.settings, search_env.search_settings, n=5)
+    before = [(h.start_sec, h.end_sec, h.best_score, h.status) for h in response.hits]
+    payload = response.to_dict()
+    top = payload['hits'][0]
+    assert (top['start_sec'], top['end_sec']) == (16, 40)
+    assert top['review_focus'] == {'start_sec': 24, 'end_sec': 34}
+    assert [(h.start_sec, h.end_sec, h.best_score, h.status) for h in response.hits] == before
+    assert [h['filename'] for h in payload['hits']] == [h.filename for h in response.hits]
+
+
+def test_review_focus_clips_to_window_and_handles_missing_chunks():
+    from tanya.search import SearchHit, SearchResponse, Chunk
+    hit = SearchHit(1, 'clip.mp4', 'clip.mp4', 1, 5.875, .8, .1,
+                    [Chunk(2, 0, 5.88, .8, .1), Chunk(1, 0, 4, .8, .1)])
+    assert SearchResponse('q', [hit]).to_dict()['hits'][0]['review_focus'] == {'start_sec': 1, 'end_sec': 4}
+    hit.chunks = [Chunk(1, 0, 5.88, .8, .1)]
+    assert SearchResponse('q', [hit]).to_dict()['hits'][0]['review_focus']['end_sec'] == 5.875
+    hit.chunks = []
+    assert SearchResponse('q', [hit]).to_dict()['hits'][0]['review_focus'] is None

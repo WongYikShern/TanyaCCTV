@@ -1,6 +1,20 @@
 # Continue TanyaCCTV work from another device
 
-## Latest: approved synthetic live evaluation (19 October 2026)
+## Latest: bounded source-chunk review (19 October 2026)
+
+Same branch/PR #5. Compared merge ratios on both recorded datasets, offline: narrower windows
+trade recall for timing, so no default/ranking change was justified. Added `review_focus` to API
+results and **Inspect strongest chunk…** alongside full-window playback, with explicit wording
+that source chunks are not event boundaries. Rankings, scores, full windows, human decisions and
+investigation references are unchanged. Missing chunks omit the control; focus is clamped.
+
+Browser replay verified car focus at 24 s with 24–34 s window and full context still 16–40 s.
+No additional API calls or real CCTV used. Tests: **303 passed, 6 skipped**. See
+`docs/window-review.md` for comparison data and limitations. Loitering/parked-car ranking is
+still not fixed; independent real labels and separate further live-evaluation approval are needed.
+No additional authorised real footage is available. Teammate review/merge remains their decision.
+
+## Earlier: approved synthetic live evaluation (19 October 2026)
 
 PR #5: https://github.com/WongYikShern/TanyaCCTV/pull/5, branch `feature/macos-workflow-validation`.
 User confirmed a new unshared key was saved and both shared keys revoked. The key from `.env`
