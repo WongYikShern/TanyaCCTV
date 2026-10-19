@@ -1,0 +1,70 @@
+{
+  "dataset": "CAVIAR small real-camera set",
+  "source_page": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA1/",
+  "permission": "Publisher states Creative Commons BY-SA; version not specified on the linked dataset page. Preserve source attribution.",
+  "attribution": "EC Funded CAVIAR project/IST 2001 37540",
+  "staged": true,
+  "google_processing_approved": false,
+  "clips": [
+    {
+      "name": "Walk1",
+      "video_url": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA1/Walk1/Walk1.mpg",
+      "annotation_url": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA1/Walk1/wk1gt.xml",
+      "purpose": "walking",
+      "video_sha256": "a5d6dc7d7def01c1bdaeea8ff620195c148b366e1a52589bf4e46f15b6daa0c2",
+      "annotation_sha256": "dfcb8135fe46e7fbbcb7616d93f4f16aee040570185227ecd8c81aaa87de06cd",
+      "prepared_fps": 25.0,
+      "decoded_frames": 612,
+      "prepared_duration_sec": 24.48,
+      "annotation_frames": 611
+    },
+    {
+      "name": "Browse2",
+      "video_url": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA1/Browse2/Browse2.mpg",
+      "annotation_url": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA1/Browse2/br2gt.xml",
+      "purpose": "browsing and standing",
+      "video_sha256": "c1decc9a72a48133674227cf64ad79adbde5dbd9239c45f1e868056ada9a0851",
+      "annotation_sha256": "c5755b19aef64f35a08b79f6effb83c1bdcadf446f4a82344296cb201c7d9939",
+      "prepared_fps": 25.0,
+      "decoded_frames": 876,
+      "prepared_duration_sec": 35.04,
+      "annotation_frames": 875
+    },
+    {
+      "name": "Rest_FallOnFloor",
+      "video_url": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA1/Rest_FallOnFloor/Rest_FallOnFloor.mpg",
+      "annotation_url": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA1/Rest_FallOnFloor/rffgt.xml",
+      "purpose": "staged fall",
+      "video_sha256": "06bc1d99e6766fd755adc215b3b5753f26d099f45c6578eee9c318e5c9637546",
+      "annotation_sha256": "6a172e14453ce9e74e841b67af2d93c7a6c46a2b8d96b20e36264f9d8cd0f7ea",
+      "prepared_fps": 25.0,
+      "decoded_frames": 1008,
+      "prepared_duration_sec": 40.32,
+      "annotation_frames": 1007
+    },
+    {
+      "name": "EnterExitCrossingPaths1cor",
+      "video_url": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA2/EnterExitCrossingPaths1cor/EnterExitCrossingPaths1cor.mpg",
+      "annotation_url": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA2/EnterExitCrossingPaths1cor/ceecp1gt.xml",
+      "purpose": "entry/exit, corridor view",
+      "video_sha256": "f8363a5492e57787647c0e9e525b749a864e3bcbaee48a7353060525428a1367",
+      "annotation_sha256": "3525985d2ee60fdd91a584a1c6fd8b70f335c19c9bc26280d785b1c4e8ae123f",
+      "prepared_fps": 25.0,
+      "decoded_frames": 383,
+      "prepared_duration_sec": 15.32,
+      "annotation_frames": 383
+    },
+    {
+      "name": "EnterExitCrossingPaths1front",
+      "video_url": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA2/EnterExitCrossingPaths1front/EnterExitCrossingPaths1front.mpg",
+      "annotation_url": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA2/EnterExitCrossingPaths1front/feecp1gt.xml",
+      "purpose": "entry/exit, front view",
+      "video_sha256": "4ad6b51f756cf5c05df6017137bdb11a31bc320dd53de75aaa06a9dccf8ea7c9",
+      "annotation_sha256": "33677afddc823d8b47eb0fa20d59553b8edc6ed041310b071ae6746a86837494",
+      "prepared_fps": 25.0,
+      "decoded_frames": 383,
+      "prepared_duration_sec": 15.32,
+      "annotation_frames": 383
+    }
+  ]
+}

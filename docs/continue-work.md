@@ -1,5 +1,10 @@
 # Continue TanyaCCTV work from another device
 
+Latest acquisition: five public staged CAVIAR real-camera clips and source labels downloaded,
+normalized/indexed separately, with Google blocked in the local viewer. No real-camera AI
+processing approved or run. See `docs/caviar-research-set.md` and the current handoff for paths,
+provenance, frame-label alignment caveats and next steps.
+
 **Start here:** [current teammate handoff](teammate-handoff.md). It supersedes the historical
 checkpoints below, including their old pending-key/commit notes.
 

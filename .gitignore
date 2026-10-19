@@ -43,3 +43,6 @@ dist/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Public research footage, labels, derivatives and local validation data
+/data/cctv_validation/

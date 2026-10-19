@@ -20,6 +20,11 @@ mean temporal IoU was only 0.453. Broad windows inflate overlap-based recall, an
 negative queries returned irrelevant clips. See the event-support guide for details. Real CCTV
 accuracy and reliable event localization remain unverified.
 
+A small public [CAVIAR real-camera research set](docs/caviar-research-set.md) is now downloaded
+locally with publisher labels and browser-compatible copies. These are staged recordings,
+kept outside Git; AI processing has not been approved or run on them. See the guide to
+re-download and open the separate local-only viewer.
+
 For your teammate: [current handoff and remaining work](docs/teammate-handoff.md).
 Timing diagnostics now distinguish any-overlap retrieval from stricter event localization;
 see [temporal validation](docs/temporal-validation.md). These metrics expose timing failures

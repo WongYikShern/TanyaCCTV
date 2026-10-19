@@ -5,6 +5,16 @@
 PR #5 is open, not merged. PRs #2–#4 were already merged before this branch started.
 Do not continue from the older `feature/local-web-dashboard` branch.
 
+## Latest acquisition checkpoint
+
+Five public CAVIAR real-camera clips plus XML labels are downloaded locally (about 38 MB),
+converted to normalized 25 fps H.264 copies, and indexed separately. Staged scenarios,
+130.48 s total; not uncontrolled natural CCTV. Source hashes and URLs are in
+`evaluation/datasets/caviar-small.json`; no footage or labels are in Git. Follow
+`docs/caviar-research-set.md` to reproduce and view. The local-only viewer blocks all Google
+processing; no real-camera AI calls have been approved or run. Verify frame-label alignment
+and derive event intervals next; lighting/weather/vehicle coverage remains incomplete.
+
 ## Resume safely
 
 In a clean existing checkout (save your own uncommitted work before switching):
@@ -41,7 +51,7 @@ fresh isolated synthetic workspace and blocks new AI calls; export before stoppi
   parked-car true candidates became first supported; fall sequence supported, ambiguous
   upright/lying sequence stayed unclear. See `docs/targeted-visual-validation.md`.
 - Additional strict temporal evaluation, entirely offline: `docs/temporal-validation.md`.
-- Latest backend verification: **309 passed, 6 skipped** with the pinned search environment.
+- Latest backend verification: **314 passed, 6 skipped** with the pinned search environment.
   Four skips need exactly the original trial index; two are Windows junction tests. Bridge
   offline previously: 15 passed, 14 trial-index skips, 4 live tests deselected.
 - User confirmed private key replacement and old-key revocation; the new key completed the
@@ -59,8 +69,9 @@ of reliable detection, precise timing, absence, identity matching or automatic a
 
 1. Review PR #5 and decide whether to merge. Further development can continue on this branch
    and push to the same PR; do not merge automatically on the owner's behalf.
-2. Obtain additional authorised footage and independent labels. The owner currently has no
-   additional real CCTV clips. Watch locally and annotate exact event times before searching.
+2. Obtain additional authorised footage and independent labels. A small public staged real-camera
+   subset is now available as described above; broader natural CCTV is still needed. Watch
+   locally, verify supplied labels and annotate exact event times before searching.
 3. Use `docs/cctv-accuracy-checklist.md` and a private copy of the CSV template. Agree what
    counts as a positive/negative and acceptable timing before using evaluation results.
 4. Present the exact Google-upload/query/image plan and estimated cost before new API calls.
@@ -69,6 +80,6 @@ of reliable detection, precise timing, absence, identity matching or automatic a
    metrics. Keep source scores as ranking signals, preserve uncertainty and manual review.
 6. Push code, tests, measured outcomes and updated limitations to the review branch.
 
-No more authorised data or paid work is currently pending execution. Real CCTV testing and
-further generalization/timing experiments need the missing inputs/approval above. Telegram
+The public dataset acquisition is complete. Local label review can proceed; AI processing
+requires the separate approval above. Broader real CCTV and generalization still need additional inputs. Telegram
 alerts and online hosting remain optional future scope.
