@@ -7,13 +7,15 @@ Do not continue from the older `feature/local-web-dashboard` branch.
 
 ## Latest acquisition checkpoint
 
-Five public CAVIAR real-camera clips plus XML labels are downloaded locally (about 38 MB),
-converted to normalized 25 fps H.264 copies, and indexed separately. Staged scenarios,
-130.48 s total; not uncontrolled natural CCTV. Source hashes and URLs are in
-`evaluation/datasets/caviar-small.json`; no footage or labels are in Git. Follow
-`docs/caviar-research-set.md` to reproduce and view. The local-only viewer blocks all Google
-processing; no real-camera AI calls have been approved or run. Verify frame-label alignment
-and derive event intervals next; lighting/weather/vehicle coverage remains incomplete.
+The initial varied-footage collection is complete: **11 licensed real-camera clips**, about
+32 minutes 10 seconds total. Five CAVIAR staged indoor clips/labels are complemented by six
+AAU RainSnow natural traffic clips across four intersections, with daylight/night, rain/snow,
+vehicles and pedestrians. Originals and H.264 review copies are local and ignored by Git.
+Source URLs/hashes are in `evaluation/datasets/caviar-small.json` and `rainsnow-small.json`.
+Read **`docs/real-cctv-footage-handoff.md`** for permission, exact coverage, checks and reproduction.
+RainSnow uses localhost:5002; CAVIAR uses localhost:5001. Both research viewers block AI calls.
+No real-camera Google processing has been approved or run. Full manual event labelling,
+accuracy evaluation and exact timing remain next tasks.
 
 ## Resume safely
 
@@ -51,8 +53,10 @@ fresh isolated synthetic workspace and blocks new AI calls; export before stoppi
   parked-car true candidates became first supported; fall sequence supported, ambiguous
   upright/lying sequence stayed unclear. See `docs/targeted-visual-validation.md`.
 - Additional strict temporal evaluation, entirely offline: `docs/temporal-validation.md`.
-- Latest backend verification: **314 passed, 6 skipped** with the pinned search environment.
-  Four skips need exactly the original trial index; two are Windows junction tests. Bridge
+- Latest backend verification: **319 passed, 6 skipped** in the full run; the one remaining
+  local-port test was blocked by the sandbox and **passed when rerun with socket access**
+  (320 passing tests across the full run and targeted rerun). Four skips need exactly the
+  original trial index; two are Windows junction tests. Bridge
   offline previously: 15 passed, 14 trial-index skips, 4 live tests deselected.
 - User confirmed private key replacement and old-key revocation; the new key completed the
   approved calls. Revocation is user-confirmed, not independently verified. `.env` is ignored.
@@ -69,9 +73,9 @@ of reliable detection, precise timing, absence, identity matching or automatic a
 
 1. Review PR #5 and decide whether to merge. Further development can continue on this branch
    and push to the same PR; do not merge automatically on the owner's behalf.
-2. Obtain additional authorised footage and independent labels. A small public staged real-camera
-   subset is now available as described above; broader natural CCTV is still needed. Watch
-   locally, verify supplied labels and annotate exact event times before searching.
+2. Use the acquired 11-clip real-camera collection. Watch locally, independently label events,
+   verify supplied CAVIAR labels and annotate exact event times before searching. Add footage
+   only for identified coverage gaps; collection alone does not establish detection accuracy.
 3. Use `docs/cctv-accuracy-checklist.md` and a private copy of the CSV template. Agree what
    counts as a positive/negative and acceptable timing before using evaluation results.
 4. Present the exact Google-upload/query/image plan and estimated cost before new API calls.

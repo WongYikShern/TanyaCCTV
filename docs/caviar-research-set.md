@@ -74,6 +74,7 @@ source hashes, local indexing and supplied XML parsing were checked. No Google c
 3. Present the exact real-camera video/frame/query upload and cost plan for approval. Public
    download permission does not mean the user has approved Google processing.
 4. Then measure retrieval/image review and timing, including misses and irrelevant matches.
-5. Obtain broader independently labelled recordings for lighting/weather/vehicle coverage.
+5. The additional AAU RainSnow collection now provides day/night, weather and vehicle inputs.
+   See `real-cctv-footage-handoff.md`; independent temporal event labels remain to be created.
 
 The acquisition step is complete. Real-camera AI accuracy has **not** been tested yet.

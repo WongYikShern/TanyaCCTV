@@ -794,3 +794,11 @@ files and open without internet (the videos are local).
 
 Use authorised sample footage only. Do not commit videos, extracted frames or databases:
 they are excluded by `.gitignore`.
+
+### Varied real-camera research footage
+
+The local acquisition now includes 11 licensed clips: five staged CAVIAR indoor recordings
+and six AAU RainSnow natural traffic recordings with day/night, rain/snow and four intersection
+views. See [the footage handoff](docs/real-cctv-footage-handoff.md) for sources, attribution,
+exact coverage and download/view commands. Media stays outside Git. Research viewers block
+cloud AI calls; accuracy and event timing are not yet validated.

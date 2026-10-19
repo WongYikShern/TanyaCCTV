@@ -1,3 +1,8 @@
+> Latest footage checkpoint: 11 licensed real-camera clips acquired locally (CAVIAR + AAU RainSnow).
+> Day/night, rain/snow, indoor/outdoor, four traffic views. Reproduce and continue from
+> [real-cctv-footage-handoff.md](real-cctv-footage-handoff.md) and [teammate-handoff.md](teammate-handoff.md).
+> Acquisition is complete for the initial collection; AI accuracy/timing evaluation remains.
+
 # Continue TanyaCCTV work from another device
 
 Latest acquisition: five public staged CAVIAR real-camera clips and source labels downloaded,

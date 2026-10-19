@@ -46,7 +46,7 @@
   </header>
 
   <main>
-    {% if config.get('LOCAL_RESEARCH_SOURCE') %}<div class="banner warn" role="status"><strong>CAVIAR real-camera research set — staged scenes.</strong> Local review only; Google processing disabled. Showing MP4 review copies; publisher originals are kept separately. Attribution: EC Funded CAVIAR project/IST 2001 37540. Publisher states CC BY-SA. <a href="{{ config['LOCAL_RESEARCH_SOURCE'] }}" target="_blank" rel="noreferrer">Publisher and usage terms</a></div>{% endif %}
+    {% if config.get('LOCAL_RESEARCH_SOURCE') %}<div class="banner warn" role="status"><strong>{{ config.get('LOCAL_RESEARCH_TITLE', 'CAVIAR real-camera research set — staged scenes.') }}</strong> Local review only; Google processing disabled. Showing MP4 review copies; publisher originals are kept separately. Attribution: {{ config.get('LOCAL_RESEARCH_ATTRIBUTION', 'EC Funded CAVIAR project/IST 2001 37540. Publisher states CC BY-SA.') }} <a href="{{ config['LOCAL_RESEARCH_SOURCE'] }}" target="_blank" rel="noreferrer">Publisher and usage terms</a></div>{% endif %}
     {% if offline_demo %}<div class="banner warn" role="status"><strong>OFFLINE REPLAY DEMO — no live AI.</strong> Search replays four recorded queries on synthetic footage. Image checking and AI preparation are disabled. Demo uploads are local and are not added to recorded search results.</div>{% endif %}
     <!-- Dashboard -->
     <section class="page" data-page="dashboard">
