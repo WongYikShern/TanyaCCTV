@@ -13,7 +13,7 @@ QUERIES = ('a person walking', 'a person lying on the floor', 'a red car', 'fire
 def replay_search(query, settings, search_settings):
     if query not in QUERIES:
         raise SearchError('Offline replay supports only: ' + '; '.join(QUERIES) + '. No live search was run.')
-    recording = json.loads((PROJECT_ROOT / 'evaluation/recordings/2026-10-17-gemini-embedding-2.json').read_text())
+    recording = json.loads((PROJECT_ROOT / 'evaluation/recordings/2026-10-17-gemini-embedding-2.json').read_text(encoding="utf-8"))
     results = recording['responses'][query]
     # Recorded paths are placeholders, never a second source of local files.
     results = [dict(r, source_file=os.path.abspath(settings.video_dir / r['filename'])) for r in results]

@@ -17,13 +17,31 @@ import sqlite3
 import os
 
 
+def local_ffmpeg():
+    """The local FFmpeg encoder only: TANYA_FFMPEG, PATH, or the copy bundled with the search environment
+    (TANYA_SENTRY_PYTHON, as documented for Windows, or .venv/sentry). Never loads .env or a Google client."""
+    sentry_default = PROJECT_ROOT / '.venv/sentry' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+    for candidate in (os.environ.get('TANYA_SENTRY_PYTHON', '').strip(), str(sentry_default)):
+        if candidate and Path(candidate).is_file():
+            exe = find_ffmpeg(Path(candidate))
+            if exe:
+                return exe
+    return find_ffmpeg(None)
+
+
 def prepare(root):
     if root.exists() and any(root.iterdir()):
         raise ValueError('Choose a new empty workspace; existing files are never overwritten.')
     settings = Settings(root / 'videos', root / 'frames', root / 'index.db')
-    # Discover only the local encoder; never load .env or configure a Google client.
-    sentry = PROJECT_ROOT / '.venv/sentry' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-    make(settings.video_dir, find_ffmpeg(sentry), log=print)
+    ffmpeg = local_ffmpeg()
+    if ffmpeg:
+        # Lets the website make local browser copies of uploads too (the demo has no search interpreter).
+        os.environ.setdefault('TANYA_FFMPEG', ffmpeg)
+    else:
+        print('WARNING: FFmpeg was not found, so the demo videos will NOT play in the browser (frames, search '
+              'replay and reports still work). Set TANYA_SENTRY_PYTHON or TANYA_FFMPEG and start again.',
+              file=sys.stderr, flush=True)
+    make(settings.video_dir, ffmpeg, log=print)
     Indexer(settings).run()
     with sqlite3.connect(settings.db_path) as conn:
         videos = conn.execute('SELECT rel_path,sha256 FROM videos').fetchall()

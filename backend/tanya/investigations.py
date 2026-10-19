@@ -22,8 +22,9 @@ from pathlib import Path
 
 DECISIONS = ("correct", "wrong", "unsure")
 MODES = ("ranked", "visual")
-# Evidence can also be a moment an operator chose by hand in the video player (not a search result).
-EVIDENCE_MODES = MODES + ("manual",)
+# Evidence can also be a moment an operator chose by hand in the video player (not a search result),
+# or a window from a direct footage scan (sampled images checked in order; no similarity ranking).
+EVIDENCE_MODES = MODES + ("manual", "scan")
 VISUAL_VERDICTS = ("supported", "not_supported", "unclear")
 STATUSES = ("open", "closed")
 
@@ -319,7 +320,9 @@ class Store:
         query = _text(item.get("query"), "Query", 1, 500)
         mode = item.get("search_mode")
         if mode not in EVIDENCE_MODES:
-            raise InvestigationError("Search mode must be ranked, visual or manual.")
+            raise InvestigationError("Search mode must be ranked, visual, scan or manual.")
+        if mode == "scan" and (item.get("rank") is not None or item.get("best_score") is not None):
+            raise InvestigationError("A footage-scan clip has no similarity rank or score.")
         rank = item.get("rank")
         if rank is not None and (type(rank) is not int or rank < 1):
             raise InvestigationError("rank must be a positive integer.")
@@ -488,7 +491,8 @@ def resolve_sources(evidence: list[dict], library: dict[str, dict], video_dir: P
     """Annotate evidence with where its source recording is now. Never rewrites stored references.
 
     library: {sha256: current video row}. source_status is "available", "renamed" (same content,
-    new name) or "missing" (content no longer in the library, or its file is gone)."""
+    new name), "missing" (content no longer in the library, or its file is gone) or "changed" (the
+    file's size no longer matches the indexed size: a cheap hint; exports re-hash every source)."""
     out = []
     root = video_dir.resolve()
     for e in evidence:
@@ -498,7 +502,10 @@ def resolve_sources(evidence: list[dict], library: dict[str, dict], video_dir: P
         if current is None or not path.is_relative_to(root) or not path.is_file():
             e.update(source_status="missing", current_video_id=None, current_filename=None, current_rel_path=None)
         else:
-            e.update(source_status="available" if current["rel_path"] == e["video_rel_path"] else "renamed",
+            status = "available" if current["rel_path"] == e["video_rel_path"] else "renamed"
+            if current.get("size_bytes") is not None and path.stat().st_size != current["size_bytes"]:
+                status = "changed"
+            e.update(source_status=status,
                      current_video_id=current["id"], current_filename=current["filename"],
                      current_rel_path=current["rel_path"])
         out.append(e)

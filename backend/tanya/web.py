@@ -171,7 +171,12 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
                     "message": "The original file is no longer in the video folder. Restore it, or re-index "
                                "to update the library."}
         code = playback.codec_of(source)
-        info = {"codec": code, "codec_name": playback.codec_name(code)}
+        info = {"codec": code, "codec_name": playback.codec_name(code), "changed": False, "changed_message": None}
+        # Cheap integrity hint (no hashing on every page view): the size recorded at indexing no longer matches.
+        if video.get("size_bytes") is not None and source.stat().st_size != video["size_bytes"]:
+            info.update(changed=True, changed_message=("This file has changed since it was indexed (its size differs), so it may not be the footage "
+                       "the frames, search results and evidence refer to. Re-index it before relying on it; "
+                       "report exports re-check every source's content hash."))
         if playback.browser_playable(source, code):
             return dict(info, status="playable", url=url_for("video_file", video_id=video["id"]), message=None)
         if playback.copy_path(playback_dir, video["sha256"]).is_file():
@@ -209,7 +214,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
 
     @app.get("/api/videos/<int:video_id>/playback")
     def video_playback(video_id):
-        video = rows("SELECT id, sha256, rel_path, filename, duration_sec FROM videos WHERE id=?", (video_id,))
+        video = rows("SELECT id, sha256, rel_path, filename, duration_sec, size_bytes FROM videos WHERE id=?", (video_id,))
         if not video:
             abort(404, description="This video is no longer in the library.")
         info = playback_info(video[0])
@@ -219,7 +224,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
 
     @app.post("/api/videos/<int:video_id>/playback-copy")
     def make_playback_copy(video_id):
-        video = rows("SELECT id, sha256, rel_path, filename, duration_sec FROM videos WHERE id=?", (video_id,))
+        video = rows("SELECT id, sha256, rel_path, filename, duration_sec, size_bytes FROM videos WHERE id=?", (video_id,))
         if not video:
             abort(404, description="This video is no longer in the library.")
         video = video[0]
@@ -515,7 +520,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
     # ------------------------------------------------------------------ investigations
 
     def library_by_sha():
-        return {v["sha256"]: v for v in rows("SELECT id, sha256, filename, rel_path, duration_sec FROM videos "
+        return {v["sha256"]: v for v in rows("SELECT id, sha256, filename, rel_path, duration_sec, size_bytes FROM videos "
                                              "WHERE status = 'done'")}
 
     def body():
@@ -610,7 +615,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         # Mirror the decision into search feedback so result cards show it ("Your earlier review").
         current = library_by_sha().get(updated["video_sha256"])
         warning = None
-        if (data.get("decision") and current and updated["search_mode"] != "manual"
+        if (data.get("decision") and current and updated["search_mode"] in ("ranked", "visual")
                 and updated["end_sec"] <= (current["duration_sec"] or 0)):
             try:
                 feedback.save(feedback_path(), dict(

@@ -13,7 +13,17 @@ folder. On macOS/Linux, use `.venv/bin/python` instead.
 
 1. Stop the existing website (Ctrl+C in its terminal).
 2. On macOS/Linux run `.venv/bin/python backend/scripts/run_offline_demo.py`.
-   On Windows run `.\.venv\Scripts\python.exe backend\scripts\run_offline_demo.py`.
+   On Windows, first point it at the local FFmpeg bundled with the search environment, so the
+   generated footage is H.264 and plays in the browser (only the encoder is used; no key or Google
+   client is loaded):
+
+   ```powershell
+   $env:TANYA_SENTRY_PYTHON = "$HOME\sentrysearch-trial\tools\sentrysearch\Scripts\python.exe"
+   .\.venv\Scripts\python.exe backend\scripts\run_offline_demo.py
+   ```
+
+   If it prints "FFmpeg was not found … will NOT play", set `TANYA_SENTRY_PYTHON` (or
+   `TANYA_FFMPEG`) and start again; frames, replayed search and reports still work without it.
 3. Open http://localhost:5001/. Check the **OFFLINE REPLAY DEMO** banner. This generates the two
    synthetic clips in a new temporary workspace and indexes them locally. It does not load
    `.env`, use a key, call Google, or change the real library.

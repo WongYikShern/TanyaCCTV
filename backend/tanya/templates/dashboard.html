@@ -23,6 +23,7 @@
   <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 7h13l5-3v12l-5-3H3z"/><circle cx="9" cy="10" r="2"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 9v5M12 17h.01"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
 </svg>
 
@@ -50,7 +51,15 @@
     {% if offline_demo %}<div class="banner warn" role="status"><strong>OFFLINE REPLAY DEMO — no live AI.</strong> Search replays four recorded queries on synthetic footage. Image checking and AI preparation are disabled. Demo uploads are local and are not added to recorded search results.</div>{% endif %}
     <!-- Dashboard -->
     <section class="page" data-page="dashboard">
-      <div class="page-head"><div><p class="eyebrow">OVERVIEW</p><h1>CCTV investigation workspace</h1><p class="muted">Find footage worth checking, review it, and keep a traceable record. Search results are never treated as confirmed incidents.</p></div></div>
+      <div class="hero card">
+        <div class="hero-text"><p class="eyebrow">OVERVIEW</p><h1 class="display">CCTV investigation workspace</h1><p class="muted">Find footage worth checking, review it, and keep a traceable record. Search results are never treated as confirmed incidents.</p></div>
+        <nav class="hero-actions" aria-label="Start a task">
+          <a class="hero-link primary" href="#search"><svg><use href="#i-search"/></svg><span><strong>Search footage</strong><small>Describe a moment in plain words</small></span><svg class="go"><use href="#i-arrow"/></svg></a>
+          <a class="hero-link" href="#library"><svg><use href="#i-library"/></svg><span><strong>Video library</strong><small>Play recordings and add footage</small></span><svg class="go"><use href="#i-arrow"/></svg></a>
+          <a class="hero-link" href="#investigations"><svg><use href="#i-case"/></svg><span><strong>Investigations</strong><small>Review clips and export reports</small></span><svg class="go"><use href="#i-arrow"/></svg></a>
+        </nav>
+        <svg class="swoosh" viewBox="0 0 400 220" preserveAspectRatio="none" aria-hidden="true"><path class="s3" d="M400 30C330 150 210 205 60 220H400Z"/><path class="s2" d="M400 70C345 165 245 210 130 220H400Z"/><path class="s1" d="M400 120C360 180 300 212 230 220H400Z"/></svg>
+      </div>
       <div class="stat-grid" id="stats" aria-live="polite"></div>
       <div class="dash-grid">
         <article class="card"><div class="card-head"><h2>Recent recordings</h2><a href="#library" class="link">View all →</a></div><div id="dash-videos" class="mini-grid"></div></article>
@@ -61,7 +70,7 @@
 
     <!-- Video library -->
     <section class="page" data-page="library" hidden>
-      <div class="page-head"><div><p class="eyebrow">RECORDINGS</p><h1>Video library</h1><p class="muted">Your original recordings and their extracted frames. Originals are never modified.</p></div>
+      <div class="page-head"><div><p class="eyebrow">RECORDINGS</p><h1 class="display">Video library</h1><p class="muted">Your original recordings and their extracted frames. Originals are never modified.</p></div>
         <div class="head-actions"><button type="button" class="secondary" id="toggle-upload"><svg><use href="#i-upload"/></svg>Add footage</button><button type="button" id="index-button"><svg><use href="#i-refresh"/></svg>Index local videos</button></div></div>
       <form id="upload-form" class="card upload-card" hidden>
         <div><h2>Add authorised footage</h2><p class="muted">MP4, MOV, AVI, MKV or M4V, up to 512 MB. Uploads stay on this computer; identical footage is detected and not stored twice.</p></div>
@@ -98,12 +107,12 @@
           <h2 class="spaced">About this recording</h2><dl id="watch-details" class="details"></dl>
         </aside>
       </div>
-      <article class="card"><div class="card-head"><h2>Frame timeline</h2><span class="muted">Select a frame to jump to that moment.</span></div><div id="frames" class="frame-grid"></div><button type="button" class="secondary" id="more-frames" hidden>Load more frames</button></article>
+      <article class="card"><div class="card-head"><h2>Frame timeline</h2><span class="muted">Scroll sideways; select a frame to jump to that moment.</span></div><div id="frames" class="frame-grid"></div><button type="button" class="secondary" id="more-frames" hidden>Load more frames</button></article>
     </section>
 
     <!-- Search -->
     <section class="page" data-page="search" id="search" hidden>
-      <div class="page-head"><div><p class="eyebrow">NATURAL-LANGUAGE SEARCH</p><h1>What are you looking for?</h1><p class="muted">Describe the people, objects or sequence you want to find. Scan your uploaded recordings and open matching moments for review.</p></div><span class="pill-soft">Human review required</span></div>
+      <div class="page-head"><div><p class="eyebrow">NATURAL-LANGUAGE SEARCH</p><h1 class="display">What are you looking for?</h1><p class="muted">Describe the people, objects or sequence you want to find. Scan your uploaded recordings and open matching moments for review.</p></div><span class="pill-soft">Human review required</span></div>
       <form id="search-form" class="card search-card">
         <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="query">Describe a moment</label><input id="query" maxlength="500" required placeholder="e.g. a person walking through the lobby"><button id="search-button">Search ranked clips</button></div>
         <div class="examples" id="examples"><span class="muted">Try:</span><button type="button" class="chip">a person walking through the lobby</button><button type="button" class="chip">a red car entering the car park</button><button type="button" class="chip">a person lying on the floor</button><button type="button" class="chip">someone standing still for a long time</button></div>
@@ -133,7 +142,7 @@
 
     <!-- Investigations -->
     <section class="page" data-page="investigations" id="investigations" hidden>
-      <div class="page-head"><div><p class="eyebrow">CASE WORK</p><h1>Investigations</h1><p class="muted">Collect candidate clips, arrange them in time, record your decisions and export a report.</p></div><span class="pill-soft">Human decisions only</span></div>
+      <div class="page-head"><div><p class="eyebrow">CASE WORK</p><h1 class="display">Investigations</h1><p class="muted">Collect candidate clips, arrange them in time, record your decisions and export a report.</p></div><span class="pill-soft">Human decisions only</span></div>
       <div class="case-layout">
         <aside class="card case-list-card">
           <form id="new-investigation" class="stack"><label for="new-title">New investigation</label><input id="new-title" class="input" maxlength="200" required placeholder="e.g. Lobby, Monday morning"><button>Create investigation</button></form>
@@ -145,8 +154,8 @@
             <div class="case-head"><div><p class="eyebrow" id="case-status">OPEN</p><h2 id="case-title" class="case-title"></h2><p id="case-description" class="muted"></p></div>
               <div class="case-actions"><button type="button" class="secondary" id="case-rename">Rename</button><button type="button" class="secondary" id="case-close">Close</button><button type="button" id="case-report-html">Export report (HTML)</button><button type="button" class="secondary" id="case-report-json">Export data (JSON)</button></div></div>
             <form id="rename-form" class="inline-form" hidden><label class="sr-only" for="rename-title">New title</label><input id="rename-title" class="input" maxlength="200" required><button>Save title</button><button type="button" class="secondary" id="rename-cancel">Cancel</button></form>
-            <h3>Saved searches</h3><div id="case-queries"></div>
-            <h3>Evidence timeline</h3><p id="case-basis" class="muted"></p><div id="case-clocks"></div><div id="case-evidence" class="timeline" aria-live="polite"></div>
+            <h3 class="section-title"><svg aria-hidden="true"><use href="#i-arrow"/></svg>Saved searches</h3><div id="case-queries"></div>
+            <h3 class="section-title"><svg aria-hidden="true"><use href="#i-arrow"/></svg>Evidence timeline</h3><p id="case-basis" class="muted"></p><div id="case-clocks"></div><div id="case-evidence" class="timeline" aria-live="polite"></div>
             <details id="case-history"><summary>Change history</summary><div id="case-history-items"></div></details>
           </div>
         </div>
@@ -155,7 +164,7 @@
 
     <!-- System -->
     <section class="page" data-page="system" hidden>
-      <div class="page-head"><div><p class="eyebrow">SYSTEM</p><h1>System &amp; AI setup</h1><p class="muted">What works now, what needs setup, and the explicit, paid step that prepares videos for AI search.</p></div></div>
+      <div class="page-head"><div><p class="eyebrow">SYSTEM</p><h1 class="display">System &amp; AI setup</h1><p class="muted">What works now, what needs setup, and the explicit, paid step that prepares videos for AI search.</p></div></div>
       <div class="dash-grid two">
         <article class="card"><div class="card-head"><h2>Readiness</h2></div><ul id="system-status" class="status-list"></ul>
           <details id="setup-details"><summary>How to enable AI search</summary><p>Search needs SentrySearch in a separate Python 3.12 environment and a Gemini API key, set in the same PowerShell window before starting this website (see the README, “Local website (Windows PowerShell)”). Run <code>check_setup.py</code> for a full report.</p></details></article>
@@ -168,7 +177,7 @@
       </div>
     </section>
   </main>
-  <p id="notice" role="status" aria-live="polite"></p>
+  <p id="notice" role="status" aria-live="polite" title="Click to dismiss"></p>
   <footer>TanyaCCTV is a local prototype. Search rankings are similarity signals, not probabilities or incident confirmations. Real-world CCTV accuracy has not been validated.</footer>
 </div>
 </body></html>

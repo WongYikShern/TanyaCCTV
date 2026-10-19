@@ -4,7 +4,7 @@
 // through textContent; nothing from the server or the user is inserted as HTML.
 let activeCase = null;
 const decisionNames = {correct: "Correct", wrong: "Wrong", unsure: "Unsure"};
-const sourceNames = {available: "Source available", renamed: "Source renamed", missing: "SOURCE MISSING"};
+const sourceNames = {available: "Source available", renamed: "Source renamed", missing: "SOURCE MISSING", changed: "SOURCE CHANGED"};
 const basisText = {
   absolute: "Ordered by camera time, using the recording start times you entered.",
   within_recording: "Ordered by recording, then by position in each recording. Enter recording start times below to order clips across cameras.",
@@ -123,10 +123,11 @@ function evidenceCard(e, open) {
   const info = element("div");
   const category = e.decision ? `Human review: ${decisionNames[e.decision]}` : "Unreviewed candidate";
   info.append(element("h3", e.current_filename && e.current_filename !== e.video_filename ? `${e.video_filename} (now ${e.current_filename})` : e.video_filename));
-  info.append(element("span", category, "badge" + (e.decision ? "" : " pending")), element("span", sourceNames[e.source_status], "badge" + (e.source_status === "missing" ? " failed" : "")));
+  info.append(element("span", category, "badge" + (e.decision ? "" : " pending")), element("span", sourceNames[e.source_status], "badge" + (e.source_status === "missing" || e.source_status === "changed" ? " failed" : "")));
   info.append(element("p", `${time(e.start_sec)}–${time(e.end_sec)} in the recording` + (e.absolute_start ? ` · camera time ${e.absolute_start.replace("T", " ").slice(0, 19)}` : "")));
-  const how = e.search_mode === "manual" ? "Chosen manually in the video player (not a search result)" : `Found by “${e.query}” (${e.search_mode === "visual" ? "with image check" : "ranked"}${e.rank ? `, rank ${e.rank}` : ""}${e.best_score !== null ? `, ranking score ${e.best_score.toFixed(3)} — not a probability` : ""})` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "");
+  const how = e.search_mode === "manual" ? "Chosen manually in the video player (not a search result)" : e.search_mode === "scan" ? `Found by a direct footage scan for “${e.query}” (sampled images checked in time order; not a similarity ranking)` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "") : `Found by “${e.query}” (${e.search_mode === "visual" ? "with image check" : "ranked"}${e.rank ? `, rank ${e.rank}` : ""}${e.best_score !== null ? `, ranking score ${e.best_score.toFixed(3)} — not a probability` : ""})` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "");
   info.append(element("p", how, "muted"));
+  if (e.source_status === "changed") info.append(element("p", "This recording's file has changed since the clip was added (its size differs). It may no longer be the referenced footage; re-index it, and check the exported report's content verification.", "warning"));
   if (e.source_status === "missing") info.append(element("p", `The recording with content hash ${e.video_sha256.slice(0, 16)}… is no longer in the library. The reference is kept; restore the original file to review it.`, "warning"));
   if (e.video_url) {
     const watch = element("button", "Open footage →"); watch.type = "button";
@@ -168,7 +169,9 @@ async function change(request, message) {
   } catch (error) { notice(error.message); }
 }
 
+// A direct footage scan window (hit.scan_window) is not a similarity ranking: store it as "scan" with no rank.
 window.investigationClipButton = function (hit, query, visual, rank) {
+  const mode = hit.scan_window ? "scan" : (visual ? "visual" : "ranked");
   const button = element("button", "Add to investigation", "secondary");
   button.type = "button";
   button.onclick = async () => {
@@ -178,8 +181,8 @@ window.investigationClipButton = function (hit, query, visual, rank) {
     try {
       activeCase = await post(`/api/investigations/${id}/evidence`, {
         video_id: hit.video_id, start_sec: hit.start_sec, end_sec: hit.end_sec, query,
-        search_mode: visual ? "visual" : "ranked", rank: rank || null, best_score: hit.best_score,
-        score_above_median: hit.best_score_above_median, thumbnail: hit.thumbnail,
+        search_mode: mode, rank: mode === "scan" ? null : (rank || null), best_score: mode === "scan" ? null : hit.best_score,
+        score_above_median: mode === "scan" ? null : hit.best_score_above_median, thumbnail: hit.thumbnail,
         visual_verdict: hit.visual_review ? hit.visual_review.verdict : null,
         visual_reason: hit.visual_review ? hit.visual_review.reason : null});
       button.textContent = "Added ✓";

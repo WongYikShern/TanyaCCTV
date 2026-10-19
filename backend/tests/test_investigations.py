@@ -472,3 +472,53 @@ def test_manual_moment_from_player_is_labelled_and_not_mirrored(api):
     assert "chosen manually in the video player (not a search result)" in html
     post(f"/api/investigations/{iid}/evidence", dict(video_id=videos["lobby.mp4"]["id"], start_sec=0, end_sec=2,
                                                      query="q", search_mode="automatic"), expect=400)
+
+
+def test_footage_scan_clip_keeps_its_own_provenance(api):
+    """A direct footage-scan window is not a similarity ranking: no rank/score, labelled as a scan."""
+    client, post, ws, videos = api
+    iid = post("/api/investigations", {"title": "Case"}, expect=201)["id"]
+    lobby = videos["lobby.mp4"]["id"]
+    post(f"/api/investigations/{iid}/evidence", dict(video_id=lobby, start_sec=0, end_sec=4, query="a person walking",
+                                                     search_mode="scan", rank=1), expect=400)
+    view = post(f"/api/investigations/{iid}/evidence", dict(video_id=lobby, start_sec=0, end_sec=4,
+                                                            query="a person walking", search_mode="scan",
+                                                            visual_verdict="supported",
+                                                            visual_reason="mock reason"), expect=201)
+    ev = view["evidence"][0]
+    assert ev["search_mode"] == "scan" and ev["rank"] is None and ev["best_score"] is None
+    post(f"/api/investigations/{iid}/evidence/{ev['id']}/review", {"decision": "correct"})
+    assert not ws.db_path.with_name("search_feedback.db").exists()          # not mirrored into ranked reviews
+    report = post(f"/api/investigations/{iid}/report", {"format": "json"})
+    found = report["evidence"][0]["found_by"]
+    assert found["search_mode"] == "scan" and found["rank"] is None
+    html = client.post(f"/api/investigations/{iid}/report", headers={"X-CSRF-Token": _token(client)},
+                       json={"format": "html"}).data.decode()
+    assert "direct footage scan for" in html and "not a similarity ranking" in html and "rank 1" not in html
+
+
+def test_changed_or_missing_source_is_flagged_in_the_app_not_only_at_export(api):
+    """Before: an altered recording showed "Source available" and played without warning until export."""
+    client, post, ws, videos = api
+    iid = post("/api/investigations", {"title": "Case"}, expect=201)["id"]
+    for name in ("lobby.mp4", "carpark.mp4"):
+        post(f"/api/investigations/{iid}/evidence", dict(video_id=videos[name]["id"], start_sec=0, end_sec=4,
+                                                         query="q", search_mode="ranked"), expect=201)
+    with open(ws.video_dir / "lobby.mp4", "ab") as f:                     # altered after indexing
+        f.write(b"tampered")
+    (ws.video_dir / "carpark.mp4").unlink()                                  # removed after indexing
+    status = {e["video_filename"]: e["source_status"] for e in client.get(f"/api/investigations/{iid}").json["evidence"]}
+    assert status == {"lobby.mp4": "changed", "carpark.mp4": "missing"}
+    lobby = videos["lobby.mp4"]["id"]
+    info = client.get(f"/api/videos/{lobby}/playback").json
+    assert info["changed"] is True and "changed since it was indexed" in info["changed_message"]
+    listed = {v["filename"]: v["playback"] for v in client.get("/api/videos").json["videos"]}
+    assert listed["lobby.mp4"]["changed"] is True and listed["carpark.mp4"]["status"] == "missing"
+    report = post(f"/api/investigations/{iid}/report", {"format": "json"})       # export still re-hashes
+    assert report["summary"]["changed_sources"] == 1 and report["summary"]["missing_sources"] == 1
+
+
+def test_unchanged_source_is_not_flagged(api):
+    client, post, ws, videos = api
+    info = client.get(f"/api/videos/{videos['lobby.mp4']['id']}/playback").json
+    assert info["changed"] is False and info["changed_message"] is None

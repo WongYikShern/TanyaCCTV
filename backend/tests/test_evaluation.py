@@ -140,7 +140,7 @@ def test_live_mode_with_approval_saves_responses(monkeypatch, tmp_path, capsys):
                         lambda settings, q, n: calls.append(q) or {"results": recorded[q]})
     out = tmp_path / "rec.json"
     assert evaluate_search.main(["--live", "--approve-api-calls", "--save", str(out)]) == 0
-    assert sorted(calls) == sorted(recorded) and json.loads(out.read_text())["responses"] == recorded
+    assert sorted(calls) == sorted(recorded) and json.loads(out.read_text(encoding="utf-8"))["responses"] == recorded
 
 
 def test_bad_ground_truth_path_exit_code(tmp_path):
@@ -266,7 +266,7 @@ def test_recording_declares_its_index_and_v2_run_is_honest(capsys):
 def test_extended_live_recording_preserves_scope_and_known_failures():
     """Re-score saved responses offline; never replace observed failures with a perfect mock."""
     path = PROJECT_ROOT / 'evaluation/recordings/2026-10-19-events.json'
-    recording = json.loads(path.read_text())
+    recording = json.loads(path.read_text(encoding="utf-8"))
     cases = load_ground_truth(PROJECT_ROOT / 'evaluation/synthetic_events_v2.json')
     assert len(recording['responses']) == len(cases) == 16
     assert len(recording['indexed_videos']) == 5

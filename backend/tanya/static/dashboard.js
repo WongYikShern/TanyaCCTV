@@ -11,6 +11,7 @@ function element(tag, text, className) { const node=document.createElement(tag);
 function icon(name) { const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg"), use=document.createElementNS(ns,"use"); use.setAttribute("href","#i-"+name); svg.append(use); return svg; }
 let noticeTimer=null;
 function notice(text) { $("notice").textContent=text; clearTimeout(noticeTimer); if(text) noticeTimer=setTimeout(()=>{$("notice").textContent="";},9000); }
+$("notice").addEventListener("click",()=>notice("")); // click the message to dismiss it
 async function api(path, options={}) {
   const response=await fetch(path,{...options,headers:{"X-CSRF-Token":token,...options.headers}});
   let data; try{data=await response.json();}catch(e){throw new Error(`The server returned an unexpected response (${response.status}).`);}
@@ -32,6 +33,7 @@ function route() {
   if(page==="dashboard") library().catch(error=>notice(error.message)).finally(renderDashboard);
   if(page==="search") library().catch(error=>notice(error.message));
   if(page==="library") library().catch(error=>notice(error.message));
+  if(page==="investigations" && window.refreshInvestigation) window.refreshInvestigation().catch(error=>notice(error.message)); // never show stale source status
   if(page==="system") Promise.all([library(),status()]).catch(error=>notice(error.message));
   window.scrollTo(0,0);
 }
@@ -112,13 +114,13 @@ function stat(label,value,sub,href,kind) {
 async function renderDashboard() {
   let cases=[];
   try{ cases=(await api("/api/investigations")).investigations; }catch(e){ notice(e.message); }
-  const done=videosCache.filter(v=>v.status==="done").length, failed=videosCache.filter(v=>v.status==="failed"||v.playback?.status==="missing").length;
+  const done=videosCache.filter(v=>v.status==="done").length, failed=videosCache.filter(v=>v.status==="failed"||v.playback?.status==="missing"||v.playback?.changed).length;
   const prepared=videosCache.filter(v=>v.search_state==="prepared").length, open=cases.filter(c=>c.status==="open");
   const unreviewed=cases.reduce((s,c)=>s+c.unreviewed_count,0);
   $("stats").replaceChildren(
     stat("Videos",videosCache.length,`${time(videosCache.reduce((s,v)=>s+(v.duration_sec||0),0))} of footage`+(waitingFiles.length?` · ${waitingFiles.length} waiting to index`:""),"#library","primary"),
     stat("Frames ready",done,`${videosCache.reduce((s,v)=>s+v.frame_count,0).toLocaleString()} frames extracted`,"#library"),
-    stat("Problems",failed,failed?"failed or missing originals":"none","#library",failed?"alert":""),
+    stat("Problems",failed,failed?"failed, missing or changed originals":"none","#library",failed?"alert":""),
     stat(connection?.offline_demo?"Replay clips":"AI-prepared",prepared,`of ${videosCache.length} video(s) searchable`,"#system"),
     stat("Investigations",cases.length,`${open.length} open · ${unreviewed} unreviewed clip(s)`,"#investigations",unreviewed?"attention":""));
   const recent=$("dash-videos"); recent.replaceChildren();
@@ -158,7 +160,7 @@ function matchesFilter(v) {
   const text=$("library-filter").value.trim().toLowerCase(), f=$("library-status").value;
   if(text && !v.filename.toLowerCase().includes(text)) return false;
   if(f==="done") return v.status==="done";
-  if(f==="failed") return v.status==="failed" || v.playback?.status==="missing";
+  if(f==="failed") return v.status==="failed" || v.playback?.status==="missing" || v.playback?.changed;
   if(f==="prepared"||f==="needs_preparation") return v.search_state===f;
   if(f==="browser_copy") return v.playback?.status==="needs_copy";
   return true;
@@ -188,6 +190,7 @@ function renderLibrary() {
     body.append(badges);
     if(v.error) body.append(element("p",v.error,"error-text"));
     if(v.playback?.status==="missing") body.append(element("p",v.playback.message,"error-text"));
+    if(v.playback?.changed) body.append(element("p",v.playback.changed_message,"error-text"));
     const actions=element("div",undefined,"card-actions"), play=element("button","Play"); play.type="button"; play.prepend(icon("play")); play.onclick=()=>openVideo(v.id);
     actions.append(play); body.append(actions); card.append(open,body); grid.append(card);
   }
@@ -222,6 +225,7 @@ async function showWatch(id,start,end) {
     let info=await api(`/api/videos/${id}/playback`);
     if(myToken!==watchToken) return;
     if(info.status==="missing"){ $("download-video").hidden=true; playerError(info.message); return; }
+    if(info.changed) notice(info.changed_message);
     if(info.status==="needs_copy"){
       if(!info.ffmpeg_available){ playerError(info.message.replace("can be made on this computer","needs FFmpeg, which was not found")+" Install FFmpeg (or set TANYA_FFMPEG / TANYA_SENTRY_PYTHON) and reload. The frame timeline below still works."); return; }
       overlay(`${info.message} Making it now… This takes a few seconds per minute of footage.`);
@@ -240,7 +244,8 @@ async function showWatch(id,start,end) {
 function updateTime(){ const p=$("player"); if(p.getAttribute("src")) currentMoment=p.currentTime; $("player-time").textContent=`${time(currentMoment)} / ${time(p.duration||videosCache.find(v=>v.id===activeVideo)?.duration_sec)}`; }
 $("player").addEventListener("timeupdate",updateTime);
 $("player").addEventListener("seeked",updateTime);
-$("player").addEventListener("waiting",()=>{ if(!$("player").error) overlay("Buffering…"); });
+// Only a real, loading source can buffer; never cover an error message with "Buffering…".
+$("player").addEventListener("waiting",()=>{ const p=$("player"); if(p.getAttribute("src") && !p.error && $("player-error").hidden) overlay("Buffering…"); });
 $("player").addEventListener("playing",()=>overlay(null));
 $("player").addEventListener("canplay",()=>{ if($("player-overlay-text").textContent==="Buffering…") overlay(null); });
 $("replay-window").onclick=()=>{ if(!watchWindow) return; const p=$("player"); p.currentTime=watchWindow[0]; p.play().catch(()=>{}); };
@@ -354,7 +359,7 @@ function resultCard(hit, query, visual, rank){
   else card.append(element("div","No frame","video-placeholder"));
   const info=element("div"), review=hit.visual_review;
   const labels={supported:"AI-supported candidate · human review required",not_supported:"Not supported in samples",unclear:"Unclear · manual review needed"};
-  info.append(element("h3",`#${rank} · ${hit.filename}`),element("span",review?labels[review.verdict]:"Ranked candidate · not visually checked","badge info"));
+  info.append(element("h3",hit.scan_window?`Scan window ${hit.scan_window} · ${hit.filename}`:`#${rank} · ${hit.filename}`),element("span",review?labels[review.verdict]:"Ranked candidate · not visually checked","badge info"));
   const reviewNames={correct:"Correct",wrong:"Wrong",unsure:"Unsure"};
   const humanBadge=element("span",hit.human_review?`Your earlier review: ${reviewNames[hit.human_review.assessment]}`:"Not yet reviewed by a person","badge "+(hit.human_review?"":"pending"));
   info.append(humanBadge);

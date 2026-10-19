@@ -161,6 +161,8 @@ def render_html(report: dict, frames_dir: Path | None = None) -> str:
         if src.get("content_verified_at_export"):
             status += " · content verified against the hash at export"
         found = ("chosen manually in the video player (not a search result)" if f["search_mode"] == "manual" else
+                 f"direct footage scan for “{escape(f['query'])}” (sampled images checked in time order; "
+                 "not a similarity ranking)" if f["search_mode"] == "scan" else
                  f"query “{escape(f['query'])}” ({escape(f['search_mode'])} search)")
         found = (found
                  + (f", rank {f['rank']}" if f["rank"] else "")

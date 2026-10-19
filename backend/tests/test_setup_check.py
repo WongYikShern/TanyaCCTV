@@ -44,7 +44,7 @@ def test_data_checks_fresh_install_passes(tmp_path):
 
 
 def test_folder_that_is_a_file_fails(tmp_path):
-    (tmp_path / "videos").write_text("not a folder")
+    (tmp_path / "videos").write_text("not a folder", encoding="utf-8")
     checks = {c.name: c for c in setup_check.check_data(settings_in(tmp_path))}
     assert checks["Video folder"].status == FAIL
 
@@ -133,14 +133,14 @@ def test_local_sentry_env_is_discovered(fake_root):
     assert config.load_search_settings().sentry_python is None
     local = config.local_sentry_python()
     local.parent.mkdir(parents=True)
-    local.write_text("")
+    local.write_text("", encoding="utf-8")
     assert config.load_search_settings().sentry_python == local
 
 
 def test_explicit_interpreter_takes_precedence(fake_root, monkeypatch):
     local = config.local_sentry_python()
     local.parent.mkdir(parents=True)
-    local.write_text("")
+    local.write_text("", encoding="utf-8")
     monkeypatch.setenv("TANYA_SENTRY_PYTHON", str(fake_root / "explicit.exe"))
     assert config.load_search_settings().sentry_python == fake_root / "explicit.exe"
 

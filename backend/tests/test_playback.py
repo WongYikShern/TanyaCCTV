@@ -66,7 +66,7 @@ def test_library_reports_playback_status_and_waiting_files(app):
     make_video(ws.video_dir / "indexed.mp4", seconds=2)
     ws.run()
     make_video(ws.video_dir / "dropped_in_later.mp4", seconds=2)       # copied in, not indexed yet
-    (ws.video_dir / "notes.txt").write_text("not a video")
+    (ws.video_dir / "notes.txt").write_text("not a video", encoding="utf-8")
     data = client.get("/api/videos").json
     assert [v["filename"] for v in data["videos"]] == ["indexed.mp4"]
     pb = data["videos"][0]["playback"]

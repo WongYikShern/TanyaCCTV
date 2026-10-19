@@ -200,7 +200,7 @@ def test_failed_video_is_retried_and_fixed_file_indexes(workspace):
 
 def test_empty_and_unsupported_files(workspace):
     (workspace.video_dir / "empty.mp4").write_bytes(b"")
-    (workspace.video_dir / "notes.txt").write_text("hello")
+    (workspace.video_dir / "notes.txt").write_text("hello", encoding="utf-8")
     (workspace.video_dir / ".hidden.mp4").write_bytes(b"x")
 
     summary = workspace.run()

@@ -149,7 +149,7 @@ def test_recorded_targeted_visual_checks_keep_temporal_ambiguity_explicit():
     """Protect the observed three-query sample results without making new API requests."""
     import json
     from tanya.config import PROJECT_ROOT
-    data = json.loads((PROJECT_ROOT / 'evaluation/recordings/2026-10-19-targeted-visual.json').read_text())
+    data = json.loads((PROJECT_ROOT / 'evaluation/recordings/2026-10-19-targeted-visual.json').read_text(encoding="utf-8"))
     assert data['attempted_images'] == data['image_limit'] == 66
     assert len(data['results']) == 3
     expected = {'a person standing still for a long time': ('cam3_entrance.mp4', 5),
