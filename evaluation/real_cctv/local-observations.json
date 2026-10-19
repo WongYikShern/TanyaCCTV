@@ -1,0 +1,62 @@
+{
+  "status": "AI-assisted sampled-frame draft ONLY; not a human review or benchmark ground truth",
+  "method": "Local OpenCV decoded frames: every 2 seconds for CAVIAR; every 15 seconds for RainSnow; fall detail every 4 frames from frame 650 to 706. No Google calls.",
+  "absence_policy": "No absence decisions made from sampled images.",
+  "clips": [
+    {
+      "clip_id": "caviar/Walk1.mp4",
+      "sha256": "ae3dd46f4ebd4364a4772a92c195981539adb5a31ab07271e6638a3f423f64a9",
+      "observation": "People cross the lobby at sampled times 2\u201320s. No claim about all occurrences or absence of other events."
+    },
+    {
+      "clip_id": "caviar/Browse2.mp4",
+      "sha256": "2a2dafc770828093344421bca3a209d778ce1194c34be65edc3a66558aa938c1",
+      "observation": "Red-shirted person reaches the wall display around 22s and remains nearby through 30s; publisher interval 21.92\u201330s is plausible. Human boundary review pending."
+    },
+    {
+      "clip_id": "caviar/Rest_FallOnFloor.mp4",
+      "sha256": "278d9ba14aedec97d4220de9bf14b527247b6daabd4f4b464923e5771814b4e6",
+      "observation": "Dense frames 26.00\u201328.24s show a person transitioning from standing to crouching and then lying down. Candidate fall transition 26.16\u201328.36s; distinguish the transition from remaining on the floor through about 35s."
+    },
+    {
+      "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+      "sha256": "dbd9ed3ad9f4f7a64dbaea5acff6d608cb8e028f590ce724953a852add61e66c",
+      "observation": "Two people walk away along the corridor; foreground people enter/leave side shop around 4\u20138s. Publisher actor-specific hints need boundary review."
+    },
+    {
+      "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+      "sha256": "1eff4901c6d76aa7ad70208254d45fb842c3750f3d9e2ed88422dc8ca299ae92",
+      "observation": "People pass across the storefront and doorway around 8\u201312s. Do not infer synchronized actor times from the corridor view."
+    },
+    {
+      "clip_id": "rainsnow/Egensevej-1.mp4",
+      "sha256": "439811922945e0fd7b40bca895d4d489a21033b8dd3ea24e985b62d823d2e309",
+      "observation": "Night road traffic; severe lens droplets and headlight glare obscure vehicles. Exact turns may be unjudgeable in parts."
+    },
+    {
+      "clip_id": "rainsnow/Egensevej-5.mp4",
+      "sha256": "a38594a64431d2a0cb02d833a9262d643f18a59b1b7d193f43e27923076bf954",
+      "observation": "Night traffic with lens droplets and glare. Individual event intervals not established by 15-second sampling."
+    },
+    {
+      "clip_id": "rainsnow/Hadsundvej-2.mp4",
+      "sha256": "0001f8c7dda246f2e844119417bf17b52a3da96e0814f4cabf63905bd3a8a110",
+      "observation": "Wet daylight intersection, parked cars on the right across sampled times, moving vehicles and pedestrians visible. Continuous parked interval and pedestrian crossings need full playback."
+    },
+    {
+      "clip_id": "rainsnow/Hjorringvej-3.mp4",
+      "sha256": "6bab2da48e55fe08f51d89468591c13d3e10496281a3bda44e67ecca3ee90c34",
+      "observation": "Wet night intersection, pedestrian near zebra crossing around 240s. Heavy reflections; exact crossing interval needs dense inspection."
+    },
+    {
+      "clip_id": "rainsnow/Hasserisvej-1.mp4",
+      "sha256": "b339e60e4d3c7f6b8de21fb924d7e38e44b7e11bf8aa910901dbac3fca1de213",
+      "observation": "Daylight wet road, moving traffic and distant junction. Do not label roadside markings as a pedestrian or vehicle."
+    },
+    {
+      "clip_id": "rainsnow/Egensevej-4.mp4",
+      "sha256": "bd24bd921d001de2d7a52cdefbdcd2a60652bcca4c7115de513687910f900e47",
+      "observation": "Snow-covered junction, moving vehicles and falling snow visible. Vehicle paths need denser inspection."
+    }
+  ]
+}

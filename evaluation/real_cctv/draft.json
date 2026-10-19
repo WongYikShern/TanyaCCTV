@@ -1,0 +1,853 @@
+{
+  "schema_version": 1,
+  "status": "DRAFT \u2014 no human-reviewed ground truth yet",
+  "instructions": "Two different humans must watch every scoped clip in full for each query. Independently record presence and exact intervals. Reconcile disagreements before scoring. Empty review is unknown, never absent.",
+  "clips": [
+    {
+      "id": "caviar/Walk1.mp4",
+      "path": "data/cctv_validation/caviar/videos/Walk1.mp4",
+      "duration_sec": 24.48,
+      "sha256": "ae3dd46f4ebd4364a4772a92c195981539adb5a31ab07271e6638a3f423f64a9",
+      "fps": 25.0,
+      "source_manifest": "evaluation/datasets/caviar-small.json"
+    },
+    {
+      "id": "caviar/Browse2.mp4",
+      "path": "data/cctv_validation/caviar/videos/Browse2.mp4",
+      "duration_sec": 35.04,
+      "sha256": "2a2dafc770828093344421bca3a209d778ce1194c34be65edc3a66558aa938c1",
+      "fps": 25.0,
+      "source_manifest": "evaluation/datasets/caviar-small.json"
+    },
+    {
+      "id": "caviar/Rest_FallOnFloor.mp4",
+      "path": "data/cctv_validation/caviar/videos/Rest_FallOnFloor.mp4",
+      "duration_sec": 40.32,
+      "sha256": "278d9ba14aedec97d4220de9bf14b527247b6daabd4f4b464923e5771814b4e6",
+      "fps": 25.0,
+      "source_manifest": "evaluation/datasets/caviar-small.json"
+    },
+    {
+      "id": "caviar/EnterExitCrossingPaths1cor.mp4",
+      "path": "data/cctv_validation/caviar/videos/EnterExitCrossingPaths1cor.mp4",
+      "duration_sec": 15.32,
+      "sha256": "dbd9ed3ad9f4f7a64dbaea5acff6d608cb8e028f590ce724953a852add61e66c",
+      "fps": 25.0,
+      "source_manifest": "evaluation/datasets/caviar-small.json"
+    },
+    {
+      "id": "caviar/EnterExitCrossingPaths1front.mp4",
+      "path": "data/cctv_validation/caviar/videos/EnterExitCrossingPaths1front.mp4",
+      "duration_sec": 15.32,
+      "sha256": "1eff4901c6d76aa7ad70208254d45fb842c3750f3d9e2ed88422dc8ca299ae92",
+      "fps": 25.0,
+      "source_manifest": "evaluation/datasets/caviar-small.json"
+    },
+    {
+      "id": "rainsnow/Egensevej-1.mp4",
+      "path": "data/cctv_validation/rainsnow/videos/Egensevej-1.mp4",
+      "duration_sec": 299.9,
+      "sha256": "439811922945e0fd7b40bca895d4d489a21033b8dd3ea24e985b62d823d2e309",
+      "fps": 20.0,
+      "source_manifest": "evaluation/datasets/rainsnow-small.json"
+    },
+    {
+      "id": "rainsnow/Egensevej-5.mp4",
+      "path": "data/cctv_validation/rainsnow/videos/Egensevej-5.mp4",
+      "duration_sec": 299.9,
+      "sha256": "a38594a64431d2a0cb02d833a9262d643f18a59b1b7d193f43e27923076bf954",
+      "fps": 20.0,
+      "source_manifest": "evaluation/datasets/rainsnow-small.json"
+    },
+    {
+      "id": "rainsnow/Hadsundvej-2.mp4",
+      "path": "data/cctv_validation/rainsnow/videos/Hadsundvej-2.mp4",
+      "duration_sec": 300.0,
+      "sha256": "0001f8c7dda246f2e844119417bf17b52a3da96e0814f4cabf63905bd3a8a110",
+      "fps": 20.0,
+      "source_manifest": "evaluation/datasets/rainsnow-small.json"
+    },
+    {
+      "id": "rainsnow/Hjorringvej-3.mp4",
+      "path": "data/cctv_validation/rainsnow/videos/Hjorringvej-3.mp4",
+      "duration_sec": 300.0,
+      "sha256": "6bab2da48e55fe08f51d89468591c13d3e10496281a3bda44e67ecca3ee90c34",
+      "fps": 20.0,
+      "source_manifest": "evaluation/datasets/rainsnow-small.json"
+    },
+    {
+      "id": "rainsnow/Hasserisvej-1.mp4",
+      "path": "data/cctv_validation/rainsnow/videos/Hasserisvej-1.mp4",
+      "duration_sec": 300.0,
+      "sha256": "b339e60e4d3c7f6b8de21fb924d7e38e44b7e11bf8aa910901dbac3fca1de213",
+      "fps": 20.0,
+      "source_manifest": "evaluation/datasets/rainsnow-small.json"
+    },
+    {
+      "id": "rainsnow/Egensevej-4.mp4",
+      "path": "data/cctv_validation/rainsnow/videos/Egensevej-4.mp4",
+      "duration_sec": 299.9,
+      "sha256": "bd24bd921d001de2d7a52cdefbdcd2a60652bcca4c7115de513687910f900e47",
+      "fps": 20.0,
+      "source_manifest": "evaluation/datasets/rainsnow-small.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "walking",
+      "query": "a person walks across an indoor lobby",
+      "event_type": "walking",
+      "hypothesis": "candidate positive",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    },
+    {
+      "id": "browsing",
+      "query": "a person stops to look at a wall display",
+      "event_type": "browsing",
+      "hypothesis": "candidate positive",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    },
+    {
+      "id": "fall",
+      "query": "a person falls down in an indoor lobby",
+      "event_type": "fall",
+      "hypothesis": "candidate positive",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    },
+    {
+      "id": "entering",
+      "query": "a person enters a shop from an indoor corridor",
+      "event_type": "entering",
+      "hypothesis": "candidate positive",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    },
+    {
+      "id": "leaving",
+      "query": "a person leaves a shop into an indoor corridor",
+      "event_type": "leaving",
+      "hypothesis": "candidate positive",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    },
+    {
+      "id": "turning",
+      "query": "a car turns through a road junction",
+      "event_type": "turning",
+      "hypothesis": "candidate positive",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    },
+    {
+      "id": "parked",
+      "query": "a vehicle stays parked while other vehicles pass",
+      "event_type": "parked",
+      "hypothesis": "candidate positive",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    },
+    {
+      "id": "crossing",
+      "query": "a pedestrian crosses a wet road",
+      "event_type": "crossing",
+      "hypothesis": "candidate positive",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    },
+    {
+      "id": "fire",
+      "query": "flames and smoke coming from a vehicle",
+      "event_type": "fire",
+      "hypothesis": "candidate negative \u2014 absence not verified",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    },
+    {
+      "id": "horse",
+      "query": "a person riding a horse",
+      "event_type": "horse",
+      "hypothesis": "candidate negative \u2014 absence not verified",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    },
+    {
+      "id": "train",
+      "query": "a train moving through the scene",
+      "event_type": "train",
+      "hypothesis": "candidate negative \u2014 absence not verified",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    },
+    {
+      "id": "wheelchair",
+      "query": "a person pushing someone in a wheelchair",
+      "event_type": "wheelchair",
+      "hypothesis": "candidate negative \u2014 absence not verified",
+      "clip_reviews": [
+        {
+          "clip_id": "caviar/Walk1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Browse2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/Rest_FallOnFloor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-5.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hadsundvej-2.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hjorringvej-3.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Hasserisvej-1.mp4",
+          "review_a": null,
+          "review_b": null
+        },
+        {
+          "clip_id": "rainsnow/Egensevej-4.mp4",
+          "review_a": null,
+          "review_b": null
+        }
+      ]
+    }
+  ]
+}

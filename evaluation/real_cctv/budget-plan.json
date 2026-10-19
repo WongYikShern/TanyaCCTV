@@ -1,0 +1,180 @@
+{
+  "operation": "PLAN ONLY: no network, indexing or inference",
+  "pricing_checked": "2026-10-20",
+  "dataset_sha256": "9cc778ec615e2bdddb26615f9f2d7833b53d22f339dbf3b50076a0f3ab361899",
+  "labels_ready": false,
+  "clips": [
+    {
+      "clip_id": "caviar/Walk1.mp4",
+      "duration_sec": 24.48,
+      "video_sha256": "ae3dd46f4ebd4364a4772a92c195981539adb5a31ab07271e6638a3f423f64a9",
+      "embedding_chunks": 3,
+      "embedding_billed_frames": 28,
+      "scan_windows": 4
+    },
+    {
+      "clip_id": "caviar/Browse2.mp4",
+      "duration_sec": 35.04,
+      "video_sha256": "2a2dafc770828093344421bca3a209d778ce1194c34be65edc3a66558aa938c1",
+      "embedding_chunks": 5,
+      "embedding_billed_frames": 43,
+      "scan_windows": 5
+    },
+    {
+      "clip_id": "caviar/Rest_FallOnFloor.mp4",
+      "duration_sec": 40.32,
+      "video_sha256": "278d9ba14aedec97d4220de9bf14b527247b6daabd4f4b464923e5771814b4e6",
+      "embedding_chunks": 5,
+      "embedding_billed_frames": 48,
+      "scan_windows": 6
+    },
+    {
+      "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+      "duration_sec": 15.32,
+      "video_sha256": "dbd9ed3ad9f4f7a64dbaea5acff6d608cb8e028f590ce724953a852add61e66c",
+      "embedding_chunks": 2,
+      "embedding_billed_frames": 17,
+      "scan_windows": 2
+    },
+    {
+      "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+      "duration_sec": 15.32,
+      "video_sha256": "1eff4901c6d76aa7ad70208254d45fb842c3750f3d9e2ed88422dc8ca299ae92",
+      "embedding_chunks": 2,
+      "embedding_billed_frames": 17,
+      "scan_windows": 2
+    },
+    {
+      "clip_id": "rainsnow/Egensevej-1.mp4",
+      "duration_sec": 299.9,
+      "video_sha256": "439811922945e0fd7b40bca895d4d489a21033b8dd3ea24e985b62d823d2e309",
+      "embedding_chunks": 38,
+      "embedding_billed_frames": 374,
+      "scan_windows": 49
+    },
+    {
+      "clip_id": "rainsnow/Egensevej-5.mp4",
+      "duration_sec": 299.9,
+      "video_sha256": "a38594a64431d2a0cb02d833a9262d643f18a59b1b7d193f43e27923076bf954",
+      "embedding_chunks": 38,
+      "embedding_billed_frames": 374,
+      "scan_windows": 49
+    },
+    {
+      "clip_id": "rainsnow/Hadsundvej-2.mp4",
+      "duration_sec": 300.0,
+      "video_sha256": "0001f8c7dda246f2e844119417bf17b52a3da96e0814f4cabf63905bd3a8a110",
+      "embedding_chunks": 38,
+      "embedding_billed_frames": 374,
+      "scan_windows": 49
+    },
+    {
+      "clip_id": "rainsnow/Hjorringvej-3.mp4",
+      "duration_sec": 300.0,
+      "video_sha256": "6bab2da48e55fe08f51d89468591c13d3e10496281a3bda44e67ecca3ee90c34",
+      "embedding_chunks": 38,
+      "embedding_billed_frames": 374,
+      "scan_windows": 49
+    },
+    {
+      "clip_id": "rainsnow/Hasserisvej-1.mp4",
+      "duration_sec": 300.0,
+      "video_sha256": "b339e60e4d3c7f6b8de21fb924d7e38e44b7e11bf8aa910901dbac3fca1de213",
+      "embedding_chunks": 38,
+      "embedding_billed_frames": 374,
+      "scan_windows": 49
+    },
+    {
+      "clip_id": "rainsnow/Egensevej-4.mp4",
+      "duration_sec": 299.9,
+      "video_sha256": "bd24bd921d001de2d7a52cdefbdcd2a60652bcca4c7115de513687910f900e47",
+      "embedding_chunks": 38,
+      "embedding_billed_frames": 374,
+      "scan_windows": 49
+    }
+  ],
+  "queries": [
+    {
+      "case_id": "walking",
+      "query": "a person walks across an indoor lobby"
+    },
+    {
+      "case_id": "browsing",
+      "query": "a person stops to look at a wall display"
+    },
+    {
+      "case_id": "fall",
+      "query": "a person falls down in an indoor lobby"
+    },
+    {
+      "case_id": "entering",
+      "query": "a person enters a shop from an indoor corridor"
+    },
+    {
+      "case_id": "leaving",
+      "query": "a person leaves a shop into an indoor corridor"
+    },
+    {
+      "case_id": "turning",
+      "query": "a car turns through a road junction"
+    },
+    {
+      "case_id": "parked",
+      "query": "a vehicle stays parked while other vehicles pass"
+    },
+    {
+      "case_id": "crossing",
+      "query": "a pedestrian crosses a wet road"
+    },
+    {
+      "case_id": "fire",
+      "query": "flames and smoke coming from a vehicle"
+    },
+    {
+      "case_id": "horse",
+      "query": "a person riding a horse"
+    },
+    {
+      "case_id": "train",
+      "query": "a train moving through the scene"
+    },
+    {
+      "case_id": "wheelchair",
+      "query": "a person pushing someone in a wheelchair"
+    }
+  ],
+  "ranked": {
+    "model": "gemini-embedding-2",
+    "new_index": true,
+    "removals": 0,
+    "indexing_calls": 245,
+    "query_calls": 12,
+    "billed_frames": 2397,
+    "indexing_estimate_usd": 1.8936,
+    "query_estimate_usd": 4.5e-05
+  },
+  "scene_scan": {
+    "model": "gemini-3.8-flash",
+    "thinking_level": "low",
+    "windows_per_query": 313,
+    "max_requests": 756,
+    "max_images": 22536,
+    "estimated_input_tokens": 26752320,
+    "max_output_tokens": 3096576,
+    "estimated_cost_usd": 31.6764
+  },
+  "total_estimate_usd": 33.5701,
+  "approval": {
+    "approved": false,
+    "quota_verified": false,
+    "budget_usd": null
+  },
+  "assumptions": [
+    "Standard paid-tier rates, no discounts/free tier assumed.",
+    "Embedding overlap bills repeated frames; no still-frame discount assumed.",
+    "Scan: 1120 tokens/image plus 2000 prompt tokens/request and 4096 output tokens/request.",
+    "Image token accounting, prompt size and actual charges may differ; this is not a dollar cap.",
+    "One attempt per approved operation; retries require a separate allowance.",
+    "No data is sent by this planner. Fresh indexing must use an isolated index, never the owner library."
+  ]
+}

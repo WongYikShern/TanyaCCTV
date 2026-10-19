@@ -1,0 +1,48 @@
+{
+  "status": "Navigation hints ONLY; not reviewed labels or absence evidence",
+  "time_mapping": "frame index / 25 fps; end exclusive; verify normalized-video alignment",
+  "hints": [
+    {
+      "clip_id": "caviar/Browse2.mp4",
+      "start_sec": 21.92,
+      "end_sec": 30,
+      "note": "publisher browsing state, actor 3",
+      "annotation": "data/cctv_validation/caviar/annotations/Browse2.xml"
+    },
+    {
+      "clip_id": "caviar/Rest_FallOnFloor.mp4",
+      "start_sec": 26.2,
+      "end_sec": 28.36,
+      "note": "publisher active movement inside broad drop-down context; actual fall boundaries need review",
+      "annotation": "data/cctv_validation/caviar/annotations/Rest_FallOnFloor.xml"
+    },
+    {
+      "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+      "start_sec": 5.88,
+      "end_sec": 6.36,
+      "note": "publisher shopenter, actor 2",
+      "annotation": "data/cctv_validation/caviar/annotations/EnterExitCrossingPaths1cor.xml"
+    },
+    {
+      "clip_id": "caviar/EnterExitCrossingPaths1cor.mp4",
+      "start_sec": 4.68,
+      "end_sec": 6.32,
+      "note": "publisher shopexit, actor 4",
+      "annotation": "data/cctv_validation/caviar/annotations/EnterExitCrossingPaths1cor.xml"
+    },
+    {
+      "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+      "start_sec": 8.68,
+      "end_sec": 10.88,
+      "note": "publisher shopexit, actor 2",
+      "annotation": "data/cctv_validation/caviar/annotations/EnterExitCrossingPaths1front.xml"
+    },
+    {
+      "clip_id": "caviar/EnterExitCrossingPaths1front.mp4",
+      "start_sec": 8,
+      "end_sec": 10.04,
+      "note": "publisher shopenter, actor 3",
+      "annotation": "data/cctv_validation/caviar/annotations/EnterExitCrossingPaths1front.xml"
+    }
+  ]
+}
