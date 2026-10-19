@@ -76,7 +76,7 @@ From the configured feature branch, with FFmpeg available through PATH or the se
 .venv/bin/python backend/scripts/download_rainsnow.py --serve
 ```
 
-Open **http://localhost:5002/#library** for RainSnow. CAVIAR remains separately available via
+Open **http://localhost:5001/#library** for RainSnow. Stop the current viewer before switching datasets. CAVIAR is available via
 `download_caviar.py --serve` at **http://localhost:5001/#library**. Both viewers block every
 `/api/search*` route, even with an API key configured. Reproduction does not require a Gemini key.
 Without flags the RainSnow script prints a plan and performs no network operations.

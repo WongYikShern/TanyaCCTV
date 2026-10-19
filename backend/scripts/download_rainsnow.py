@@ -139,16 +139,17 @@ def main():
     if args.serve:
         if not (FOLDER/'media-manifest.json').exists():
             raise ValueError('Run --prepare first')
+        sys.path.insert(0, str(ROOT / 'backend'))
         sys.path.insert(0, str(Path(__file__).parent))
         from download_caviar import review_app
         from tanya.setup_check import check_port, PASS
-        if check_port(5002).status != PASS:
-            raise ValueError('Stop the other localhost:5002 viewer first')
+        if check_port(5001).status != PASS:
+            raise ValueError('Stop the other localhost:5001 viewer first')
         app = review_app(FOLDER)
         app.config['LOCAL_RESEARCH_SOURCE'] = plan['source_page']
         app.config['LOCAL_RESEARCH_TITLE'] = 'AAU RainSnow real traffic-camera research set.'
         app.config['LOCAL_RESEARCH_ATTRIBUTION'] = plan['attribution'] + '. CC BY 4.0.'
-        app.run(host='127.0.0.1', port=5002, debug=False)
+        app.run(host='127.0.0.1', port=5001, debug=False)
     return 0
 
 

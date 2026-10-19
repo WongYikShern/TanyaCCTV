@@ -13,7 +13,7 @@ AAU RainSnow natural traffic clips across four intersections, with daylight/nigh
 vehicles and pedestrians. Originals and H.264 review copies are local and ignored by Git.
 Source URLs/hashes are in `evaluation/datasets/caviar-small.json` and `rainsnow-small.json`.
 Read **`docs/real-cctv-footage-handoff.md`** for permission, exact coverage, checks and reproduction.
-RainSnow uses localhost:5002; CAVIAR uses localhost:5001. Both research viewers block AI calls.
+Both viewers use localhost:5001; stop one before starting the other. Both block AI calls.
 No real-camera Google processing has been approved or run. Full manual event labelling,
 accuracy evaluation and exact timing remain next tasks.
 
