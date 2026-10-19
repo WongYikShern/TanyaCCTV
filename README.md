@@ -20,6 +20,11 @@ mean temporal IoU was only 0.453. Broad windows inflate overlap-based recall, an
 negative queries returned irrelevant clips. See the event-support guide for details. Real CCTV
 accuracy and reliable event localization remain unverified.
 
+For your teammate: [current handoff and remaining work](docs/teammate-handoff.md).
+Timing diagnostics now distinguish any-overlap retrieval from stricter event localization;
+see [temporal validation](docs/temporal-validation.md). These metrics expose timing failures
+rather than claiming they are fixed.
+
 **Guides:**
 
 - [Demo guide](docs/demo.md): search, review, then an investigation and its report, on synthetic footage

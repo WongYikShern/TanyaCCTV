@@ -280,9 +280,46 @@ def test_extended_live_recording_preserves_scope_and_known_failures():
     assert summary['mean_precision_at'][5] == 0.508
     assert summary['mean_recall_at'][5] == 1.0
     assert summary['mean_iou'] == 0.453
+    assert report['localization']['0.5']['summary']['merged']['mean_recall_at'][5] == 0.455
+    strict_fall = next(q for q in report['localization']['0.5']['per_query']
+                       if q['query'] == 'a person falling down' and q['level'] == 'merged')
+    assert strict_fall['recall_at'][5] == 0.0
     assert not report['not_measured']
     assert report['by_event_type']['loitering']['hit_rate_at'][1] == 0.0
     assert report['by_event_type']['vehicle_parked']['hit_rate_at'][1] == 0.0
     assert report['by_event_type']['fall']['mean_iou'] == 0.125
     negatives = [a for a in report['analysis'] if a['negative']]
     assert len(negatives) == 5 and all(a['false_positives'] for a in negatives)
+
+
+def test_temporal_relevance_rejects_broad_overlap_but_accepts_exact_threshold():
+    case = Case('fall', [Event('a.mp4', 20, 23)])
+    broad = W('a.mp4', 16, 40)
+    half = W('a.mp4', 20, 26)
+    assert score_case(case, [broad], 'merged', ks=(1,)).recall_at[1] == 1
+    strict = score_case(case, [broad, half], 'merged', ks=(1, 2), min_iou=.5)
+    assert strict.hit_at == {1: False, 2: True}
+    assert strict.precision_at[2] == .5 and strict.recall_at[2] == 1
+    assert strict.first_relevant['rank'] == 2
+    assert score_case(case, [W('other.mp4', 20, 23)], 'chunks', ks=(1,), min_iou=.5).hit_at[1] is False
+
+
+@pytest.mark.parametrize('threshold', [-.1, 1.1, float('nan')])
+def test_invalid_temporal_threshold_rejected(threshold):
+    with pytest.raises(ValueError):
+        score_case(Case('q', []), [], 'chunks', min_iou=threshold)
+
+
+def test_localization_excludes_negatives_and_unmeasured_queries():
+    cases = [Case('fall', [Event('a.mp4', 20, 23)]), Case('absent', []),
+             Case('missing response', [Event('a.mp4', 0, 3)])]
+    responses = {'fall': [dict(filename='a.mp4', start_sec=16, end_sec=40, score=.8,
+                               score_above_median=.1, rank=1)], 'absent': []}
+    report = evaluate(cases, responses, allow_missing=True)
+    assert report['summary']['merged']['mean_recall_at'][5] == 1
+    for measured in report['localization'].values():
+        summary = measured['summary']['merged']
+        assert (summary['positive_queries'], summary['negative_queries']) == (1, 1)
+        assert summary['mean_recall_at'][5] == 0
+        assert len(measured['per_query']) == 4
+    assert len(report['not_measured']) == 1

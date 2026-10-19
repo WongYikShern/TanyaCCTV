@@ -122,8 +122,13 @@ def matches(w: Window, e: Event) -> bool:
     return w.video == e.video and overlap(w.start_sec, w.end_sec, e.start_sec, e.end_sec) > 0
 
 
-def score_case(case: Case, windows: list[Window], level: str, ks=DEFAULT_KS) -> QueryResult:
-    """Metrics for one query; `windows` must be in ranked order."""
+def score_case(case: Case, windows: list[Window], level: str, ks=DEFAULT_KS,
+               *, min_iou: float = 0.0) -> QueryResult:
+    """Metrics for ranked windows; min_iou adds a timing requirement to overlap relevance."""
+    if not 0 <= min_iou <= 1:
+        raise ValueError("min_iou must be between 0 and 1")
+    def relevant_event(window, event):
+        return matches(window, event) and (min_iou == 0 or iou(window, event) >= min_iou)
     result = QueryResult(case.query, level, negative=not case.events, event_type=case.event_type,
                          returned=len(windows))
     if windows:
@@ -131,18 +136,18 @@ def score_case(case: Case, windows: list[Window], level: str, ks=DEFAULT_KS) -> 
         result.top_window = asdict(top)
     if not case.events:
         return result
-    relevant = [any(matches(w, e) for e in case.events) for w in windows]
+    relevant = [any(relevant_event(w, e) for e in case.events) for w in windows]
     for k in ks:
         top_k = relevant[:k]
         result.hit_at[k] = any(top_k)
         result.precision_at[k] = (sum(top_k) / len(top_k)) if top_k else 0.0
-        found = {i for i, e in enumerate(case.events) if any(matches(w, e) for w in windows[:k])}
+        found = {i for i, e in enumerate(case.events) if any(relevant_event(w, e) for w in windows[:k])}
         result.recall_at[k] = len(found) / len(case.events)
     first = next((i for i, r in enumerate(relevant) if r), None)
     result.reciprocal_rank = 1 / (first + 1) if first is not None else 0.0
     if first is not None:
         w = windows[first]
-        e = max((e for e in case.events if matches(w, e)), key=lambda e: iou(w, e))
+        e = max((e for e in case.events if relevant_event(w, e)), key=lambda e: iou(w, e))
         result.first_relevant = {
             "rank": first + 1, "window": asdict(w), "event": asdict(e),
             "start_error_sec": round(abs(w.start_sec - e.start_sec), 3),
@@ -212,10 +217,15 @@ def evaluate(cases: list[Case], responses: dict[str, list[dict]], ks=DEFAULT_KS,
         raise ValueError("no recorded response for: " + ", ".join(missing))
     measured = [c for c in cases if c.query in responses]
     per_query, analysis = [], []
+    localized = {"0.3": [], "0.5": []}
     for case in measured:
         results = responses[case.query]
         merged = merged_windows(results, ratio, gap_sec)
-        per_query.append(score_case(case, chunk_windows(results), "chunks", ks))
+        chunks = chunk_windows(results)
+        per_query.append(score_case(case, chunks, "chunks", ks))
+        for threshold, scored in localized.items():
+            for level, windows in (("chunks", chunks), ("merged", merged)):
+                scored.append(score_case(case, windows, level, ks, min_iou=float(threshold)))
         per_query.append(score_case(case, merged, "merged", ks))
         analysis.append(error_analysis(case, merged, all_cases, k=max(ks)))
     by_type = {t: summarise([q for q in per_query if q.level == "merged" and q.event_type == t], ks)
@@ -224,6 +234,11 @@ def evaluate(cases: list[Case], responses: dict[str, list[dict]], ks=DEFAULT_KS,
             "summary": {level: summarise([q for q in per_query if q.level == level], ks)
                         for level in ("chunks", "merged")},
             "by_event_type": by_type, "analysis": analysis,
+            "localization": {threshold: {
+                "summary": {level: summarise([q for q in scored if q.level == level], ks)
+                            for level in ("chunks", "merged")},
+                "per_query": [asdict(q) for q in scored]}
+                for threshold, scored in localized.items()},
             "not_measured": [{"query": c.query, "event_type": c.event_type,
                               "reason": "no recorded response"} for c in cases if c.query in missing]
                             + [{"query": c.query, "event_type": c.event_type,
@@ -283,6 +298,16 @@ def format_report(report: dict) -> str:
                   "  " + "  ".join(f"R@{k} {s['mean_recall_at'][k]}" for k in ks),
                   f"  MRR {s['mrr']}  first-relevant timing: start error {s['mean_start_error_sec']} s, "
                   f"end error {s['mean_end_error_sec']} s, IoU {s['mean_iou']}", ""]
+    if report.get("localization"):
+        lines.append("Temporal localization (same-video overlap plus minimum IoU; diagnostic thresholds, not detector acceptance criteria):")
+        for threshold, measured in report["localization"].items():
+            for level in ("chunks", "merged"):
+                summary = measured["summary"][level]
+                k = max(ks)
+                lines.append(f"  IoU >= {threshold}, {level}: hit@{ks[0]} {summary['hit_rate_at'][ks[0]]}, "
+                             f"P@{k} {summary['mean_precision_at'][k]}, R@{k} {summary['mean_recall_at'][k]}")
+        lines.append("  Negative queries are excluded from these positive-event metrics; these do not measure absence.")
+        lines.append("")
     lines.append("Per query (merged windows):")
     for q in report["per_query"]:
         if q["level"] != "merged":

@@ -25,6 +25,14 @@ Metrics are reported twice:
 **Negative queries** (no annotated event) have no precision or recall. The engine always returns
 its nearest clips, so they are listed separately and never counted as correct rejections.
 
+## Temporal localization diagnostics
+
+The report now adds IoU >= 0.3 and >= 0.5 metrics alongside the original any-overlap metrics.
+These do not change rankings or establish detector acceptance criteria. The full synthetic
+run's merged recall@5 drops from 1.000 at any overlap to 0.455 at IoU >= 0.5. See
+[temporal-validation.md](temporal-validation.md) for definitions, per-condition failures and
+reproduction. JSON includes both levels' strict per-query results under `localization`.
+
 ## Latest extended synthetic measurement — 19 October 2026
 
 The approved five-clip run now measures every query in `synthetic_events_v2.json`: 11 positive

@@ -1,5 +1,13 @@
 # Continue TanyaCCTV work from another device
 
+**Start here:** [current teammate handoff](teammate-handoff.md). It supersedes the historical
+checkpoints below, including their old pending-key/commit notes.
+
+Latest offline addition: stricter timing diagnostics (IoU >= 0.3 and >= 0.5), with same-video
+matching, excluded negatives/unmeasured cases, and unchanged original ranking metrics.
+Merged recall@5 falls from 1.000 with any overlap to 0.455 at IoU >= 0.5. See
+`docs/temporal-validation.md`. No new Google calls, real footage, ranking or model changes.
+
 ## Latest: approved targeted image checks (19 October 2026)
 
 Same PR #5 / branch `feature/macos-workflow-validation`. Owner approved 66 synthetic images
