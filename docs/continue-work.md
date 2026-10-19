@@ -1,3 +1,9 @@
+> Latest core-search checkpoint: the normal website now defaults to direct multi-recording
+> scenario scans, with explicit upload plans and evidence timestamps. See
+> [scenario-search.md](scenario-search.md) and [teammate-handoff.md](teammate-handoff.md).
+> Selected live positives/negatives and an action sequence passed; one timeout required a
+> separately approved retry. Arbitrary-video accuracy is not established.
+
 > Latest footage checkpoint: 11 licensed real-camera clips acquired locally (CAVIAR + AAU RainSnow).
 > Day/night, rain/snow, indoor/outdoor, four traffic views. Reproduce and continue from
 > [real-cctv-footage-handoff.md](real-cctv-footage-handoff.md) and [teammate-handoff.md](teammate-handoff.md).

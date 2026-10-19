@@ -60,7 +60,8 @@ def test_research_viewer_blocks_cloud_calls_even_with_a_key(workspace, monkeypat
     assert b'Google processing disabled' in client.get('/').data
     with client.session_transaction() as session:
         headers = {'X-CSRF-Token': session['csrf']}
-    for path in ('/api/search','/api/search/plan','/api/search/sync'):
+    for path in ('/api/search','/api/search/plan','/api/search/sync','/api/search/scan/plan',
+                 '/api/search/scan/batch','/api/search/scan/cancel'):
         assert client.post(path, headers=headers, json={'query':'person','confirmed':True}).status_code == 403
     assert client.get('/api/status').json['search_ready'] is False
     video = client.get('/api/videos').json['videos'][0]

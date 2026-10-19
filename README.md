@@ -802,3 +802,11 @@ and six AAU RainSnow natural traffic recordings with day/night, rain/snow and fo
 views. See [the footage handoff](docs/real-cctv-footage-handoff.md) for sources, attribution,
 exact coverage and download/view commands. Media stays outside Git. Research viewers block
 cloud AI calls; accuracy and event timing are not yet validated.
+
+### Search a described scene across uploaded recordings
+
+Open Search and use **Scan footage for this scene** (the default). It scans samples throughout
+all indexed recordings, with an optional single-recording/time-range filter, without depending
+on the top similarity matches or an embedding index. Review and approve the exact Google
+upload plan first. Results include evidence timestamps and separate unclear/contradicted
+windows. See [scenario search](docs/scenario-search.md) for the workflow and sampling limits.

@@ -1,0 +1,183 @@
+{
+  "date": "2026-10-19",
+  "method": "direct_visual_scan",
+  "approved_image_limit": 90,
+  "approved_request_limit": 3,
+  "automatic_retries": 0,
+  "scope": "Same four recordings as the separately approved 87-image baseline. Two sequence tests plus one separately approved retry.",
+  "attempts": [
+    {
+      "query": "a person walks toward the camera and then raises both hands",
+      "outcome": "timeout",
+      "thinking_level": "provider_default",
+      "max_images": 30,
+      "observation": "Browser reported ReadTimeout, no result accepted; no automatic retry."
+    },
+    {
+      "query": "a person falls down and remains lying on the floor",
+      "outcome": "completed",
+      "thinking_level": "low",
+      "summary": {
+        "checked_candidates": 5,
+        "rejected": 5,
+        "sampled_frames": 29,
+        "supported": 0,
+        "unclear": 0
+      },
+      "windows": [
+        {
+          "recording": "synthetic_square_1.mp4",
+          "start_sec": 0.0,
+          "end_sec": 10.0,
+          "visual_review": {
+            "evidence_timestamps": [],
+            "reason": "The frames show an animated blue square moving on a dark background; no person is visible.",
+            "sampled_timestamps": [
+              0.0,
+              2.0,
+              4.0,
+              6.0,
+              8.0,
+              9.0
+            ],
+            "verdict": "not_supported"
+          }
+        },
+        {
+          "recording": "synthetic_square_2.mp4",
+          "start_sec": 0.0,
+          "end_sec": 10.0,
+          "visual_review": {
+            "evidence_timestamps": [],
+            "reason": "The frames show a blue square moving across a black background, with no person present.",
+            "sampled_timestamps": [
+              0.0,
+              2.0,
+              4.0,
+              6.0,
+              8.0,
+              9.0
+            ],
+            "verdict": "not_supported"
+          }
+        },
+        {
+          "recording": "boat.mp4",
+          "start_sec": 0.0,
+          "end_sec": 5.875,
+          "visual_review": {
+            "evidence_timestamps": [],
+            "reason": "The video displays an unmanned robotic boat on water; there are no people present.",
+            "sampled_timestamps": [
+              0.0,
+              1.0,
+              2.0,
+              4.0,
+              5.0
+            ],
+            "verdict": "not_supported"
+          }
+        },
+        {
+          "recording": "living_room.mp4",
+          "start_sec": 0.0,
+          "end_sec": 12.0,
+          "visual_review": {
+            "evidence_timestamps": [],
+            "reason": "A person wearing a black mask and jacket walks forward and raises their hands while standing; they do not fall down or lie on the floor.",
+            "sampled_timestamps": [
+              0.0,
+              2.0,
+              5.0,
+              7.0,
+              10.0,
+              12.0
+            ],
+            "verdict": "not_supported"
+          }
+        },
+        {
+          "recording": "living_room.mp4",
+          "start_sec": 6.0,
+          "end_sec": 15.56,
+          "visual_review": {
+            "evidence_timestamps": [],
+            "reason": "The person remains standing upright and raises their hands; there is no falling or lying on the floor.",
+            "sampled_timestamps": [
+              6.0,
+              8.0,
+              10.0,
+              12.0,
+              14.0,
+              15.0
+            ],
+            "verdict": "not_supported"
+          }
+        }
+      ]
+    },
+    {
+      "query": "a person walks toward the camera and then raises both hands",
+      "outcome": "completed",
+      "thinking_level": "low",
+      "max_images": 30,
+      "separately_approved_retry": true,
+      "observation": "Observed through native Chrome UI: 5/5 windows checked, 29 images sent, 2 supported and 0 unclear; remaining 3 not supported.",
+      "summary": {
+        "checked_candidates": 5,
+        "sampled_frames": 29,
+        "supported": 2,
+        "unclear": 0,
+        "rejected": 3
+      },
+      "supported_windows": [
+        {
+          "recording": "living_room.mp4",
+          "start_sec": 0,
+          "end_sec": 12,
+          "sampled_timestamps": [
+            0,
+            2,
+            5,
+            7,
+            10,
+            12
+          ],
+          "evidence_timestamps": [
+            0,
+            2,
+            5,
+            7,
+            10,
+            12
+          ]
+        },
+        {
+          "recording": "living_room.mp4",
+          "start_sec": 6,
+          "end_sec": 15.56,
+          "sampled_timestamps": [
+            6,
+            8,
+            10,
+            12,
+            14,
+            15
+          ],
+          "evidence_timestamps": [
+            6,
+            8,
+            10,
+            12,
+            14,
+            15
+          ]
+        }
+      ]
+    }
+  ],
+  "successful_images": 58,
+  "timeout_image_bound": 30,
+  "attempted_requests": 3,
+  "browser_seek_observation": "Evidence at 12 seconds opened the living-room recording at 12 seconds, showing raised hands. A zero-length window at an endpoint was found and navigation was subsequently guarded."
+}

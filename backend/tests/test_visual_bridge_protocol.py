@@ -56,9 +56,8 @@ def test_default_model_and_structured_request(bridge, capsys):
     assert calls[0]["model"] == "gemini-3.8-flash"
     assert module.client_options["http_options"]["retry_options"] == {"attempts": 1}
     assert calls[0]["config"]["response_json_schema"] == module.SCHEMA
-    # Model listing/countTokens did not establish that MINIMAL thinking was supported.
-    # Let the provider use its supported default rather than forcing a rejected setting.
-    assert "thinking_config" not in calls[0]["config"]
+    # LOW is documented for 3.8 Flash; MINIMAL is not supported for that model.
+    assert calls[0]["config"]["thinking_config"] == {"thinking_level": "low"}
 
 
 def test_provider_error_exposes_status_but_never_credential_message(bridge, capsys):
@@ -79,3 +78,23 @@ def test_frame_limit_rejected_before_api_call(bridge, monkeypatch, capsys):
     monkeypatch.setattr(sys, "stdin", StringIO(json.dumps(payload)))
     assert module.main() == 1 and not calls
     assert json.loads(capsys.readouterr().out)["ok"] is False
+
+
+def test_other_model_override_keeps_provider_thinking_default(bridge, monkeypatch):
+    module, calls, _ = bridge
+    monkeypatch.setenv("TANYA_VERIFY_MODEL", "custom-model")
+    assert module.main() == 0
+    assert calls[0]["model"] == "custom-model"
+    assert "thinking_config" not in calls[0]["config"]
+
+
+def test_timeout_is_not_retransmitted(bridge, capsys):
+    module, calls, _ = bridge
+    class ReadTimeout(Exception):
+        pass
+    module.fake_error = ReadTimeout("sensitive transport details")
+    assert module.main() == 1
+    assert len(calls) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert not result["ok"] and "No matches were accepted" in result["error"]
+    assert "sensitive transport details" not in result["error"]
