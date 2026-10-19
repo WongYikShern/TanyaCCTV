@@ -1,7 +1,7 @@
 # Teammate handoff — 19 October 2026
 
-**Current branch:** `feature/macos-workflow-validation`  
-**Review PR:** https://github.com/WongYikShern/TanyaCCTV/pull/5  
+**Current branch:** `feature/macos-workflow-validation`
+**Review PR:** https://github.com/WongYikShern/TanyaCCTV/pull/5
 PR #5 is open, not merged. PRs #2–#4 were already merged before this branch started.
 Do not continue from the older `feature/local-web-dashboard` branch.
 
