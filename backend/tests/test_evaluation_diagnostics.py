@@ -107,3 +107,32 @@ def test_failure_cases_include_misses_bad_timing_and_failed_queries():
     result=benchmark.score_mode(queries,run,'ranked')
     assert [q['query'] for q in result.failure_cases]==['q','neg']
     assert result.failure_cases[0]['event_timing'][0]['best_iou']==.1
+
+
+def test_split_breakdowns_keep_unavailable_queries_out_of_scores():
+    queries=[benchmark.Query('dev','direct','dev',[benchmark.Span('a',0,2)]),
+             benchmark.Query('test','paraphrase','test',[benchmark.Span('a',10,12)]),
+             benchmark.Query('missing','negative','test',[])]
+    run=dict(source='mock',responses={
+        'dev':dict(status='ok',windows=[dict(video='a',start_sec=0,end_sec=2)]),
+        'test':dict(status='ok',windows=[])})
+    result=benchmark.score_mode(queries,run,'ranked')
+    assert result.breakdowns['split']['dev']['recall_at_5']==1
+    test=result.breakdowns['split']['test']
+    assert test['recall_at_5']==0 and test['unavailable']==1
+    assert test['negative_false_positive_rate'] is None
+    assert result.breakdowns['kind']['negative']['answered']==0
+
+
+@pytest.mark.parametrize('verdict',[None,'unknown','Supported'])
+def test_malformed_visual_review_cannot_become_a_correct_negative(verdict):
+    query=benchmark.Query('negative','negative','test',[])
+    run=dict(source='mock',responses={'negative':dict(status='ok',windows=[dict(video='a',start_sec=0,end_sec=2,verdict=verdict)])})
+    with pytest.raises(ValueError,match='explicit'):benchmark.score_mode([query],run,'scan')
+
+
+@pytest.mark.parametrize('latency',[-1,float('inf'),float('nan')])
+def test_invalid_latency_rejected(latency):
+    query=benchmark.Query('negative','negative','test',[])
+    run=dict(source='mock',responses={'negative':dict(status='ok',latency_sec=latency,windows=[])})
+    with pytest.raises(ValueError,match='latency'):benchmark.score_mode([query],run,'ranked')

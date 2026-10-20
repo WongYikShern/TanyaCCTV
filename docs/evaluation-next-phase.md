@@ -162,3 +162,27 @@ ignored local data, not Git. These changes do not run or improve the model itsel
 Final checkpoint validation including run-identity regressions: **498 passed, seven
 skipped** (same missing trial/provisional data and Windows-only skips described above).
 No footage, weights, generated results, reviews or credentials are included in this checkpoint.
+
+## Follow-up: split diagnostics and malformed review results
+
+The scorer now includes `breakdowns.split` and `breakdowns.kind` in each mode's JSON
+report, and prints the query-split summary. Every group retains answered, failed,
+unavailable and positive/negative sample counts, plus Recall@5, IoU localisation,
+individual misses and negative false-positive rate. Unanswered queries do not become
+successful negatives. Tiny groups are descriptive only: development/test query splits
+share the CAVIAR footage, so this is not a held-out-camera generalisation test.
+
+Checked windows must carry exactly `supported`, `unclear` or `not_supported`. A missing
+or malformed verdict is refused rather than silently treated as rejection. Latency must
+be finite and nonnegative. Unclear windows still do not prove an event absent.
+
+Validation: **505 backend tests passed, seven skipped**, with the same data/platform
+skip reasons recorded above. The existing synthetic ranked recording (16 queries) and
+three-query image-check recording were scored offline through the updated CLI; all
+remain `source=replay`, with legacy identity warnings and no new inference. Their local
+report is ignored under `data/cctv_validation/replay-diagnostics-2026-10-21.json` and is
+not committed. No comparable real-CCTV ranked/scan run is available yet. No model
+accuracy improvement, new YOLO inference or new fall/entry/exit detection is claimed.
+
+Still awaiting the teammate's original reviewed CSV and cached YOLO runs. The pending
+operator checklist above is unchanged. No paid calls, uploads or package downloads ran.

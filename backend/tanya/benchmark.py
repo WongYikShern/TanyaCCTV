@@ -77,6 +77,7 @@ class ModeResult:
     metrics: dict = field(default_factory=dict)
     per_query: list = field(default_factory=list)
     failure_cases: list = field(default_factory=list)
+    breakdowns: dict = field(default_factory=dict)
 
 
 def dataset_contract(truth: dict, clips: list[dict]) -> dict:
@@ -186,9 +187,14 @@ def score_mode(queries: list[Query], run: dict | None, mode: str, use_evidence_s
         row = dict(query=q.query, kind=q.kind, split=q.split, positive=q.positive, status=status)
         if status == "ok":
             if r.get("latency_sec") is not None:
-                latencies.append(float(r["latency_sec"]))
+                latency = float(r["latency_sec"])
+                if not math.isfinite(latency) or latency < 0:
+                    raise ValueError(f"Invalid latency for {q.query!r}")
+                latencies.append(latency)
             windows = _windows(r)
             if mode in CHECKED_MODES:     # only "supported" windows are presented as candidate matches
+                if any(w.get("verdict") not in ("supported", "unclear", "not_supported") for _, w in windows):
+                    raise ValueError("Every checked window needs an explicit supported/unclear/not_supported verdict")
                 windows = [(s, w) for s, w in windows if w.get("verdict") == "supported"]
                 if use_evidence_span:
                     windows = [(Span(s.video, float(w["evidence_start_sec"]), float(w["evidence_end_sec"]))
@@ -232,7 +238,29 @@ def score_mode(queries: list[Query], run: dict | None, mode: str, use_evidence_s
     m["latency_sec_median"] = round(statistics.median(latencies), 2) if latencies else None
     m["latency_sec_mean"] = _mean(latencies)
     result.metrics = m
+    result.breakdowns = {dimension: {
+        value: subgroup_summary([p for p in per_query if p[dimension] == value])
+        for value in sorted({p[dimension] for p in per_query})}
+        for dimension in ("split", "kind")}
     return result
+
+
+def subgroup_summary(rows: list[dict]) -> dict:
+    """Small-sample diagnostics; failed/unavailable queries stay out of accuracy denominators."""
+    ok = [r for r in rows if r['status'] == 'ok']
+    positive = [r for r in ok if r['positive']]
+    negative = [r for r in ok if not r['positive']]
+    events = sum(r['labelled_events'] for r in positive)
+    misses = sum(r['missed_events'] for r in positive)
+    return dict(queries=len(rows), answered=len(ok),
+                failed=sum(r['status']=='failed' for r in rows),
+                unavailable=sum(r['status']=='unavailable' for r in rows),
+                scored_positive=len(positive), scored_negative=len(negative),
+                recall_at_5=_mean(r['recall@5'] for r in positive),
+                localization_at_5_iou_05=_mean(r['loc@5_iou>=0.5'] for r in positive),
+                labelled_events=events, missed_events=misses,
+                missed_individual_event_rate=round(misses/events,3) if events else None,
+                negative_false_positive_rate=_mean(r['false_positive'] for r in negative))
 
 
 def _score_query(q: Query, windows: list[Span], mode: str) -> dict:
@@ -411,6 +439,7 @@ def format_report(dataset: dict, results: list[ModeResult], comparison: dict, ce
             lines.append("  Scan @k is chronological, not a similarity ranking; event recall uses all supported windows.")
         if r.source in ("mock", "replay"):
             lines.append("  TEST/REPLAY ONLY: these outputs are not fresh live AI inference.")
+        lines.append("  By query split: " + json.dumps(r.breakdowns['split']))
     lines += ["", f"Comparison on common answered queries: {json.dumps(comparison)}", "",
               f"Structural ceiling (window geometry only, perfect ranker; not a model measurement), "
               f"{ceil['events']} events:"]
