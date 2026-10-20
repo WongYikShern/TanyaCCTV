@@ -4,7 +4,6 @@ import hashlib
 import json
 from pathlib import Path
 import ssl
-import os
 import subprocess
 import sys
 import urllib.request
@@ -57,9 +56,8 @@ def prepare(folder, clips):
     import cv2
     from tanya.config import Settings
     from tanya.indexer import Indexer
-    from tanya.playback import find_ffmpeg
-    sentry = ROOT / '.venv/sentry' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-    ffmpeg = find_ffmpeg(sentry)
+    from tanya.playback import find_local_ffmpeg
+    ffmpeg = find_local_ffmpeg(ROOT)   # PATH, TANYA_FFMPEG, TANYA_SENTRY_PYTHON (Windows) or .venv/sentry
     if not ffmpeg:
         raise ValueError('Local FFmpeg is required for research MP4 copies; originals are unchanged.')
     videos = folder / 'videos';videos.mkdir(parents=True, exist_ok=True)

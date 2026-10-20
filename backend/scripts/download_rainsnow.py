@@ -3,7 +3,6 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import os
 import shutil
 import ssl
 import subprocess
@@ -78,9 +77,8 @@ def prepare(clips):
     import cv2
     from tanya.config import Settings
     from tanya.indexer import Indexer
-    from tanya.playback import find_ffmpeg
-    executable = ROOT / '.venv/sentry' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-    ffmpeg = find_ffmpeg(executable)
+    from tanya.playback import find_local_ffmpeg
+    ffmpeg = find_local_ffmpeg(ROOT)   # PATH, TANYA_FFMPEG, TANYA_SENTRY_PYTHON (Windows) or .venv/sentry
     if not ffmpeg:
         raise ValueError('Local FFmpeg is required')
     videos = FOLDER / 'videos'

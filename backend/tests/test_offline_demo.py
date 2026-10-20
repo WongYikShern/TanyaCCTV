@@ -61,9 +61,10 @@ def test_offline_demo_finds_local_ffmpeg_via_documented_windows_setting(tmp_path
     sentry.write_text('', encoding='utf-8')
     seen = []
     monkeypatch.setenv('TANYA_SENTRY_PYTHON', str(sentry))
-    monkeypatch.setattr(run_offline_demo, 'find_ffmpeg',
+    monkeypatch.delenv('TANYA_FFMPEG', raising=False)
+    monkeypatch.setattr('tanya.playback.find_ffmpeg',
                         lambda p: (seen.append(p), 'C:/ffmpeg.exe' if p == sentry else None)[1])
-    assert run_offline_demo.local_ffmpeg() == 'C:/ffmpeg.exe' and seen[0] == sentry
+    assert run_offline_demo.local_ffmpeg() == 'C:/ffmpeg.exe' and sentry in seen
 
 
 def test_offline_demo_warns_clearly_without_ffmpeg(tmp_path, monkeypatch, capsys):
@@ -72,7 +73,7 @@ def test_offline_demo_warns_clearly_without_ffmpeg(tmp_path, monkeypatch, capsys
     import run_offline_demo
     monkeypatch.delenv('TANYA_SENTRY_PYTHON', raising=False)
     monkeypatch.delenv('TANYA_FFMPEG', raising=False)
-    monkeypatch.setattr(run_offline_demo, 'find_ffmpeg', lambda p: None)
+    monkeypatch.setattr(run_offline_demo, 'find_local_ffmpeg', lambda root: None)
     made = []
     monkeypatch.setattr(run_offline_demo, 'make', lambda folder, ffmpeg, log: made.append(ffmpeg))
     monkeypatch.setattr(run_offline_demo, 'Indexer', lambda s: type('I', (), {'run': lambda self: None})())

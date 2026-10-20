@@ -25,6 +25,12 @@ locally with publisher labels and browser-compatible copies. These are staged re
 kept outside Git; AI processing has not been approved or run on them. See the guide to
 re-download and open the separate local-only viewer.
 
+**Real-camera benchmark (20 October 2026):** the CAVIAR clips now have 30 events derived from
+the publisher's labels (not yet human-verified), 25 operator-style queries including negatives,
+and a repeatable benchmark (`backend/scripts/run_benchmark.py`). No live AI search has been run on
+them, so real-world accuracy is **unmeasured**; see [real-camera evaluation](docs/real-cctv-evaluation.md)
+for the results, failure analysis and the costed run that needs approval.
+
 For your teammate: [current handoff and remaining work](docs/teammate-handoff.md).
 Timing diagnostics now distinguish any-overlap retrieval from stricter event localization;
 see [temporal validation](docs/temporal-validation.md). These metrics expose timing failures
@@ -34,6 +40,7 @@ rather than claiming they are fixed.
 
 - [Demo guide](docs/demo.md): search, review, then an investigation and its report, on synthetic footage
 - [Search evaluation](docs/search-evaluation.md): measured ranking quality and its limits
+- [Real-camera evaluation](docs/real-cctv-evaluation.md): CAVIAR dataset, benchmark, failure analysis, live-run plan
 - [Event support](docs/event-support.md): which event types are measured, unmeasured or unsupported
 - [Performance](docs/performance.md): measured indexing and search times
 - [Validating on real CCTV](docs/cctv-accuracy-checklist.md)
@@ -110,8 +117,8 @@ It checks Python, packages, data folders, the database, disk space, OneDrive, po
 pinned SentrySearch install and the key. Each problem comes with a "fix:" line. Exit code 1
 means something required is missing.
 
-Expected test result on Windows without SentrySearch configured (checked 19 October 2026):
-**295 passed, 10 skipped, 0 failed**. The skips are:
+Expected test result on Windows without SentrySearch configured (checked 20 October 2026):
+**451 passed, 10 skipped, 0 failed**. The skips are:
 
 - 2 playback-copy tests that need FFmpeg (on PATH, `TANYA_FFMPEG`, or bundled with SentrySearch).
 - 4 end-to-end tests that need `TANYA_SENTRY_PYTHON` and the synthetic SentrySearch trial index.
@@ -120,7 +127,7 @@ Expected test result on Windows without SentrySearch configured (checked 19 Octo
   (`WinError 1314`). Directory-junction tests, which need no special rights, check the same
   "no escaping the video or frames folder" protections on Windows.
 
-With `TANYA_SENTRY_PYTHON` set and the trial index present, the result is 302 passed and
+With `TANYA_SENTRY_PYTHON` set and the trial index present, the result is 458 passed and
 3 skipped. On macOS/Linux, the 3 symlink tests run and the junction tests are skipped.
 
 **Semantic search on Windows** needs the separate Python 3.12 SentrySearch environment
@@ -421,7 +428,7 @@ FFmpeg does **not** need to be installed: OpenCV's wheel bundles its own decoder
 python -m pytest backend -v
 ```
 
-Expected on Windows: 295 passed, 10 skipped, 0 failed. Skips explained in
+Expected on Windows: 451 passed, 10 skipped, 0 failed. Skips explained in
 [Local website (Windows PowerShell)](#local-website-windows-powershell). Tests use temporary
 folders and synthetic videos; they never touch `data/`.
 

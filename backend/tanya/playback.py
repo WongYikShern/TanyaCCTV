@@ -85,6 +85,22 @@ def find_ffmpeg(sentry_python: Path | None = None) -> str | None:
     return found
 
 
+def find_local_ffmpeg(project_root: Path) -> str | None:
+    """FFmpeg for local tools (demo footage, research copies): TANYA_FFMPEG or PATH, else the copy bundled
+    with the search environment named by TANYA_SENTRY_PYTHON (the documented Windows setup) or found at
+    <project>/.venv/sentry. Only the local encoder is located; no .env, key or Google client is loaded."""
+    found = find_ffmpeg(None)
+    if found:
+        return found
+    default = Path(project_root) / ".venv" / "sentry" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    for candidate in (os.environ.get("TANYA_SENTRY_PYTHON", "").strip(), str(default)):
+        if candidate and Path(candidate).is_file():
+            found = find_ffmpeg(Path(candidate))
+            if found:
+                return found
+    return None
+
+
 def make_copy(source: Path, target: Path, ffmpeg: str, duration_sec: float | None = None) -> Path:
     """Write a browser-playable H.264 copy of `source` to `target` (atomically). Never touches `source`."""
     target.parent.mkdir(parents=True, exist_ok=True)

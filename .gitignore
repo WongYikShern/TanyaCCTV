@@ -46,3 +46,10 @@ desktop.ini
 
 # Public research footage, labels, derivatives and local validation data
 /data/cctv_validation/
+
+# Local evaluation / experiment outputs (regenerable; may contain reviewer initials)
+evaluation/provisional/
+caviar-review-*.csv
+*.pt
+*.onnx
+experiments/yolo/results*/

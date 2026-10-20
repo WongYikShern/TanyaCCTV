@@ -123,8 +123,8 @@ approval. It adds Phases 6–9 (details in `docs/progress.md`):
 
 Tests (Windows, no key):
 
-- backend: **295 passed, 10 skipped, 0 failed**
-- with `TANYA_SENTRY_PYTHON`: **302 passed, 3 skipped**
+- backend: **451 passed, 10 skipped, 0 failed**
+- with `TANYA_SENTRY_PYTHON`: **458 passed, 3 skipped**
 - bridge offline: **29 passed, 4 skipped**
 
 No Google calls were made.

@@ -366,6 +366,9 @@ function resultCard(hit, query, visual, rank){
   info.append(element("p",`${time(hit.start_sec)} – ${time(hit.end_sec)}`,"when"),element("p",Number.isFinite(hit.best_score)?`Ranking score ${hit.best_score.toFixed(3)} — a similarity signal for ordering, not a probability.`:"Direct footage scan · no similarity score", "muted"));
   if(review){
     info.append(element("p",review.reason),element("p","Sampled times: "+(review.sampled_timestamps.map(time).join(", ")||"none"),"muted"));
+    // The checker's cited frames give a tighter range than the scanned window (a hint, not a boundary).
+    if(review.evidence_span){ const s=review.evidence_span; const span=element("p",`Evidence span ${time(s.start_sec)}–${time(s.end_sec)} (from the frames the checker cited; the event may extend beyond it)`,"when");
+      const playSpan=element("button",`Play evidence span ${time(s.start_sec)}–${time(s.end_sec)}`); playSpan.type="button"; playSpan.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,s.start_sec,s.end_sec); info.append(span,playSpan); }
     for(const t of review.evidence_timestamps){ const b=element("button",`Review evidence at ${time(t)}`,"secondary"); b.type="button"; b.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,t,hit.end_sec); info.append(b); }
   }
   const actions=element("div",undefined,"actions"), watch=element("button",`Play from ${time(hit.start_sec)}`); watch.type="button"; watch.prepend(icon("play"));

@@ -9,7 +9,7 @@ from make_demo_footage import make
 from tanya.config import PROJECT_ROOT, Settings, SearchSettings
 from tanya.indexer import Indexer
 from tanya.offline_demo import QUERIES, replay_search
-from tanya.playback import find_ffmpeg
+from tanya.playback import find_local_ffmpeg
 from tanya.search_sync import save_manifest
 from tanya.setup_check import check_port, PASS
 from tanya.web import create_app
@@ -18,15 +18,8 @@ import os
 
 
 def local_ffmpeg():
-    """The local FFmpeg encoder only: TANYA_FFMPEG, PATH, or the copy bundled with the search environment
-    (TANYA_SENTRY_PYTHON, as documented for Windows, or .venv/sentry). Never loads .env or a Google client."""
-    sentry_default = PROJECT_ROOT / '.venv/sentry' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-    for candidate in (os.environ.get('TANYA_SENTRY_PYTHON', '').strip(), str(sentry_default)):
-        if candidate and Path(candidate).is_file():
-            exe = find_ffmpeg(Path(candidate))
-            if exe:
-                return exe
-    return find_ffmpeg(None)
+    """The local FFmpeg encoder only (see tanya.playback.find_local_ffmpeg). Never loads .env or a Google client."""
+    return find_local_ffmpeg(PROJECT_ROOT)
 
 
 def prepare(root):

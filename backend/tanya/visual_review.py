@@ -70,6 +70,25 @@ def run_review(payload, search_settings):
     return data.get("results")
 
 
+def evidence_span(window_start, window_end, sampled, evidence):
+    """Tighter time range from the frames the checker cited: [first cited - g/2, last cited + g/2],
+    g = mean spacing of the sampled frames, clipped to the scanned window. None without evidence.
+
+    The scanned window stays the provenance; this is a localisation hint only. Measured on recorded
+    checker output (synthetic footage, 3 supported windows) it never lowered IoU and raised it from
+    0.357 to 0.825 and 0.125 to 0.312 where the checker cited a subset of frames (docs/real-cctv-evaluation.md).
+    """
+    if not evidence:
+        return None
+    sampled = sorted(sampled) or sorted(evidence)
+    gap = (sampled[-1] - sampled[0]) / (len(sampled) - 1) if len(sampled) > 1 else 1.0
+    start = max(window_start, min(evidence) - gap / 2)
+    end = min(window_end, max(evidence) + gap / 2)
+    if end <= start:
+        return None
+    return {"start_sec": round(start, 2), "end_sec": round(end, 2)}
+
+
 def review_results(result, settings, search_settings, reviewer=None):
     """Keep visual candidates separate from unclear and rejected windows. Errors fail closed."""
     reviewer = reviewer or run_review
@@ -113,7 +132,10 @@ def review_results(result, settings, search_settings, reviewer=None):
         decision = decisions.get(ident, {"verdict": "unclear", "reason":
             f"Outside the first {MAX_CANDIDATES} candidates; not visually checked." if i >= MAX_CANDIDATES else
             "No readable extracted frames in this time window.", "evidence_timestamps": []})
-        hit["visual_review"] = dict(decision, sampled_timestamps=[f["timestamp_sec"] for f in samples.get(ident, [])])
+        sampled = [f["timestamp_sec"] for f in samples.get(ident, [])]
+        hit["visual_review"] = dict(decision, sampled_timestamps=sampled,
+                                    evidence_span=evidence_span(hit["start_sec"], hit["end_sec"], sampled,
+                                                                decision["evidence_timestamps"]))
         groups[decision["verdict"]].append(hit)
     result["hits"] = groups["supported"]
     result["unclear_hits"] = groups["unclear"]
