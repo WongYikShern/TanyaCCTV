@@ -17,6 +17,8 @@ measurable queries with none; unlabelled queries are never scored):
   labelled event in the same video (timestamp localisation, not just overlap).
 - Missed-event rate: share of positive queries with no overlapping window in the top 5
   (ranked) or no "supported" window (scan).
+  This legacy name is query-level (also reported as no_hit_query_rate). The separate
+  missed_individual_event_rate counts each labelled event, including misses within hit queries.
 - Negative false-positive rate: share of negative queries that produced a candidate presented as
   a match. Ranked search always returns its nearest windows, so its rate is 1.0 by design; the
   scene scan counts a negative as a false positive only when it marks a window "supported".
@@ -28,6 +30,7 @@ detections. Nothing here calls a model or a network service.
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import statistics
 from dataclasses import dataclass, field
@@ -37,7 +40,7 @@ KS = (1, 5)
 IOU_THRESHOLDS = (0.3, 0.5)
 MODES = ("ranked", "scan", "ranked_checked")   # ranked_checked = ranked retrieval + image check
 CHECKED_MODES = ("scan", "ranked_checked")       # windows carry a verdict; only "supported" counts
-SOURCES = ("live", "replay")
+SOURCES = ("live", "replay", "mock")
 
 # Structural parameters of the current pipeline (see search_sync / scenario_scan / indexer).
 CHUNK_SEC, CHUNK_OVERLAP_SEC = 10.0, 2.0
@@ -73,6 +76,36 @@ class ModeResult:
     counts: dict = field(default_factory=dict)
     metrics: dict = field(default_factory=dict)
     per_query: list = field(default_factory=list)
+    failure_cases: list = field(default_factory=list)
+
+
+def dataset_contract(truth: dict, clips: list[dict]) -> dict:
+    """Freeze label content and declared prepared-video identities; never reads private paths."""
+    canonical = json.dumps(truth, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    videos = [dict(video=c["video"], sha256=c["video_sha256"], duration_sec=c["duration_sec"]) for c in clips]
+    if len({c["video"] for c in videos}) != len(videos):
+        raise ValueError("Duplicate clip in dataset contract")
+    return dict(version=1, ground_truth_sha256=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+                clips=sorted(videos, key=lambda c: c["video"]))
+
+
+def check_run_contract(run: dict | None, expected: dict, required: bool = False) -> str:
+    if run is None:
+        return "no run"
+    actual = run.get("dataset_contract")
+    if actual is None:
+        if required:
+            raise ValueError("Run has no dataset contract; cannot verify label/footage identity")
+        return "UNBOUND legacy recording: label/footage identity not verified"
+    if actual != expected:
+        raise ValueError("Run dataset contract does not match the current labels/footage")
+    return "matching declared labels/footage (not an authentication of inference)"
+
+
+def valid_span(span: Span) -> bool:
+    return (isinstance(span.video, str) and bool(span.video.strip())
+            and math.isfinite(span.start_sec) and math.isfinite(span.end_sec)
+            and 0 <= span.start_sec < span.end_sec)
 
 
 def load_queries(path: Path) -> tuple[list[Query], list[dict]]:
@@ -88,9 +121,11 @@ def load_queries(path: Path) -> tuple[list[Query], list[dict]]:
             continue
         events = [Span(e["video"], float(e["start_sec"]), float(e["end_sec"])) for e in c.get("events", [])]
         for e in events:
-            if not 0 <= e.start_sec < e.end_sec:
+            if not valid_span(e):
                 raise ValueError(f"invalid event window for {c['query']!r}: {e}")
         ignore = [Span(e["video"], float(e["start_sec"]), float(e["end_sec"])) for e in c.get("ignore_events", [])]
+        if any(not valid_span(e) for e in ignore):
+            raise ValueError(f"invalid contested interval for {c['query']!r}")
         measured.append(Query(c["query"], c.get("query_kind", "direct"), c.get("split", "test"), events, ignore))
     return measured, unlabelled
 
@@ -121,7 +156,7 @@ def _windows(response: dict) -> list[tuple[Span, dict]]:
     out = []
     for w in response.get("windows", []):
         span = Span(w["video"], float(w["start_sec"]), float(w["end_sec"]))
-        if not span.start_sec < span.end_sec:
+        if not valid_span(span):
             raise ValueError(f"invalid returned window {w}")
         out.append((span, w))
     return out
@@ -158,9 +193,16 @@ def score_mode(queries: list[Query], run: dict | None, mode: str, use_evidence_s
                 if use_evidence_span:
                     windows = [(Span(s.video, float(w["evidence_start_sec"]), float(w["evidence_end_sec"]))
                                 if w.get("evidence_start_sec") is not None else s, w) for s, w in windows]
+                    if any(not valid_span(s) or s.start_sec < float(w["start_sec"])
+                           or s.end_sec > float(w["end_sec"]) for s, w in windows):
+                        raise ValueError("Evidence span must be finite and inside its source window")
             row.update(_score_query(q, [s for s, _ in windows], mode))
         per_query.append(row)
     result.per_query = per_query
+    result.failure_cases = [p for p in per_query if p["status"] != "ok" or
+                            (p["positive"] and (p.get("missed_events", 0) or p.get("false_positive_windows", 0)
+                             or any(e["best_iou"] < .5 for e in p.get("event_timing", [])))) or
+                            (not p["positive"] and p.get("false_positive"))]
     ok = [p for p in per_query if p["status"] == "ok"]
     pos, neg = [p for p in ok if p["positive"]], [p for p in ok if not p["positive"]]
     result.counts = dict(queries=len(queries), positive=sum(q.positive for q in queries),
@@ -174,6 +216,18 @@ def score_mode(queries: list[Query], run: dict | None, mode: str, use_evidence_s
         for t in IOU_THRESHOLDS:
             m[f"loc@{k}_iou>={t}"] = _mean(p[f"loc@{k}_iou>={t}"] for p in pos)
     m["missed_event_rate"] = _mean(p["missed"] for p in pos)
+    # Preserve the legacy query-level statistic, but name it explicitly as well.
+    m["no_hit_query_rate"] = m["missed_event_rate"]
+    m["event_recall"] = _mean(p["event_recall"] for p in pos)
+    total_events = sum(p["labelled_events"] for p in pos)
+    missed_events = sum(p["missed_events"] for p in pos)
+    m["missed_individual_event_rate"] = round(missed_events / total_events, 3) if total_events else None
+    m["labelled_events"] = total_events
+    m["missed_events"] = missed_events
+    m["false_positive_windows"] = sum(p["false_positive_windows"] for p in ok)
+    matched = [e for p in pos for e in p["event_timing"] if e["start_error_sec"] is not None]
+    m["matched_start_error_sec_mean"] = _mean(e["start_error_sec"] for e in matched)
+    m["matched_end_error_sec_mean"] = _mean(e["end_error_sec"] for e in matched)
     m["negative_false_positive_rate"] = _mean(p["false_positive"] for p in neg)
     m["latency_sec_median"] = round(statistics.median(latencies), 2) if latencies else None
     m["latency_sec_mean"] = _mean(latencies)
@@ -189,6 +243,7 @@ def _score_query(q: Query, windows: list[Span], mode: str) -> dict:
     out = {}
     if not q.positive:
         out["false_positive"] = 1.0 if windows else 0.0
+        out["false_positive_windows"] = len(windows)
         return out
     for k in KS:
         top = windows[:k]
@@ -201,12 +256,25 @@ def _score_query(q: Query, windows: list[Span], mode: str) -> dict:
             out[f"loc@{k}_iou>={t}"] = 1.0 if best >= t else 0.0
     horizon = windows if mode in CHECKED_MODES else windows[:5]
     out["missed"] = 0.0 if any(overlap(w, e) > 0 for w in horizon for e in q.events) else 1.0
+    timing = []
+    for event in q.events:
+        best = max((w for w in horizon if overlap(w, event) > 0), key=lambda w: iou(w, event), default=None)
+        timing.append(dict(video=event.video, start_sec=event.start_sec, end_sec=event.end_sec,
+                           best_iou=iou(best, event) if best else 0.0,
+                           start_error_sec=abs(best.start_sec-event.start_sec) if best else None,
+                           end_error_sec=abs(best.end_sec-event.end_sec) if best else None))
+    out.update(labelled_events=len(q.events), missed_events=sum(e["start_error_sec"] is None for e in timing),
+               event_recall=sum(e["start_error_sec"] is not None for e in timing)/len(q.events),
+               event_timing=timing,
+               false_positive_windows=sum(not any(overlap(w, e) > 0 for e in q.events) for w in horizon))
     return out
 
 
-def scan_run_from_results(results: dict[str, dict], engine: str) -> dict:
+def scan_run_from_results(results: dict[str, dict], engine: str, source: str = "live") -> dict:
     """Run record from scene-scan outputs ({query: {"status", "latency_sec", "batches": [batch...]}}),
     where each batch is the /api/search/scan/batch result (hits / unclear_hits / rejected_hits)."""
+    if source not in SOURCES:
+        raise ValueError(f"unknown inference source: {source!r}")
     responses = {}
     for query, r in results.items():
         windows = []
@@ -221,7 +289,7 @@ def scan_run_from_results(results: dict[str, dict], engine: str) -> dict:
         windows.sort(key=lambda w: (w["verdict"] != "supported", w.get("scan_window") or 0))
         responses[query] = dict(status=r.get("status", "ok"), latency_sec=r.get("latency_sec"), windows=windows,
                                 **({"error": r["error"]} if r.get("error") else {}))
-    return dict(mode="scan", source="live", engine=engine, responses=responses)
+    return dict(mode="scan", source=source, engine=engine, responses=responses)
 
 
 def compare(a: ModeResult, b: ModeResult) -> dict:
@@ -335,6 +403,14 @@ def format_report(dataset: dict, results: list[ModeResult], comparison: dict, ce
                      f"loc@5 IoU>=0.3 {m['loc@5_iou>=0.3']}, IoU>=0.5 {m['loc@5_iou>=0.5']}")
         lines.append(f"  missed-event rate {m['missed_event_rate']}; negatives scored {c['scored_negative']}/{c['negative']}: "
                      f"false-positive rate {m['negative_false_positive_rate']}; latency median {m['latency_sec_median']} s")
+        lines.append(f"  individual events missed {m['missed_events']}/{m['labelled_events']} "
+                     f"(rate {m['missed_individual_event_rate']}); false-positive windows {m['false_positive_windows']}")
+        lines.append(f"  matched-only boundary errors: start {m['matched_start_error_sec_mean']} s, "
+                     f"end {m['matched_end_error_sec_mean']} s; missed events excluded from these averages")
+        if r.mode.startswith("scan"):
+            lines.append("  Scan @k is chronological, not a similarity ranking; event recall uses all supported windows.")
+        if r.source in ("mock", "replay"):
+            lines.append("  TEST/REPLAY ONLY: these outputs are not fresh live AI inference.")
     lines += ["", f"Comparison on common answered queries: {json.dumps(comparison)}", "",
               f"Structural ceiling (window geometry only, perfect ranker; not a model measurement), "
               f"{ceil['events']} events:"]

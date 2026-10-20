@@ -6,7 +6,7 @@
     python backend/scripts/run_benchmark.py --ground-truth evaluation/synthetic_events_v2.json \\
         --ranked-recording evaluation/recordings/2026-10-19-events.json   # replayed synthetic check
 
-RUN.json is a run record: {"mode": "ranked"|"scan", "source": "live"|"replay", "engine": "...",
+RUN.json is a run record: {"mode": "ranked"|"scan", "source": "live"|"replay"|"mock", "engine": "...",
 "responses": {query: {"status": "ok"|"failed"|"unavailable", "latency_sec": s,
 "windows": [{"video", "start_sec", "end_sec", "score"?, "verdict"?}]}}}. Queries without a
 response are reported as unavailable. Replayed outputs are labelled as such, never as live.
@@ -86,7 +86,7 @@ def durations_for(truth: Path, events_file: Path | None) -> dict[str, float]:
     return {}
 
 
-def record_live_scan(queries, out: Path, reviewer=None, caviar: Path | None = None) -> int:
+def record_live_scan(queries, out: Path, reviewer=None, caviar: Path | None = None, contract=None) -> int:
     """Scene-scan every measurable query over the prepared CAVIAR library (paid when reviewer is None)."""
     import time
     from tanya import scenario_scan
@@ -101,6 +101,13 @@ def record_live_scan(queries, out: Path, reviewer=None, caviar: Path | None = No
         started, batches = time.monotonic(), []
         try:
             plan = scenario_scan.build_library_plan(settings, q.query)
+            if plan["excluded"]:
+                raise ValueError("Incomplete benchmark scope: some recordings were excluded from the scan")
+            if contract is not None:
+                actual = {v['filename']: v['sha256'] for v in plan['videos']}
+                expected = {c['video']: c['sha256'] for c in contract['clips']}
+                if not expected or actual != expected:
+                    raise ValueError("Prepared footage differs from the frozen dataset; rebuild local metadata before approval")
             for batch in range(plan["max_calls"]):
                 batches.append(scenario_scan.run_batch(plan, batch, settings, search_settings, reviewer))
             results[q.query] = dict(status="ok", latency_sec=round(time.monotonic() - started, 2), batches=batches)
@@ -109,9 +116,13 @@ def record_live_scan(queries, out: Path, reviewer=None, caviar: Path | None = No
                                     batches=batches, error=str(error))
         print(f"{results[q.query]['status']:6s} {q.query}", flush=True)
     engine = "scene scan: " + __import__("os").environ.get("TANYA_VERIFY_MODEL", "gemini-3.8-flash")
-    out.write_text(json.dumps(benchmark.scan_run_from_results(results, engine), indent=2) + "\n", encoding="utf-8")
+    source = "mock" if reviewer is not None else "live"
+    record = benchmark.scan_run_from_results(results, engine, source=source)
+    if contract is not None:
+        record['dataset_contract'] = contract
+    out.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     print(f"saved {out}")
-    return 0
+    return 1 if any(r['status'] != 'ok' for r in results.values()) else 0
 
 
 def main() -> int:
@@ -126,6 +137,7 @@ def main() -> int:
     p.add_argument("--merge-ratio", type=float, default=0.5)
     p.add_argument("--plan", action="store_true", help="print exact upload/request bounds for a live run")
     p.add_argument("--json", type=Path, help="also write the full report as JSON")
+    p.add_argument("--require-bound-runs", action="store_true", help="refuse legacy recordings without a matching label/footage contract")
     p.add_argument("--record-live-scan", type=Path, metavar="OUT",
                    help="PAID: run scene scan for every measurable query over the prepared CAVIAR library and "
                         "save a run record to OUT. Refused without --approve-api-calls.")
@@ -143,35 +155,58 @@ def main() -> int:
     # Durations come from the matching events file: the default one, or one passed explicitly with --events.
     events_file = args.events if (args.ground_truth == DEFAULT_TRUTH or args.events != DEFAULT_EVENTS) else None
     durations = durations_for(args.ground_truth, events_file)
+    meta = json.loads(args.ground_truth.read_text(encoding="utf-8"))
+    clips = json.loads(events_file.read_text(encoding="utf-8"))["clips"] if events_file and events_file.is_file() else []
+    contract = benchmark.dataset_contract(meta, clips)
+    try:
+        binding = {mode: benchmark.check_run_contract(run, contract, args.require_bound_runs)
+                   for mode, run in (("ranked", ranked), ("scan", scan))}
+    except ValueError as error:
+        print(f"Cannot run the benchmark: {error}", file=sys.stderr)
+        return 1
     if args.plan:
         if not durations:
             print("--plan needs clip durations (the default CAVIAR dataset).", file=sys.stderr)
             return 1
-        print(json.dumps(benchmark.live_plan(queries, durations, USD_PER_FRAME), indent=2))
+        print(json.dumps(dict(**benchmark.live_plan(queries, durations, USD_PER_FRAME), dataset_contract=contract), indent=2))
         print("Nothing was sent. Image-check pricing is not stored in this project; confirm the current "
               "per-image/token price for the configured model before approving.")
         return 0
     if args.record_live_scan:
+        if args.record_live_scan.exists():
+            print("Refused: choose a new recording path; existing run files are preserved.", file=sys.stderr)
+            return 2
         if not args.approve_api_calls:
             print("Refused: --record-live-scan sends sampled frames to Google. Review --plan, then add "
                   "--approve-api-calls to approve the charges.", file=sys.stderr)
             return 2
-        return record_live_scan(queries, args.record_live_scan)
+        if not contract['clips']:
+            print("Refused: supply --events with prepared-video hashes before a live run.", file=sys.stderr)
+            return 2
+        return record_live_scan(queries, args.record_live_scan, contract=contract)
     results = [benchmark.score_mode(queries, ranked, "ranked"), benchmark.score_mode(queries, scan, "scan")]
     if scan and any(w.get("evidence_start_sec") is not None for r in scan["responses"].values()
                     for w in r.get("windows", [])):
         results.append(benchmark.score_mode(queries, scan, "scan", use_evidence_span=True))
     if args.checked_recording:
         checked = checked_run_from_recording(args.checked_recording)
+        try:
+            binding['ranked_checked'] = benchmark.check_run_contract(checked, contract, args.require_bound_runs)
+        except ValueError as error:
+            print(f"Cannot run the benchmark: {error}", file=sys.stderr)
+            return 1
         results += [benchmark.score_mode(queries, checked, "ranked_checked"),
                     benchmark.score_mode(queries, checked, "ranked_checked", use_evidence_span=True)]
     comparison = benchmark.compare(results[0], results[1])     # ranked vs scan, on queries both answered
     ceil = benchmark.ceiling(queries, durations) if durations else dict(events=0, rows=[], summary={})
     meta = json.loads(args.ground_truth.read_text(encoding="utf-8"))
     dataset = dict(name=args.ground_truth.name, clips=len(durations) or "?",
+                   contract=contract, recording_identity=binding,
                    events=len({(e.video, e.start_sec, e.end_sec) for q in queries for e in q.events}),
                    verification=verification_summary(meta),
                    positive=sum(q.positive for q in queries), negative=sum(not q.positive for q in queries))
+    for mode, identity in binding.items():
+        print(f"{mode} recording identity: {identity}")
     if durations:
         print(benchmark.format_report(dataset, results, comparison, ceil, unlabelled))
     else:

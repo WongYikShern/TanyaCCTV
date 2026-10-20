@@ -38,6 +38,9 @@ rather than claiming they are fixed.
 
 **Guides:**
 
+- [21 October evaluation continuation](docs/evaluation-next-phase.md): local asset inventory,
+  individual event/timing diagnostics, cached YOLO analysis and the next review handoff
+
 - [Demo guide](docs/demo.md): search, review, then an investigation and its report, on synthetic footage
 - [Search evaluation](docs/search-evaluation.md): measured ranking quality and its limits
 - [Real-camera evaluation](docs/real-cctv-evaluation.md): CAVIAR dataset, benchmark, failure analysis, live-run plan

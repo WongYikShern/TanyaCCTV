@@ -240,3 +240,11 @@ use submitted content. A smaller first step is possible: step 3 on the 7 dev que
 5 short staged clips, two sites, 384×288, daytime indoor; no night, weather, vehicles, crowds or
 modern resolutions; one fall, two meetings, one browsing event; labels unverified; no live
 inference. None of these numbers is production accuracy. RainSnow needs event labels first.
+
+## 21 October continuation
+
+See [evaluation continuation](evaluation-next-phase.md) for the current machine inventory,
+review/detection handoff and offline confidence/region analysis. The scorer now exposes
+individual missed events and matched boundary errors separately from query-level no-hit rate.
+Injected mock scan runs carry `source=mock`; these are never genuine AI results. No new live
+CCTV inference or measured YOLO improvement was produced by these changes.

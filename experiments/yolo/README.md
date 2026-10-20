@@ -23,7 +23,11 @@ Everything (environment, weights, settings, temporary files, results) goes in
 not sync. The project folder itself is OneDrive-synced, so nothing large or derived from footage is
 written there. Drive C: had 14.6 GB free when this plan was made.
 
-## Proposed setup (requires approval; nothing below has been run)
+## Original setup plan (already run on the teammate's Windows laptop)
+
+The results below came from that existing installation. These commands are retained for
+reproduction, not instructions to reinstall or redownload. First locate the environment,
+weights and cached results; transferring code through Git does not transfer those files.
 
 | Item | Source | Download | Installed |
 |---|---|---|---|
@@ -107,3 +111,12 @@ per-clip reports, raw detections, samples and inspection images are in `%LOCALAP
 - **Lying person after the staged fall:** box found in 5% of frames at 384 px, 73% at 640 px. This
   is person detection, not fall recognition.
 - The GPU is barely used (≤ 70 MB): speed is limited by per-frame overhead, not the model.
+
+## Offline confidence and region-filter analysis (no model needed)
+
+`analyse_cached.py` reuses this experiment's `results.json` and `*_detections.json` files.
+It does not import torch/Ultralytics or run inference, and uses the existing network guard.
+See [continuation guide](../../docs/evaluation-next-phase.md) for commands and input/output rules.
+It reports baseline/filtered precision, recall, misses and size buckets at each confidence.
+Ground truth is never masked, so suppressing a genuine person counts against recall.
+Without the actual saved runs, this is a tested analysis tool, not a measured improvement.

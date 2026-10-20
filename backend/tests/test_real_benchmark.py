@@ -271,6 +271,7 @@ def test_live_scan_recorder_writes_a_scored_run_with_a_mock_reviewer(tmp_path, m
     out = tmp_path / "scan.json"
     assert run_benchmark.record_live_scan(queries, out, reviewer=reviewer, caviar=lib) == 0
     record = benchmark.load_run(out, "scan")
+    assert record["source"] == "mock"   # an injected reviewer must never become live AI evidence
     windows = record["responses"]["walk"]["windows"]
     assert windows[0]["verdict"] == "supported" and windows[0]["evidence_start_sec"] is not None
     scored = benchmark.score_mode(queries, record, "scan")
@@ -290,3 +291,18 @@ def test_checked_replay_recomputes_evidence_spans_and_stays_labelled_as_replay()
     assert span["loc@1_iou>=0.3"] >= window["loc@1_iou>=0.3"]
     with pytest.raises(ValueError, match="unknown mode"):
         benchmark.score_mode(queries, record, "detector")
+
+
+def test_scan_footage_contract_mismatch_stops_before_reviewer(tmp_path, monkeypatch):
+    lib=tmp_path/'caviar'
+    make_video(lib/'videos/a.mp4',seconds=2,seed=1)
+    Indexer(Settings(lib/'videos',lib/'frames',lib/'videos.db'),log=lambda m:None).run()
+    queries=[benchmark.Query('q','direct','test',[])]
+    contract=dict(clips=[dict(video='a.mp4',sha256='wrong')])
+    out=tmp_path/'run.json'
+    def reviewer(*args):
+        pytest.fail('No frame may be sent when footage identity differs')
+    assert run_benchmark.record_live_scan(queries,out,reviewer=reviewer,caviar=lib,contract=contract)==1
+    record=json.loads(out.read_text(encoding='utf-8'))
+    assert record['responses']['q']['status']=='failed'
+    assert record['responses']['q']['windows']==[]
