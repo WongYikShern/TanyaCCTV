@@ -91,7 +91,7 @@ function renderQueries(c, open) {
       location.hash = "#search";
       notice(q.search_mode === "visual" ? "Tick the image-check approval, then search." : "Press search to run this saved query again.");
     };
-    const remove = element("button", "Remove", "secondary");
+    const remove = element("button", "Remove", "secondary danger");
     remove.type = "button"; remove.disabled = !open;
     remove.onclick = () => change(post(`/api/investigations/${c.id}/queries/${q.id}/remove`));
     row.append(run, remove);
@@ -147,7 +147,7 @@ function evidenceCard(e, open) {
   const note = element("textarea"); note.id = noteId; note.maxLength = 2000; note.rows = 2; note.value = e.note; note.disabled = !open;
   const saveNote = element("button", "Save note", "secondary"); saveNote.type = "button"; saveNote.disabled = !open;
   saveNote.onclick = () => change(post(`/api/investigations/${activeCase.id}/evidence/${e.id}/review`, {note: note.value}), "Note saved.");
-  const remove = element("button", "Remove from investigation", "secondary"); remove.type = "button"; remove.disabled = !open;
+  const remove = element("button", "Remove from investigation", "secondary danger"); remove.type = "button"; remove.disabled = !open;
   remove.onclick = () => {
     const reason = window.prompt("Why remove this clip? (kept in the change history)", "");
     if (reason !== null) change(post(`/api/investigations/${activeCase.id}/evidence/${e.id}/remove`, {reason}), "Clip removed.");

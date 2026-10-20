@@ -4,7 +4,10 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" content="{{ csrf }}">
   <title>TanyaCCTV · Investigation workspace</title>
-  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <link rel="icon" href="{{ url_for('static', filename='brand/favicon-32.png') }}" type="image/png" sizes="32x32">
+  <link rel="icon" href="{{ url_for('static', filename='brand/favicon-64.png') }}" type="image/png" sizes="64x64">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='brand/tanyacctv-mark.png') }}">
+  <meta name="theme-color" content="#FFFFFF">
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
   <script defer src="{{ url_for('static', filename='dashboard.js') }}"></script>
   <script defer src="{{ url_for('static', filename='investigations.js') }}"></script>
@@ -20,7 +23,6 @@
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
-  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 7h13l5-3v12l-5-3H3z"/><circle cx="9" cy="10" r="2"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 9v5M12 17h.01"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></symbol>
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
@@ -28,7 +30,7 @@
 </svg>
 
 <aside class="sidebar" aria-label="Main navigation">
-  <a class="brand" href="#dashboard"><span class="brand-mark"><svg><use href="#i-camera"/></svg></span><span>Tanya<span class="accent">CCTV</span></span></a>
+  <a class="brand" href="#dashboard" aria-label="TanyaCCTV dashboard"><img src="{{ url_for('static', filename='brand/tanyacctv-logo.png') }}" alt="TanyaCCTV — Your township's cameras, now listening." width="624" height="153"></a>
   <nav>
     <a class="nav" data-view="dashboard" href="#dashboard"><svg><use href="#i-dashboard"/></svg>Dashboard</a>
     <a class="nav" data-view="library" href="#library"><svg><use href="#i-library"/></svg>Video Library</a>
