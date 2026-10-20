@@ -136,3 +136,29 @@ def test_invalid_latency_rejected(latency):
     query=benchmark.Query('negative','negative','test',[])
     run=dict(source='mock',responses={'negative':dict(status='ok',latency_sec=latency,windows=[])})
     with pytest.raises(ValueError,match='latency'):benchmark.score_mode([query],run,'ranked')
+
+
+def test_scan_capture_requires_complete_unique_window_coverage():
+    hit=dict(filename='a.mp4',start_sec=0,end_sec=2,scan_window=1,
+             visual_review=dict(verdict='supported',reason='fixture',sampled_timestamps=[0,1],evidence_timestamps=[1]))
+    batch=dict(batch=0,total_windows=1,completed_windows=1,done=True,hits=[hit])
+    result={'q':dict(status='ok',batches=[batch])}
+    response=benchmark.scan_run_from_results(result,'fixture',source='mock')['responses']['q']
+    assert response['status']=='ok' and response['coverage']['complete'] is True
+    assert response['coverage']['sampled_images']==2
+    assert response['windows'][0]['reason']=='fixture'
+    result['q']['batches'][0]['done']=False
+    partial=benchmark.scan_run_from_results(result,'fixture',source='mock')['responses']['q']
+    assert partial['status']=='failed' and not partial['coverage']['complete']
+    result['q']['batches'][0].update(done=True,total_windows=2,completed_windows=2,hits=[hit,hit])
+    assert benchmark.scan_run_from_results(result,'fixture',source='mock')['responses']['q']['status']=='failed'
+
+
+def test_failed_live_request_is_not_described_as_never_attempted():
+    query=benchmark.Query('q','direct','test',[benchmark.Span('a',0,2)])
+    result=benchmark.score_mode([query],dict(source='live',responses={'q':dict(status='failed')}),'scan')
+    dataset=dict(name='fixture',clips=1,events=1,verification='unverified',positive=1,negative=0)
+    report=benchmark.format_report(dataset,[result],{},benchmark.ceiling([],{}),[])
+    assert 'requests failed' in report
+    assert 'live inference was not run' not in report
+    assert result.metrics['negative_false_positive_rate'] is None

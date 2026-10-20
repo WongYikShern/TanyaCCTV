@@ -22,7 +22,9 @@ accuracy and reliable event localization remain unverified.
 
 A small public [CAVIAR real-camera research set](docs/caviar-research-set.md) is now downloaded
 locally with publisher labels and browser-compatible copies. These are staged recordings,
-kept outside Git; AI processing has not been approved or run on them. See the guide to
+kept outside Git. One explicitly approved three-query scene-scan pilot was attempted on
+21 October; its first 30-image request failed with Google HTTP 503, with no accepted
+results or retries. Real-CCTV accuracy remains unmeasured. See the guide to
 re-download and open the separate local-only viewer.
 
 **Real-camera benchmark (20 October 2026):** the CAVIAR clips now have 30 events derived from

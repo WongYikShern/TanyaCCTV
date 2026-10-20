@@ -313,9 +313,25 @@ def scan_run_from_results(results: dict[str, dict], engine: str, source: str = "
                     span = review.get("evidence_span") or {}
                     windows.append(dict(video=hit["filename"], start_sec=hit["start_sec"], end_sec=hit["end_sec"],
                                         verdict=review.get("verdict"), scan_window=hit.get("scan_window"),
+                                        reason=review.get("reason"), sampled_timestamps=review.get("sampled_timestamps", []),
+                                        evidence_timestamps=review.get("evidence_timestamps", []),
                                         evidence_start_sec=span.get("start_sec"), evidence_end_sec=span.get("end_sec")))
         windows.sort(key=lambda w: (w["verdict"] != "supported", w.get("scan_window") or 0))
-        responses[query] = dict(status=r.get("status", "ok"), latency_sec=r.get("latency_sec"), windows=windows,
+        batches = r.get('batches', [])
+        expected = batches[-1].get('total_windows') if batches else None
+        ids = [w.get('scan_window') for w in windows]
+        complete = (type(expected) is int and expected > 0 and len(ids) == expected
+                    and set(ids) == set(range(1, expected+1))
+                    and [b.get('batch') for b in batches] == list(range(len(batches)))
+                    and batches[-1].get('done') is True
+                    and batches[-1].get('completed_windows') == expected)
+        coverage = dict(planned_windows=expected, returned_windows=len(windows),
+                        batches_received=len(batches), complete=complete,
+                        sampled_images=sum(len(w['sampled_timestamps']) for w in windows))
+        status = r.get('status', 'ok')
+        if status == 'ok' and not complete:
+            status = 'failed'
+        responses[query] = dict(status=status, latency_sec=r.get("latency_sec"), windows=windows, coverage=coverage,
                                 **({"error": r["error"]} if r.get("error") else {}))
     return dict(mode="scan", source=source, engine=engine, responses=responses)
 
@@ -422,7 +438,10 @@ def format_report(dataset: dict, results: list[ModeResult], comparison: dict, ce
         lines.append(f"[{r.mode}] source={r.source or 'none'} engine={r.engine or '-'}: "
                      f"{c['ok']} ok, {c['failed']} failed, {c['unavailable']} unavailable of {c['queries']}")
         if not c["ok"]:
-            lines.append("  No results: live inference was not run for this mode (requires an approved paid run).")
+            if c["failed"]:
+                lines.append("  No scoreable results: requests failed. Failures are not correct negatives or measured misses.")
+            else:
+                lines.append("  No recorded results for this mode; live inference is not established.")
             continue
         m = r.metrics
         lines.append(f"  positives scored {c['scored_positive']}/{c['positive']}: hit@1 {m['hit@1']}, hit@5 {m['hit@5']}, "

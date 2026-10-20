@@ -223,3 +223,73 @@ unverified on this Mac until the pending handoff and approved evaluation are com
 
 Media-audit checkpoint tests: **510 passed, seven skipped** (same documented data/platform
 skips). The shared application/search model and UI were not changed by this checkpoint.
+
+## Latest status: approved three-query scene-scan pilot
+
+The owner approved up to 342 sampled images and 12 Gemini 3.8 Flash requests across the
+five CAVIAR clips (130.48 s), with no retries or video indexing, for exactly:
+
+- `a person falling to the floor`
+- `a person entering a shop`
+- `fire or smoke`
+
+The pilot uses this Mac's audited prepared-video hashes and publisher-derived labels;
+it does **not** contain the missing teammate review and is not independently verified.
+The plan estimated US$0.4896 at standard paid-tier rates: $0.75/million input tokens and
+$3.75/million output tokens (including thinking), with 1,120 image tokens/image, 2,000
+prompt tokens/request and a 4,096 output-token/request cap. Model pinned to
+`gemini-3.8-flash`, low thinking, no retries. Estimates are not actual charges or a hard
+billing cap. [Official pricing checked 21 October](https://ai.google.dev/gemini-api/docs/pricing).
+
+Read-only AI Studio inspection showed the visible default project on the free tier,
+with Flash limits 5 RPM, 250K TPM and 20 RPD. Usage figures can lag and historical peak
+figures are not a guarantee of remaining quota. The 1-day view displayed 0/20 RPD.
+This does not authenticate that a browser-selected project matches every API key.
+No billing/account settings were changed. Requests were scheduled at least 15 s apart.
+[Google's rate-limit guidance](https://ai.google.dev/gemini-api/docs/rate-limits).
+
+**Actual outcome:** the first fall-query batch attempted 30 images in one request and
+returned HTTP 503 (model under high demand). No decision was accepted. The pilot stopped
+immediately, with **one attempted request, zero completed requests, no retries**. The
+other two queries were not attempted. Billing was not independently verified; do not
+claim that the failed request was charged, free, or a successful negative.
+
+Local plan, approval ledger, failed run and report are under ignored
+`data/cctv_validation/pilot-three-queries/`. No footage/images/raw outputs are committed.
+Scoring with `--require-bound-runs` confirms the label/footage contract and reports one
+failed and two unavailable queries. Accuracy, missed-event and timing metrics remain
+unmeasured. Any retry of the failed request needs separate approval; do not rerun the
+whole pilot or overwrite its ledger. The temporary operator runner refuses existing
+attempt records to prevent accidental resends.
+
+The recorder now preserves per-window reasons, sampled/cited timestamps and coverage
+counters. A completed capture requires unique IDs for all planned windows, consecutive
+batch IDs and a final done/completed-window confirmation. Incomplete captures fail rather
+than becoming correct negatives. This is sampled-window coverage, not exhaustive-frame
+coverage or proof of absence. The failed-request report text was corrected to distinguish
+an unsuccessful request from one that was never attempted.
+
+## Independent review can proceed without the ZIP
+
+The existing CAVIAR review page and 33 contact sheets are prepared locally. Start it with:
+
+```bash
+.venv/bin/python backend/scripts/build_real_dataset.py --serve-review
+```
+
+Open http://127.0.0.1:5003/ on this laptop, enter your own initials, inspect each event,
+mark confirm/adjust/reject, and download your CSV. Work independently without copying the
+teammate's decisions. The tool's existing human review remains required; the assistant
+has not impersonated a second reviewer. Contact sheets and page are local/ignored; no
+shared labels were rebuilt or overwritten. Keep your downloaded CSV for comparison when
+the teammate's original arrives. Event absence across a whole video still needs full-video
+inspection; a short contact sheet cannot establish it.
+
+Still blocked: verifying the missing handover ZIP/CSV/YOLO runs; completing independent
+human reviews; obtaining successful live inference for measurement. The HTTP 503 is a
+provider availability failure, not evidence of search or fall-detection accuracy. Do not
+switch models, add indexing or retry paid requests without scoped approval.
+
+Latest checkpoint validation: **512 passed, seven skipped**, with the same documented
+missing-data/platform skips. Tests use offline fixtures/mocks; the one approved live
+request above is separate and failed. Source recordings/reviewer data remain excluded.

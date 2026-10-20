@@ -1,7 +1,9 @@
 # Real-camera search evaluation — 20 October 2026
 
 **Bottom line.** A reproducible benchmark now exists for real (staged) CCTV footage, with
-30 labelled events and 22 scoreable queries. **No live AI search has been run on it**, so its
+30 labelled events and 22 scoreable queries. **No successful live AI results are available**: an
+approved pilot on 21 October stopped on its first request (30 images, Google HTTP 503,
+no retries). See `evaluation-next-phase.md` for that attempt. Its
 real-world accuracy is **unmeasured**: every ranked-search and scene-scan score below is either
 "unavailable", a replay of earlier *synthetic* runs, or a geometric upper bound. Running the
 live benchmark needs paid Gemini calls and your approval (see "Live run plan").
