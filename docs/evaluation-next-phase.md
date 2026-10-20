@@ -186,3 +186,40 @@ accuracy improvement, new YOLO inference or new fall/entry/exit detection is cla
 
 Still awaiting the teammate's original reviewed CSV and cached YOLO runs. The pending
 operator checklist above is unchanged. No paid calls, uploads or package downloads ran.
+
+## Cross-machine prepared-media audit
+
+Added `backend/scripts/audit_caviar_media.py`. It verifies original MPEG and publisher XML
+hashes against the committed download plan, verifies the prepared MP4 hash against the
+local media manifest, and checks manifest frame count/fps/duration against the pinned
+preparation recipe. It decodes original/prepared copies sequentially, compares corresponding
+frames without trusting the MPEG's problematic timestamps, checks dimensions and counts,
+and requires prepared playback at 25 fps. Pixel differences are measured as mean absolute
+BGR-channel error on a 0–255 scale (default per-frame threshold 15).
+
+This is a preparation-consistency diagnostic, not proof of semantic event labels or a
+perfect detector of subtle shifts in near-identical frames. Human boundary inspection is
+still necessary. It never grants reviewer status or transfers another person's review.
+Changed sources fail before decoding/label generation. Failed audits save diagnostics but
+do not generate a benchmark dataset. Existing output directories are refused.
+
+Example (choose a new ignored local directory):
+
+```bash
+.venv/bin/python backend/scripts/audit_caviar_media.py --out data/cctv_validation/my-local-audit
+.venv/bin/python backend/scripts/run_benchmark.py --ground-truth data/cctv_validation/my-local-audit/caviar_ground_truth.json --events data/cctv_validation/my-local-audit/caviar-events.json
+```
+
+On 21 October this Mac's five CAVIAR copies passed: all **3,262 corresponding decoded
+frames** compared; mean absolute pixel error per clip 3.00–3.51, worst individual-frame
+error 4.28, below threshold 15. Source/XML hashes matched the pinned plan, counts matched,
+and prepared fps was 25. The regenerated local dataset uses the Mac's actual prepared-file
+hashes and remains **publisher_label_unverified**. No shared labels or committed metadata
+were overwritten. Outputs/audit reports remain under ignored local data, not Git.
+
+The local-only benchmark run still reports no live ranked/scan results. Media preparation
+is checked; real-CCTV search accuracy and the teammate's single-reviewer decisions remain
+unverified on this Mac until the pending handoff and approved evaluation are completed.
+
+Media-audit checkpoint tests: **510 passed, seven skipped** (same documented data/platform
+skips). The shared application/search model and UI were not changed by this checkpoint.
