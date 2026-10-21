@@ -155,9 +155,28 @@ search results instead of live calls.
 
 ## Honest limitations to state
 
-- **Not validated on real CCTV.** Ranking was measured on 3 positive queries with cartoon footage.
+- **Not validated on real CCTV.** The recorded cartoon benchmark covers 16 queries
+  (11 positive, five negative); it does not establish real-camera accuracy.
 - **Results are 10-second chunks**, grouped into windows. They're good for finding a moment, not
   frame-accurate.
 - **Search needs internet and a Gemini key,** and AI preparation sends video to Google.
 - **Image checking is experimental.** It looks only at sampled frames and can be wrong.
 - **No alarms.** There are no automatic alarms, identity recognition or decisions about people.
+
+## Latest offline rehearsal — 21 October 2026
+
+A fresh isolated workspace was generated with two H.264 synthetic videos (60 s and 40 s).
+All four fixed replay searches completed. Local video byte-range playback returned HTTP
+206; creating an investigation, saving a search, adding evidence, recording an unsure
+decision, and exporting JSON/HTML succeeded. The exported report had zero human-confirmed
+incidents: this was an automated workflow rehearsal, not human validation. Live indexing
+and visual-check endpoints returned HTTP 403 in offline mode. No Google call was made.
+
+The local rehearsal summary and exports are under ignored
+`data/cctv_validation/demo-rehearsal-2d4b8a94/`; they are not part of Git. The normal
+website and owner library were left running and unchanged. This validates the local
+workflow with fresh playable assets, not new AI output or a browser UI walkthrough.
+
+The independent CAVIAR review page is separate: http://127.0.0.1:5003/ while its local
+server runs. A human must perform that review and export their own CSV; an automated
+demo decision cannot substitute for the second reviewer.

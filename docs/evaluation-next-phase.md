@@ -303,3 +303,19 @@ script hashing and prepared-video encodings); they were not suppressed or relabe
 an unconditional verifier pass. The original single-reviewer CSV was reproduced and all
 three saved YOLO runs were analysed offline. Missing-file blockers in earlier sections
 are now resolved; independent human review and successful live search evaluation are not.
+
+## Remaining-task continuation: offline demo rehearsal
+
+A fresh end-to-end offline rehearsal passed using new local H.264 synthetic videos:
+recorded searches, range-enabled playback, investigation/search/evidence persistence,
+unsure decision and JSON/HTML exports. All live-AI routes remained blocked. See
+`docs/demo.md` for scope and local artifact paths. No owner data or normal server was
+changed; no new model result or independently reviewed incident was claimed.
+
+A fresh three-query CAVIAR scene-scan retry (up to 342 images / 12 requests, estimated
+US$0.49, no indexing or automatic retries) has been presented for explicit owner approval.
+No request has been made under that new proposal yet. Do not treat the broad request to
+finish all tasks as permission to upload more footage or retry prior failed requests.
+The second independent review still needs a human; the owner has been asked who will do it.
+Real ranked-search evaluation also still needs a separate scoped indexing/query approval;
+the scene-only proposal does not authorize embeddings or larger full-benchmark runs.
