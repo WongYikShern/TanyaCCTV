@@ -36,7 +36,7 @@
     <a class="nav" data-view="library" href="#library"><svg><use href="#i-library"/></svg>Video Library</a>
     <a class="nav" data-view="search" href="#search"><svg><use href="#i-search"/></svg>Search</a>
     <a class="nav" data-view="investigations" href="#investigations"><svg><use href="#i-case"/></svg>Investigations</a>
-    <a class="nav" data-view="system" href="#system"><svg><use href="#i-system"/></svg>System &amp; AI setup</a>
+    <a class="nav" data-view="system" href="#system"><svg><use href="#i-system"/></svg>Settings</a>
   </nav>
   <div class="sidebar-foot"><span class="dot"></span>Running on this computer<small>localhost only · no accounts</small></div>
 </aside>
@@ -53,37 +53,36 @@
     {% if offline_demo %}<div class="banner warn" role="status"><strong>OFFLINE REPLAY DEMO — no live AI.</strong> Search replays four recorded queries on synthetic footage. Image checking and AI preparation are disabled. Demo uploads are local and are not added to recorded search results.</div>{% endif %}
     <!-- Dashboard -->
     <section class="page" data-page="dashboard">
-      <div class="hero card">
-        <div class="hero-text"><p class="eyebrow">OVERVIEW</p><h1 class="display">CCTV investigation workspace</h1><p class="muted">Find footage worth checking, review it, and keep a traceable record. Search results are never treated as confirmed incidents.</p></div>
-        <nav class="hero-actions" aria-label="Start a task">
-          <a class="hero-link primary" href="#search"><svg><use href="#i-search"/></svg><span><strong>Search footage</strong><small>Describe a moment in plain words</small></span><svg class="go"><use href="#i-arrow"/></svg></a>
-          <a class="hero-link" href="#library"><svg><use href="#i-library"/></svg><span><strong>Video library</strong><small>Play recordings and add footage</small></span><svg class="go"><use href="#i-arrow"/></svg></a>
-          <a class="hero-link" href="#investigations"><svg><use href="#i-case"/></svg><span><strong>Investigations</strong><small>Review clips and export reports</small></span><svg class="go"><use href="#i-arrow"/></svg></a>
-        </nav>
-        <svg class="swoosh" viewBox="0 0 400 220" preserveAspectRatio="none" aria-hidden="true"><path class="s3" d="M400 30C330 150 210 205 60 220H400Z"/><path class="s2" d="M400 70C345 165 245 210 130 220H400Z"/><path class="s1" d="M400 120C360 180 300 212 230 220H400Z"/></svg>
-      </div>
+      <form id="dash-search" class="card dash-search">
+        <h1 class="display">What do you want to find?</h1>
+        <p class="muted">Describe it in plain words. The AI looks through your footage and shows you the moments worth watching.</p>
+        <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="dash-query">Describe a moment</label><input id="dash-query" maxlength="500" required placeholder="e.g. a person in a black jacket walking in"><button>Search</button></div>
+        <p class="steps"><span><b>1</b>Add footage</span><span><b>2</b>Describe what you're looking for</span><span><b>3</b>Watch the suggested moments</span></p>
+      </form>
       <div class="stat-grid" id="stats" aria-live="polite"></div>
       <div class="dash-grid">
-        <article class="card"><div class="card-head"><h2>Recent recordings</h2><a href="#library" class="link">View all →</a></div><div id="dash-videos" class="mini-grid"></div></article>
-        <article class="card"><div class="card-head"><h2>Recent investigations</h2><a href="#investigations" class="link">View all →</a></div><div id="dash-cases"></div></article>
-        <article class="card"><div class="card-head"><h2>System status</h2><a href="#system" class="link">Details →</a></div><ul id="dash-status" class="status-list"></ul></article>
+        <article class="card"><div class="card-head"><h2>Your recordings</h2><a href="#library" class="link">View all →</a></div><div id="dash-videos" class="mini-grid"></div></article>
+        <div>
+          <article class="card"><div class="card-head"><h2>Investigations</h2><a href="#investigations" class="link">View all →</a></div><div id="dash-cases"></div></article>
+          <article class="card"><div class="card-head"><h2>Status</h2><a href="#system" class="link">Settings →</a></div><ul id="dash-status" class="status-list"></ul></article>
+        </div>
       </div>
     </section>
 
     <!-- Video library -->
     <section class="page" data-page="library" hidden>
-      <div class="page-head"><div><p class="eyebrow">RECORDINGS</p><h1 class="display">Video library</h1><p class="muted">Your original recordings and their extracted frames. Originals are never modified.</p></div>
-        <div class="head-actions"><button type="button" class="secondary" id="toggle-upload"><svg><use href="#i-upload"/></svg>Add footage</button><button type="button" id="index-button"><svg><use href="#i-refresh"/></svg>Index local videos</button></div></div>
+      <div class="page-head"><div><h1 class="display">Video library</h1><p class="muted">Your recordings. Click one to watch it. Files stay on this computer and are never changed.</p></div>
+        <div class="head-actions"><button type="button" class="secondary" id="index-button" title="Add videos that were copied straight into the video folder"><svg><use href="#i-refresh"/></svg>Check folder for new videos</button><button type="button" id="toggle-upload"><svg><use href="#i-upload"/></svg>Add footage</button></div></div>
       <form id="upload-form" class="card upload-card" hidden>
-        <div><h2>Add authorised footage</h2><p class="muted">MP4, MOV, AVI, MKV or M4V, up to 512 MB. Uploads stay on this computer; identical footage is detected and not stored twice.</p></div>
+        <div><h2>Add footage</h2><p class="muted">MP4, MOV, AVI, MKV or M4V, up to 512 MB. It stays on this computer. Once it's added you can search it straight away.</p></div>
         <label class="file-drop" for="video-file"><svg><use href="#i-upload"/></svg><span>Choose a video file</span><input id="video-file" name="video" type="file" accept=".mp4,.mov,.avi,.mkv,.m4v" required></label>
         <label class="check"><input type="checkbox" name="authorized" value="yes" required><span>I have permission to use this footage.</span></label>
-        <button id="upload-button">Upload &amp; extract frames</button>
+        <button id="upload-button">Add video</button>
       </form>
       <div class="toolbar card">
-        <label class="sr-only" for="library-filter">Filter by file name</label><input id="library-filter" class="input" placeholder="Filter by file name">
+        <label class="sr-only" for="library-filter">Filter by file name</label><input id="library-filter" class="input" placeholder="Find a recording by name">
         <label class="sr-only" for="library-status">Filter by status</label>
-        <select id="library-status" class="input"><option value="all">All recordings</option><option value="done">Frames ready</option><option value="failed">Problems</option><option value="prepared">AI search prepared</option><option value="needs_preparation">Needs AI preparation</option><option value="browser_copy">Needs browser copy</option></select>
+        <select id="library-status" class="input"><option value="all">All recordings</option><option value="done">Ready</option><option value="failed">Problems</option><option value="needs_preparation">Quick search not set up</option></select>
         <span id="library-count" class="muted"></span>
       </div>
       <div id="waiting" class="banner warn" hidden></div>
@@ -102,8 +101,8 @@
           <div id="player-error" class="banner error" hidden></div>
         </div>
         <aside class="card watch-side">
-          <h2>Add this moment to an investigation</h2>
-          <p class="muted">Adds the 10 seconds around the current playback position as an unreviewed clip, labelled as chosen manually (not a search result).</p>
+          <h2>Save this moment</h2>
+          <p class="muted">Saves the 10 seconds around the current playback position to an investigation.</p>
           <label class="sr-only" for="watch-case">Investigation</label><select id="watch-case" class="input"><option value="">Choose an open investigation</option></select>
           <button type="button" id="watch-add">Add current moment</button>
           <h2 class="spaced">About this recording</h2><dl id="watch-details" class="details"></dl>
@@ -114,29 +113,33 @@
 
     <!-- Search -->
     <section class="page" data-page="search" id="search" hidden>
-      <div class="page-head"><div><p class="eyebrow">NATURAL-LANGUAGE SEARCH</p><h1 class="display">What are you looking for?</h1><p class="muted">Describe the people, objects or sequence you want to find. Scan your uploaded recordings and open matching moments for review.</p></div><span class="pill-soft">Human review required</span></div>
+      <div class="page-head"><div><h1 class="display">Search footage</h1><p class="muted">Describe what you're looking for. You'll get a short list of moments to watch, so you don't have to watch everything.</p></div></div>
       <form id="search-form" class="card search-card">
-        <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="query">Describe a moment</label><input id="query" maxlength="500" required placeholder="e.g. a person walking through the lobby"><button id="search-button">Search ranked clips</button></div>
+        <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="query">Describe a moment</label><input id="query" maxlength="500" required placeholder="e.g. a person walking through the lobby"><button id="search-button">Search</button></div>
         <div class="examples" id="examples"><span class="muted">Try:</span><button type="button" class="chip">a person walking through the lobby</button><button type="button" class="chip">a red car entering the car park</button><button type="button" class="chip">a person lying on the floor</button><button type="button" class="chip">someone standing still for a long time</button></div>
         <div class="search-options">
-          <label for="search-mode">Search method <select id="search-mode" class="input"><option value="direct" {% if offline_demo %}disabled{% else %}selected{% endif %}>Scan footage for this scene</option><option value="ranked" {% if offline_demo %}selected{% endif %}>Fast similarity search</option></select></label>
-          <label class="save-to" for="save-to">Save searches and clips to <select id="save-to" class="input"><option value="">No investigation</option></select></label>
-          <label class="check" id="ranked-visual-option"><input id="visual-check" type="checkbox"><span>Also check the actual images (experimental; sends sampled frames to Google)</span></label>
+          <label for="scan-video" id="scan-video-label">Search in <select id="scan-video" class="input"><option value="all">All recordings</option></select></label>
+          <label class="save-to" for="save-to">Save clips to <select id="save-to" class="input"><option value="">No investigation</option></select></label>
         </div>
-        <div id="scenario-options">
-          <label for="scan-video">Search in <select id="scan-video" class="input"><option value="all">All indexed recordings</option></select></label>
-          <div class="search-options"><label for="scan-start">Start (seconds, optional) <input id="scan-start" class="input" type="number" min="0" step="0.1" placeholder="0"></label><label for="scan-end">End (seconds, optional) <input id="scan-end" class="input" type="number" min="0" step="0.1" placeholder="End of recording"></label></div>
-          <p class="muted">Scans samples throughout the selected footage, without relying on the top similarity results or preparing an embedding index. Choose one recording to set a time range. Longer scans take more time and API calls.</p>
-          <div id="scenario-plan" class="banner info" hidden>
-            <p id="scenario-plan-summary"></p><p id="scenario-plan-files"></p><p id="scenario-plan-note"></p>
-            <label class="check"><input id="scenario-consent" type="checkbox"><span>I approve sending this plan's sampled images and description to Google Gemini, using my API account. Charges may apply.</span></label>
-            <button type="button" id="scenario-run" disabled>Scan approved footage</button>
+        <details id="more-options" class="more-options"><summary>More options</summary>
+          <div class="search-options">
+            <label for="search-mode">Search type <select id="search-mode" class="input"><option value="direct" {% if offline_demo %}disabled{% else %}selected{% endif %}>Thorough: AI looks at the footage (recommended)</option><option value="ranked" {% if offline_demo %}selected{% endif %}>Quick: similarity ranking (needs set-up)</option></select></label>
+            <label class="check" id="ranked-visual-option"><input id="visual-check" type="checkbox"><span>Double-check the top results with AI image review</span></label>
           </div>
-          <button type="button" id="scenario-stop" class="secondary" hidden>Stop after current batch</button>
-          <p id="scenario-progress" role="status"></p>
+          <div id="scenario-options" class="search-options">
+            <label for="scan-start">From (seconds) <input id="scan-start" class="input" type="number" min="0" step="0.1" placeholder="0"></label><label for="scan-end">To (seconds) <input id="scan-end" class="input" type="number" min="0" step="0.1" placeholder="End"></label>
+            <span class="muted small-note">Pick one recording above to search only part of it.</span>
+          </div>
+        </details>
+        <div id="scenario-plan" class="confirm-box" hidden>
+          <h3>Ready to search</h3>
+          <p id="scenario-plan-summary"></p><p id="scenario-plan-files" class="muted"></p><p id="scenario-plan-note" class="muted small-note"></p>
+          <label class="check"><input id="scenario-consent" type="checkbox"><span>OK to send these images to Google Gemini (may cost a little on your API account).</span></label>
+          <div class="confirm-actions"><button type="button" id="scenario-run" disabled>Start search</button><button type="button" id="scenario-cancel" class="secondary">Cancel</button></div>
         </div>
-        <div id="visual-consent-panel" class="banner info" hidden><p><strong>Experimental image check.</strong> Sends up to 6 sampled images from each of the first 5 retrieved windows (up to 30 images) and your query to Google Gemini. It may incur API charges, can miss events or misread clothing, and its verdicts still need your review.</p><label class="check"><input id="visual-consent" type="checkbox"><span>I approve sending these sampled frames to Google and the API charges for this search.</span></label></div>
-        <p id="setup" class="muted" aria-live="polite">Checking search setup…</p>
+        <div id="visual-consent-panel" class="confirm-box" hidden><p>AI will look at up to 30 images from the top 5 results. This sends them to Google Gemini and may cost a little.</p><label class="check"><input id="visual-consent" type="checkbox"><span>OK to send these images to Google Gemini.</span></label></div>
+        <div class="progress-row"><p id="scenario-progress" role="status"></p><button type="button" id="scenario-stop" class="secondary small" hidden>Stop</button></div>
+        <p id="setup" class="muted" aria-live="polite"></p>
         <p id="coverage" class="warning" aria-live="polite"></p>
       </form>
       <div id="results" aria-live="polite"></div>
@@ -144,7 +147,7 @@
 
     <!-- Investigations -->
     <section class="page" data-page="investigations" id="investigations" hidden>
-      <div class="page-head"><div><p class="eyebrow">CASE WORK</p><h1 class="display">Investigations</h1><p class="muted">Collect candidate clips, arrange them in time, record your decisions and export a report.</p></div><span class="pill-soft">Human decisions only</span></div>
+      <div class="page-head"><div><h1 class="display">Investigations</h1><p class="muted">Group the clips you found for one incident, mark what you've confirmed, and export a report.</p></div></div>
       <div class="case-layout">
         <aside class="card case-list-card">
           <form id="new-investigation" class="stack"><label for="new-title">New investigation</label><input id="new-title" class="input" maxlength="200" required placeholder="e.g. Lobby, Monday morning"><button>Create investigation</button></form>
@@ -166,20 +169,20 @@
 
     <!-- System -->
     <section class="page" data-page="system" hidden>
-      <div class="page-head"><div><p class="eyebrow">SYSTEM</p><h1 class="display">System &amp; AI setup</h1><p class="muted">What works now, what needs setup, and the explicit, paid step that prepares videos for AI search.</p></div></div>
+      <div class="page-head"><div><h1 class="display">Settings</h1><p class="muted">Check that the AI is connected, and set up the optional quick search.</p></div></div>
       <div class="dash-grid two">
-        <article class="card"><div class="card-head"><h2>Readiness</h2></div><ul id="system-status" class="status-list"></ul>
-          <details id="setup-details"><summary>How to enable AI search</summary><p>Search needs SentrySearch in a separate Python 3.12 environment and a Gemini API key, set in the same PowerShell window before starting this website (see the README, “Local website (Windows PowerShell)”). Run <code>check_setup.py</code> for a full report.</p></details></article>
-        <article class="card"><div class="card-head"><h2>Prepare videos for AI search</h2></div>
-          <p class="muted">Sends planned footage to Google and may incur charges. Local upload, frame extraction and playback do not. Review the plan before approving.</p>
-          <button id="plan-button" type="button" class="secondary">Review AI indexing plan</button>
-          <div id="sync-plan" hidden><p id="plan-summary"></p><p id="plan-files" class="muted"></p><div id="sync-approval"><p class="warning">This sends the planned footage to Google and may incur API charges. Free-tier content may be used to improve Google products. Only continue with footage you are authorised to share. Stale search entries listed in the plan are removed; original videos stay untouched.</p><label class="check"><input id="sync-consent" type="checkbox"><span>I approve this plan, the footage transfer to Google, and any API charges.</span></label><button id="sync-button" type="button">Prepare AI search</button></div></div>
+        <article class="card"><div class="card-head"><h2>Status</h2></div><ul id="system-status" class="status-list"></ul>
+          <details id="setup-details"><summary>How to connect the AI</summary><p>Search needs SentrySearch in a separate Python 3.12 environment and a Gemini API key, set in the same terminal window before starting this website (see the README). Run <code>check_setup.py</code> for a full report.</p></details></article>
+        <article class="card"><div class="card-head"><h2>Quick search set-up (optional)</h2></div>
+          <p class="muted">Only needed for the <b>Quick</b> search type. The normal (thorough) search works without it. This uploads your videos to Google once, which may cost a little.</p>
+          <button id="plan-button" type="button" class="secondary">Check what needs uploading</button>
+          <div id="sync-plan" hidden><p id="plan-summary"></p><p id="plan-files" class="muted"></p><div id="sync-approval"><p class="warning">This uploads the videos listed above to Google and may cost a little. On Google's free tier, Google may use the content to improve its products. Only continue with footage you're allowed to share. Your original videos are not changed.</p><label class="check"><input id="sync-consent" type="checkbox"><span>OK to upload these videos to Google.</span></label><button id="sync-button" type="button">Set up quick search</button></div></div>
           <div id="sync-messages"></div></article>
-        <article class="card"><div class="card-head"><h2>Your search reviews</h2></div><p class="muted">Correct / Wrong / Unsure choices on search results are kept on this computer. They do not retrain the AI. Exports include queries and file names: review before sharing.</p><a class="button secondary" href="/api/feedback/export" download>Export search reviews (CSV)</a></article>
+        <article class="card"><div class="card-head"><h2>Your Yes / No answers</h2></div><p class="muted">When you mark a search result as a match or not, it's saved on this computer so you can measure how well search works. It doesn't retrain the AI. The export includes your searches and file names.</p><a class="button secondary" href="/api/feedback/export" download>Export answers (CSV)</a></article>
       </div>
     </section>
   </main>
   <p id="notice" role="status" aria-live="polite" title="Click to dismiss"></p>
-  <footer>TanyaCCTV is a local prototype. Search rankings are similarity signals, not probabilities or incident confirmations. Real-world CCTV accuracy has not been validated.</footer>
+  <footer>TanyaCCTV is a local prototype. AI results are suggestions, not proof: always watch the clip before deciding. Accuracy on real CCTV hasn't been measured yet.</footer>
 </div>
 </body></html>

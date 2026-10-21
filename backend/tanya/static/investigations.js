@@ -9,7 +9,7 @@ const basisText = {
   absolute: "Ordered by camera time, using the recording start times you entered.",
   within_recording: "Ordered by recording, then by position in each recording. Enter recording start times below to order clips across cameras.",
   mixed: "Clips with a recording start time are ordered by camera time first; the others follow, by position in their recording.",
-  empty: "No clips yet. Search with this investigation selected under ‘Save searches and clips to’, then use ‘Add to investigation’.",
+  empty: "No clips yet. On the Search page, choose this investigation under ‘Save clips to’, then press ‘Add to investigation’ on a result.",
 };
 
 function remember(id) { try { id ? localStorage.setItem("tanya.case", String(id)) : localStorage.removeItem("tanya.case"); } catch (e) { /* storage unavailable */ } }
@@ -85,6 +85,8 @@ function renderQueries(c, open) {
     run.type = "button"; run.disabled = !open;
     run.onclick = () => {
       $("query").value = q.query;
+      // Saved searches come from the quick (ranked) search, so rerun them the same way.
+      $("search-mode").value = "ranked"; $("more-options").open = true;
       if ($("visual-check").checked !== (q.search_mode === "visual")) $("visual-check").click();
       $("save-to").value = String(c.id);
       updateControls();
@@ -176,7 +178,7 @@ window.investigationClipButton = function (hit, query, visual, rank) {
   button.type = "button";
   button.onclick = async () => {
     const id = $("save-to").value;
-    if (!id) { notice("Choose an investigation under ‘Save searches and clips to’ first."); return; }
+    if (!id) { notice("First choose an investigation under ‘Save clips to’, next to the search box. Create one on the Investigations page if you don't have one."); $("save-to").focus(); return; }
     button.disabled = true;
     try {
       activeCase = await post(`/api/investigations/${id}/evidence`, {
