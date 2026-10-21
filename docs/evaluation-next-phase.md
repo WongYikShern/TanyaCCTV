@@ -293,3 +293,13 @@ switch models, add indexing or retry paid requests without scoped approval.
 Latest checkpoint validation: **512 passed, seven skipped**, with the same documented
 missing-data/platform skips. Tests use offline fixtures/mocks; the one approved live
 request above is separate and failed. Source recordings/reviewer data remain excluded.
+
+## Handover files received
+
+The actual ZIP has now arrived. See [handover verification and saved-run findings](handover-verification-2026-10-21.md).
+All 38 listed checksums, publisher XMLs and saved detection metrics were checked. The
+supplied verifier's two compatibility failures are explained explicitly (Windows CRLF
+script hashing and prepared-video encodings); they were not suppressed or relabelled as
+an unconditional verifier pass. The original single-reviewer CSV was reproduced and all
+three saved YOLO runs were analysed offline. Missing-file blockers in earlier sections
+are now resolved; independent human review and successful live search evaluation are not.
