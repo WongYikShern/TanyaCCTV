@@ -1,12 +1,16 @@
 # Real-camera search evaluation — 20 October 2026
 
-**Bottom line.** A reproducible benchmark now exists for real (staged) CCTV footage, with
-30 labelled events and 22 scoreable queries. **No successful live AI results are available**: an
-approved pilot on 21 October stopped on its first request (30 images, Google HTTP 503,
-no retries). See `evaluation-next-phase.md` for that attempt. Its
-real-world accuracy is **unmeasured**: every ranked-search and scene-scan score below is either
-"unavailable", a replay of earlier *synthetic* runs, or a geometric upper bound. Running the
-live benchmark needs paid Gemini calls and your approval (see "Live run plan").
+**Latest update, 21 October:** a genuine scene-scan pilot completed two positive queries
+against single-reviewer provisional labels; two of three event instances matched, one
+was missed and one unrelated window was supported. The negative query stopped on HTTP
+503 and is unmeasured. See [the live pilot report](live-caviar-pilot-2026-10-21.md) for
+coverage, timing and failure details. Independent human verification and a complete
+ranked/scan comparison remain pending; this is not established general CCTV accuracy.
+
+The rest of this document records the **20 October historical baseline**: 30 publisher-derived
+events and 22 scoreable queries, with no live results at that point. Its numbers below
+are unavailable, synthetic replays or geometric upper bounds, not the later pilot scores.
+Further live evaluation needs scoped upload/cost approval (see "Live run plan").
 
 ## What each search mode really does (verified in code)
 

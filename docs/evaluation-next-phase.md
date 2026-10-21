@@ -319,3 +319,16 @@ finish all tasks as permission to upload more footage or retry prior failed requ
 The second independent review still needs a human; the owner has been asked who will do it.
 Real ranked-search evaluation also still needs a separate scoped indexing/query approval;
 the scene-only proposal does not authorize embeddings or larger full-benchmark runs.
+
+## Fresh pilot approval and measured provisional results
+
+The owner approved the fresh three-query pilot and agreed to do the second review.
+See [live CAVIAR pilot](live-caviar-pilot-2026-10-21.md) for the authoritative latest result:
+ten requests attempted, nine completed, stopped on HTTP 503 without retries. Two positive
+queries have complete 19-window coverage; fire/smoke is incomplete and unmeasured.
+Against provisional labels the scan found two of three event instances, missed one shop
+entry, and produced one unrelated fall candidate. Timing remains loose; cited-image spans
+did not consistently improve localization. No full accuracy, negative-query or ranked-search
+comparison is established. The normal app and model prompt were not changed during the run.
+The previous section's “approval pending” statement is now historical; do not rerun the
+failed request or other paid tests without a fresh scoped approval.

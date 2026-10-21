@@ -22,16 +22,19 @@ accuracy and reliable event localization remain unverified.
 
 A small public [CAVIAR real-camera research set](docs/caviar-research-set.md) is now downloaded
 locally with publisher labels and browser-compatible copies. These are staged recordings,
-kept outside Git. One explicitly approved three-query scene-scan pilot was attempted on
-21 October; its first 30-image request failed with Google HTTP 503, with no accepted
-results or retries. Real-CCTV accuracy remains unmeasured. See the guide to
+kept outside Git. A fresh approved scene-scan pilot on 21 October completed two positive
+queries against single-reviewer provisional labels: two of three event instances matched,
+one was missed and one unrelated window was supported. Fire/smoke testing stopped on
+Google HTTP 503; no automatic retries ran. See [the live pilot report](docs/live-caviar-pilot-2026-10-21.md).
+Reliable real-CCTV accuracy remains unverified. See the research-set guide to
 re-download and open the separate local-only viewer.
 
 **Real-camera benchmark (20 October 2026):** the CAVIAR clips now have 30 events derived from
 the publisher's labels (not yet human-verified), 25 operator-style queries including negatives,
-and a repeatable benchmark (`backend/scripts/run_benchmark.py`). No live AI search has been run on
-them, so real-world accuracy is **unmeasured**; see [real-camera evaluation](docs/real-cctv-evaluation.md)
-for the results, failure analysis and the costed run that needs approval.
+and a repeatable benchmark (`backend/scripts/run_benchmark.py`). The later limited live
+scene-scan pilot is provisional; ranked search and the complete benchmark remain unmeasured.
+See [real-camera evaluation](docs/real-cctv-evaluation.md) for the historical baseline and
+the linked latest pilot findings. Further paid runs need scoped approval.
 
 For your teammate: [current handoff and remaining work](docs/teammate-handoff.md).
 Timing diagnostics now distinguish any-overlap retrieval from stricter event localization;
