@@ -19,6 +19,7 @@ from .config import SUPPORTED_EXTENSIONS, SEARCHABLE_EXTENSIONS, load_settings, 
 from .indexer import Indexer, scan_video_dir, sha256_file
 from . import playback
 from . import person_detection
+from . import event_index
 from .search import search_videos
 from .sentry_client import SearchError, redact
 from . import sentry_client
@@ -87,7 +88,10 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
 
     store = Store(settings.db_path.with_name("investigations.db"))
 
-    def search_run_settings(visual_check):
+    def search_run_settings(visual_check, filters=None):
+        if demo_mode == "event_index":
+            return {"engine": "Preset offline event index (keyword and synonym rules; no AI)",
+                    "filters": filters.as_dict() if filters is not None and filters.active else None}
         return {"chunks_requested": 10, "merge_ratio": search_settings.merge_ratio,
                 "merge_gap_sec": search_settings.merge_gap_sec, "visual_check": visual_check,
                 "engine": "SentrySearch d3efd6a (Gemini Embedding 2), 10 s chunks / 2 s overlap"}
@@ -271,6 +275,24 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             frame["url"] = url_for("frame_file", rel=frame["image_path"])
         return jsonify(frames=result[:60], has_more=len(result) > 60)
 
+    @app.get("/api/videos/<int:video_id>/events")
+    def video_events(video_id):
+        """Indexed labels for this exact video (by content hash), for the player's event timeline.
+        Person detections are separate: see /people. Outside the event-index demo there is no label index."""
+        video = rows("SELECT id, sha256, duration_sec FROM videos WHERE id=? AND status='done'", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        if demo_mode != "event_index":
+            return jsonify(index_available=False, events=[], duration_sec=video[0]["duration_sec"])
+        return jsonify(index_available=True, duration_sec=video[0]["duration_sec"],
+                       events=offline_search.events_for_video(video[0]["sha256"], video[0]["duration_sec"]))
+
+    @app.get("/api/search/filters")
+    def search_filters():
+        if demo_mode != "event_index":
+            return jsonify(available=False)
+        return jsonify(available=True, **offline_search.filter_options(settings))
+
     @app.get("/api/videos/<int:video_id>/people")
     def people(video_id):
         """Cached YOLO person-presence candidates for this exact video (never runs the detector)."""
@@ -450,10 +472,21 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         investigation_id = data.get("investigation_id")
         if investigation_id is not None and type(investigation_id) is not int:
             abort(400, description="investigation_id must be a number.")
+        filters = None
+        if data.get("filters") not in (None, {}):
+            if demo_mode != "event_index":
+                abort(400, description="Search filters are available for the preset event index only.")
+            try:
+                filters = event_index.parse_filters(data["filters"])
+            except event_index.FilterError as error:
+                abort(400, description=str(error))
         if not lock.acquire(blocking=False):
             abort(409, description="Wait for local indexing to finish before searching.")
         try:
-            result = (offline_search or search_videos)(query.strip(), settings, search_settings).to_dict()
+            if demo_mode == "event_index":
+                result = offline_search(query.strip(), settings, search_settings, filters=filters).to_dict()
+            else:
+                result = (offline_search or search_videos)(query.strip(), settings, search_settings).to_dict()
             coverage = search_coverage()
             # The preset event index does not use AI preparation, so that warning does not apply to it.
             if coverage["needs_preparation"] and demo_mode != "event_index":
@@ -481,7 +514,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             # Save the query and the settings it ran with, so the investigation can re-run it.
             try:
                 result["saved_query"] = store.save_query(
-                    investigation_id, query, mode, search_run_settings(visual_check), result_count=len(all_hits))
+                    investigation_id, query, mode, search_run_settings(visual_check, filters), result_count=len(all_hits))
             except (InvestigationError, StoreUnavailable) as error:
                 result["warnings"].insert(0, f"The search ran, but was not saved to the investigation: {error}")
         return jsonify(result)
@@ -637,6 +670,18 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         if not isinstance(thumbnail, str) or not rows("SELECT 1 FROM frames WHERE video_id=? AND image_path=?",
                                                       (video["id"], thumbnail)):
             thumbnail = None  # anything that is not one of this video's own frames is dropped
+        event = None
+        if data.get("search_mode") == "index":
+            if demo_mode != "event_index":
+                abort(400, description="Event-index clips can only be added while the event index is loaded.")
+            source = data.get("event_source")
+            start, end = data.get("start_sec"), data.get("end_sec")
+            if source not in event_index.SOURCES or type(start) not in (int, float) or type(end) not in (int, float):
+                abort(400, description="An event-index clip needs its event source and times.")
+            event = offline_search.lookup(settings, video["sha256"], float(start), float(end), source)
+            if event is None:
+                abort(400, description="This clip does not match an indexed event or current person detection, "
+                                       "so its provenance cannot be recorded. Search again and add it from the results.")
         store.add_evidence(inv_id, dict(
             video_sha256=video["sha256"], video_filename=video["filename"], video_rel_path=video["rel_path"],
             video_duration_sec=video["duration_sec"], start_sec=data.get("start_sec"), end_sec=data.get("end_sec"),
@@ -644,7 +689,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             search_mode=data.get("search_mode"), rank=data.get("rank"), best_score=data.get("best_score"),
             score_above_median=data.get("score_above_median"), visual_verdict=data.get("visual_verdict"),
             visual_reason=redact(data["visual_reason"]) if isinstance(data.get("visual_reason"), str) else None,
-            thumbnail=thumbnail))
+            thumbnail=thumbnail, event=event))
         return jsonify(investigation_view(inv_id)), 201
 
     @app.post("/api/investigations/<int:inv_id>/evidence/<int:ev_id>/remove")
@@ -687,14 +732,19 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
 
     @app.post("/api/investigations/<int:inv_id>/report")
     def investigation_report(inv_id):
-        fmt = body().get("format")
+        options = body()
+        fmt = options.get("format")
         if fmt not in ("html", "json"):
             abort(400, description="Choose an HTML or JSON report.")
+        include_frames = options.get("include_frames", False)
+        if type(include_frames) is not bool:
+            abort(400, description="include_frames must be true or false.")
         inv = investigation_view(inv_id)
         store.record_export(inv_id, fmt)  # recorded before rendering, so the report includes it
         items = verify_sources(inv["evidence"], settings.video_dir, sha256_file)
-        report = case_report.build_report(inv, items, inv["timeline_basis"], store.audit(inv_id))
-        text = (case_report.render_html(report, settings.frames_dir) if fmt == "html"
+        report = case_report.build_report(inv, items, inv["timeline_basis"], store.audit(inv_id),
+                                          include_frames=include_frames and fmt == "html")
+        text = (case_report.render_html(report, settings.frames_dir if include_frames else None) if fmt == "html"
                 else case_report.render_json(report))
         name = f"investigation-{inv_id}-report.{fmt}"
         return app.response_class(text, mimetype="text/html" if fmt == "html" else "application/json",

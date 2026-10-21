@@ -71,6 +71,7 @@ async function status() {
   const ready=data.offline_demo || data.scan_ready || data.search_ready;
   $("ai-pill").textContent=data.offline_demo ? "Offline demo · no live AI" : ready ? "AI connected" : "AI not set up";
   $("ai-pill").classList.toggle("ready",ready);
+  window.loadFilterOptions?.();
   $("setup-details").open=!data.search_ready;
   renderStatusList($("system-status")); updateControls();
 }
@@ -255,7 +256,7 @@ async function showWatch(id,start,end) {
   $("download-video").hidden=false; $("download-video").href=video.video_url; $("download-video").download=video.filename;
   $("player-window").hidden=!watchWindow; $("replay-window").hidden=!watchWindow;
   if(watchWindow) $("player-window").textContent=`Result window ${time(watchWindow[0])}–${time(watchWindow[1])}`;
-  updateTime(); loadFrames(); fillWatchCases(); loadPeople(id,myToken);
+  updateTime(); loadFrames(); fillWatchCases(); loadPeople(id,myToken); window.loadEventTimeline?.(id,myToken);
   overlay("Checking whether this browser can play the recording…");
   try{
     let info=await api(`/api/videos/${id}/playback`);
@@ -277,7 +278,7 @@ async function showWatch(id,start,end) {
     if(info.status==="copy_ready") $("watch-meta").textContent+=" · playing a browser copy (original unchanged)";
   }catch(error){ if(myToken===watchToken) playerError(error.message+(serverProblem(error.message)?"":" The frame timeline below still works.")); }
 }
-function updateTime(){ const p=$("player"); if(p.getAttribute("src")) currentMoment=p.currentTime; $("player-time").textContent=`${time(currentMoment)} / ${time(p.duration||videosCache.find(v=>v.id===activeVideo)?.duration_sec)}`; }
+function updateTime(){ const p=$("player"); if(p.getAttribute("src")) currentMoment=p.currentTime; $("player-time").textContent=`${time(currentMoment)} / ${time(p.duration||videosCache.find(v=>v.id===activeVideo)?.duration_sec)}`; window.updatePlayhead?.(); }
 $("player").addEventListener("timeupdate",updateTime);
 $("player").addEventListener("seeked",updateTime);
 // Only a real, loading source can buffer; never cover an error message with "Buffering…".
@@ -289,6 +290,7 @@ $("watch-back").onclick=()=>{ location.hash="#library"; };
 // ---------------------------------------------------------------- optional YOLO person detection
 function renderPeople(data, id, myToken){
   const panel=$("people-panel"); panel.replaceChildren();
+  window.setTimelinePeople?.(data);   // the same detections, drawn on the event timeline as their own lane
   $("people-section").hidden=!data.available && !data.result;
   const r=data.result;
   if(r){
@@ -310,9 +312,10 @@ function renderPeople(data, id, myToken){
 }
 async function loadPeople(id, myToken){
   $("people-section").hidden=true; $("people-panel").replaceChildren();
-  try{ const data=await api(`/api/videos/${id}/people`); if(myToken===watchToken) renderPeople(data,id,myToken); }catch(e){ /* optional feature: the player still works */ }
+  try{ const data=await api(`/api/videos/${id}/people`); if(myToken===watchToken) renderPeople(data,id,myToken); }catch(e){ window.setTimelinePeople?.(null); /* optional feature: the player still works */ }
 }
 function seek(t){ currentMoment=t; const p=$("player"); if(p.getAttribute("src")&&!p.error) p.currentTime=t; updateTime(); }
+window.seekTo = seek;
 async function loadFrames() {
   const id=activeVideo, page=framePage; $("more-frames").disabled=true;
   try{
@@ -396,9 +399,13 @@ $("search-form").onsubmit=async event=>{
   const loading=element("div",undefined,"card loading-line"); loading.append(element("div",undefined,"spinner"),element("span",visual?"Searching and double-checking the top results… This can take a few minutes.":"Searching…"));
   $("results").replaceChildren(loading);
   try{
-    const data=await post("/api/search",{query:$("query").value,visual_check:visual,approve_frame_upload:approved,...(saveToId()?{investigation_id:saveToId()}:{})});
+    const filters=window.searchFilters?.()||null;
+    // With filters, an empty box means "every event that passes the filters".
+    const queryText=$("query").value.trim()||(filters?"all":$("query").value);
+    const data=await post("/api/search",{query:queryText,visual_check:visual,approve_frame_upload:approved,...(filters?{filters}:{}),...(saveToId()?{investigation_id:saveToId()}:{})});
     const indexed=data.mode==="event_index";
     $("results").replaceChildren(element("p",indexed?`Events in the preset index for “${data.query}”. Each result says where its label comes from: watch the footage before deciding.`:visual?`Results for “${data.query}”. These are AI suggestions from a few images per clip: always watch before deciding.`:`Closest-looking clips for “${data.query}”. They appear even if what you described never happened: watch to check.`,"results-intro"));
+    const active=indexed?window.filterSummary?.(data.applied_filters):null; if(active) $("results").append(active);
     for(const warning of data.warnings) $("results").append(element("p",warning,"warning"));
     if(data.visual_review) $("results").append(element("h3",`${data.visual_review.supported} likely · ${data.visual_review.unclear} maybe · ${data.visual_review.rejected} no match`));
     if(!data.hits.length){ const e=element("div",undefined,"card empty-state"); e.append(icon("search"),element("h2",indexed?"No matching events":"No likely matches"),element("p",indexed?"No annotated event matches. Not finding it doesn't prove it didn't happen.":visual?(data.unclear_hits?.length?"Check the “maybe” clips below. ":"")+"Not finding it doesn't prove it didn't happen.":"No clips came back. Try different wording.","muted")); $("results").append(e); }

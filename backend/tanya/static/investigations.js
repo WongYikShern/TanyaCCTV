@@ -3,7 +3,13 @@
 // Uses helpers from dashboard.js ($, element, api, time, notice, openVideo). All text is set
 // through textContent; nothing from the server or the user is inserted as HTML.
 let activeCase = null;
-const decisionNames = {correct: "Correct", wrong: "Wrong", unsure: "Unsure"};
+// Stored values stay correct/wrong/unsure (reports and history use them); people see what they mean.
+const decisionNames = {correct: "Relevant", wrong: "Not relevant", unsure: "Uncertain"};
+const decisionHelp = {correct: "This clip shows what the investigation is looking for (human-confirmed).",
+  wrong: "This clip does not show it.", unsure: "Cannot tell yet: keep it open for another look."};
+const eventSourceNames = {provisional_review: "Annotated · reviewed by one person (provisional)",
+  publisher_annotation: "Annotated (publisher, not reviewed here)", synthetic_script: "Scripted demo event",
+  yolo_person: "YOLO person detection · model candidate"};
 const sourceNames = {available: "Source available", renamed: "Source renamed", missing: "SOURCE MISSING", changed: "SOURCE CHANGED"};
 const basisText = {
   absolute: "Ordered by camera time, using the recording start times you entered.",
@@ -80,7 +86,8 @@ function renderQueries(c, open) {
   if (!c.queries.length) { box.append(element("p", "No saved searches yet.", "muted")); return; }
   for (const q of c.queries) {
     const row = element("div", undefined, "case-row");
-    row.append(element("span", `“${q.query}” · ${q.search_mode === "visual" ? "with image check" : "ranked"} · last run ${q.last_run_at ? new Date(q.last_run_at).toLocaleString() : "never"} · ${q.last_result_count ?? "?"} result(s)`));
+    const filtered = q.settings && q.settings.filters ? " · with filters" : "";
+    row.append(element("span", `“${q.query}” · ${q.search_mode === "visual" ? "with image check" : q.settings && q.settings.engine && q.settings.engine.startsWith("Preset") ? "event index" : "ranked"}${filtered} · last run ${q.last_run_at ? new Date(q.last_run_at).toLocaleString() : "never"} · ${q.last_result_count ?? "?"} result(s)`));
     const run = element("button", "Run again", "secondary");
     run.type = "button"; run.disabled = !open;
     run.onclick = () => {
@@ -89,6 +96,7 @@ function renderQueries(c, open) {
       $("search-mode").value = "ranked"; $("more-options").open = true;
       if ($("visual-check").checked !== (q.search_mode === "visual")) $("visual-check").click();
       $("save-to").value = String(c.id);
+      if (window.applySavedFilters) window.applySavedFilters(q.settings && q.settings.filters);
       updateControls();
       location.hash = "#search";
       notice(q.search_mode === "visual" ? "Tick the image-check approval, then search." : "Press search to run this saved query again.");
@@ -123,11 +131,20 @@ function evidenceCard(e, open) {
   if (e.thumbnail_url) { const img = element("img"); img.src = e.thumbnail_url; img.alt = `Frame from ${e.video_filename}`; card.append(img); }
   else card.append(element("div", e.source_status === "missing" ? "Source missing" : "No frame", "video-placeholder small-placeholder"));
   const info = element("div");
-  const category = e.decision ? `Human review: ${decisionNames[e.decision]}` : "Unreviewed candidate";
+  const category = e.decision ? `Human review: ${decisionNames[e.decision]}` : (e.event && e.event.source === "yolo_person" ? "Model candidate · not reviewed" : "Unreviewed candidate");
   info.append(element("h3", e.current_filename && e.current_filename !== e.video_filename ? `${e.video_filename} (now ${e.current_filename})` : e.video_filename));
   info.append(element("span", category, "badge" + (e.decision ? "" : " pending")), element("span", sourceNames[e.source_status], "badge" + (e.source_status === "missing" || e.source_status === "changed" ? " failed" : "")));
   info.append(element("p", `${time(e.start_sec)}–${time(e.end_sec)} in the recording` + (e.absolute_start ? ` · camera time ${e.absolute_start.replace("T", " ").slice(0, 19)}` : "")));
-  const how = e.search_mode === "manual" ? "Chosen manually in the video player (not a search result)" : e.search_mode === "scan" ? `Found by a direct footage scan for “${e.query}” (sampled images checked in time order; not a similarity ranking)` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "") : `Found by “${e.query}” (${e.search_mode === "visual" ? "with image check" : "ranked"}${e.rank ? `, rank ${e.rank}` : ""}${e.best_score !== null ? `, ranking score ${e.best_score.toFixed(3)} — not a probability` : ""})` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "");
+  if (e.event) {
+    const ev = element("div", undefined, "evidence-event");
+    ev.append(element("span", eventSourceNames[e.event.source] || e.event.source, "badge " + (e.event.source === "yolo_person" ? "pending" : "info")));
+    ev.append(element("p", `Label: ${e.event.label} · status: ${String(e.event.verification || "unknown").replace(/_/g, " ")}`));
+    if (e.event.provenance) ev.append(element("p", e.event.provenance, "muted small-note"));
+    const d = e.event.detector;
+    if (d) ev.append(element("p", `Detector confidence up to ${d.max_conf.toFixed(2)} (mean ${d.mean_conf.toFixed(2)}) over ${d.frames} frames; model ${d.weights || "unknown"}, ${d.imgsz || "?"} px. A person-presence candidate, not an action.`, "muted small-note"));
+    info.append(ev);
+  }
+  const how = e.search_mode === "index" ? `Found in the preset offline event index by “${e.query}” (keyword match; no AI, no ranking)` : e.search_mode === "manual" ? "Chosen manually in the video player (not a search result)" : e.search_mode === "scan" ? `Found by a direct footage scan for “${e.query}” (sampled images checked in time order; not a similarity ranking)` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "") : `Found by “${e.query}” (${e.search_mode === "visual" ? "with image check" : "ranked"}${e.rank ? `, rank ${e.rank}` : ""}${e.best_score !== null ? `, ranking score ${e.best_score.toFixed(3)} — not a probability` : ""})` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "");
   info.append(element("p", how, "muted"));
   if (e.source_status === "changed") info.append(element("p", "This recording's file has changed since the clip was added (its size differs). It may no longer be the referenced footage; re-index it, and check the exported report's content verification.", "warning"));
   if (e.source_status === "missing") info.append(element("p", `The recording with content hash ${e.video_sha256.slice(0, 16)}… is no longer in the library. The reference is kept; restore the original file to review it.`, "warning"));
@@ -139,7 +156,7 @@ function evidenceCard(e, open) {
   const review = element("div", undefined, "review-feedback");
   review.append(element("p", "Your decision (recorded in the change history; earlier decisions are kept):"));
   for (const [value, label] of Object.entries(decisionNames)) {
-    const b = element("button", label, "secondary"); b.type = "button"; b.disabled = !open;
+    const b = element("button", label, "secondary"); b.type = "button"; b.disabled = !open; b.title = decisionHelp[value];
     b.setAttribute("aria-pressed", String(e.decision === value));
     b.onclick = () => change(post(`/api/investigations/${activeCase.id}/evidence/${e.id}/review`, {decision: value}), `Saved: ${label}.`);
     review.append(b);
@@ -156,6 +173,10 @@ function evidenceCard(e, open) {
   };
   review.append(noteLabel, note, saveNote, remove);
   if (e.reviewed_at) review.append(element("span", `Decision saved ${new Date(e.reviewed_at).toLocaleString()}.`, "muted"));
+  const decisions = (e.history || []).filter(h => h.action !== "note_changed");
+  if (decisions.length) review.append(element("p", "History: not reviewed → " + decisions.map(h => `${decisionNames[h.to] || h.to} (${new Date(h.at).toLocaleString()})`).join(" → "), "muted small-note"));
+  const notes = (e.history || []).filter(h => h.action === "note_changed").length;
+  if (notes) review.append(element("p", `The note was changed ${notes} time(s); earlier versions are in the change history.`, "muted small-note"));
   info.append(review);
   card.append(info);
   return card;
@@ -173,7 +194,7 @@ async function change(request, message) {
 
 // A direct footage scan window (hit.scan_window) is not a similarity ranking: store it as "scan" with no rank.
 window.investigationClipButton = function (hit, query, visual, rank) {
-  const mode = hit.scan_window ? "scan" : (visual ? "visual" : "ranked");
+  const mode = hit.event ? "index" : hit.scan_window ? "scan" : (visual ? "visual" : "ranked");
   const button = element("button", "Add to investigation", "secondary");
   button.type = "button";
   button.onclick = async () => {
@@ -183,8 +204,10 @@ window.investigationClipButton = function (hit, query, visual, rank) {
     try {
       activeCase = await post(`/api/investigations/${id}/evidence`, {
         video_id: hit.video_id, start_sec: hit.start_sec, end_sec: hit.end_sec, query,
-        search_mode: mode, rank: mode === "scan" ? null : (rank || null), best_score: mode === "scan" ? null : hit.best_score,
-        score_above_median: mode === "scan" ? null : hit.best_score_above_median, thumbnail: hit.thumbnail,
+        search_mode: mode, rank: mode === "scan" || mode === "index" ? null : (rank || null),
+        best_score: mode === "scan" || mode === "index" ? null : hit.best_score,
+        score_above_median: mode === "scan" || mode === "index" ? null : hit.best_score_above_median, thumbnail: hit.thumbnail,
+        ...(mode === "index" ? {event_source: hit.event.source} : {}),
         visual_verdict: hit.visual_review ? hit.visual_review.verdict : null,
         visual_reason: hit.visual_review ? hit.visual_review.reason : null});
       button.textContent = "Added ✓";
@@ -202,7 +225,8 @@ async function downloadReport(format) {
   notice(format === "html" ? "Preparing the report… (checking each source video's content hash)" : "Preparing the data export…");
   try {
     const response = await serverFetch(`/api/investigations/${activeCase.id}/report`, {
-      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({format})});
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({format, include_frames: format === "html" && $("case-report-frames").checked})});
     if (!response.ok) throw new Error((await response.json()).error || "The report could not be created.");
     const url = URL.createObjectURL(await response.blob());
     const link = element("a"); link.href = url; link.download = `investigation-${activeCase.id}-report.${format}`;

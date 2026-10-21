@@ -48,6 +48,48 @@ score (the report does not yet name the index source; see the evaluation notes).
 
 `--dataset synthetic|caviar` limits the footage; `--search replay` starts the older recorded-search demo below.
 
+### Investigation features in the offline demo (22 October 2026 build)
+
+1. **Event timeline (player page).** Below the player, every indexed label for that exact video
+   (matched by content hash) is drawn on a bar: provisional single-reviewer CAVIAR labels (solid
+   orange), publisher labels (slate), scripted demo events (grey stripes). Overlapping events go to
+   separate rows; very dense recordings keep a scrollable list. Select an event (bar or list) to
+   jump to its start, or click anywhere on the bar to seek there; a red line follows playback.
+   The frame timeline and video controls are unchanged. Outside the demo there is no label index,
+   and the card says so.
+2. **YOLO person-presence lane.** Cached detections appear in their own dashed amber lane, never
+   mixed with labels, with detector confidence, frame count, the largest number of people boxed in
+   one frame and the strongest box (time, frame, pixel coordinates; "Strongest box" jumps there).
+   The status line says whether results are newly generated, cached for this video and model,
+   cached with an unverifiable model (the saved experiment run did not record its weights hash),
+   or stale (made with other weights; then not shown). "Find people" beside the player runs YOLO
+   on that one video only (GPU if available, otherwise the existing CPU fallback; ~50 MB GPU).
+3. **Evidence review.** Decisions read Relevant / Not relevant / Uncertain (stored as
+   correct / wrong / unsure, so older data and reports stay valid). Each item shows how it was
+   found; event-index clips also show their label, source and status, recorded by the server from
+   its own index or detection cache when the clip is added (a client cannot assert provenance).
+   The card lists the decision history (earlier decisions are never overwritten: they stay in the
+   append-only change history) and how often the note changed.
+4. **Reports.** The HTML report is branded, printable and shows summary cards (including
+   unresolved = uncertain + unreviewed), label caveats (provisional single-reviewer labels; YOLO
+   is not action recognition; synthetic footage), per-item event provenance and detector details,
+   decision history, saved searches with their filters, missing/changed source warnings and the
+   change log. Frame images are footage, so they are **not** embedded unless "Include frame images"
+   is ticked. JSON is `report_version` 2: every version-1 field is kept; new fields are added.
+5. **Search filters.** "Filters" under the search box (event-index demo only): event type,
+   result source, label status, recording, time range and a minimum YOLO confidence that applies
+   to person detections only. Options list only values that exist in the loaded library. Filters
+   combine with the words typed (leave the box empty, or type "all", to list everything that
+   passes the filters); active filters are shown above the results with a Clear button; saved
+   searches remember their filters and "Run again" restores them. Unsupported requests (fights,
+   fire...) still return an honest no-match, whatever the filters.
+
+Suggested demo: `a person falling` → open the CAVIAR result → point at the event timeline and its
+provisional status → open `EnterExitCrossingPaths1cor.mp4` to show the separate YOLO lane and
+"Strongest box" → Filters: Result source = Scripted, search `a person falling` → add a clip to an
+investigation, mark it Relevant then Uncertain, add a note → export the HTML report (frames off)
+and point at the caveats, history and provenance.
+
 ## Free offline rehearsal (recommended when internet is unreliable)
 
 1. Stop the existing website (Ctrl+C in its terminal).

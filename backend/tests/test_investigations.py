@@ -334,12 +334,15 @@ def test_reports_separate_human_decisions_and_escape_content(api):
     assert all(e["source"]["video_sha256"] and e["window"]["end_sec"] for e in report["evidence"])
     assert any("not calibrated probabilities" in line for line in report["limitations"])
 
-    html = client.post(f"/api/investigations/{iid}/report", headers=headers, json={"format": "html"}).data.decode()
+    plain = client.post(f"/api/investigations/{iid}/report", headers=headers, json={"format": "html"}).data.decode()
+    assert "data:image/jpeg" not in plain and "Frame images are not included" in plain     # footage only on request
+    html = client.post(f"/api/investigations/{iid}/report", headers=headers,
+                       json={"format": "html", "include_frames": True}).data.decode()
     assert "<script>alert(1)</script>" not in html and "&lt;script&gt;" in html
     assert "<img src=x>" not in html and "<b>q</b>" not in html
     assert "data:image/jpeg;base64," in html and "Human-confirmed" in html and "not a probability" in html
     exports = [a for a in client.get(f"/api/investigations/{iid}/audit").json["audit"] if a["action"] == "report_exported"]
-    assert [a["detail"]["format"] for a in exports] == ["json", "html"]
+    assert [a["detail"]["format"] for a in exports] == ["json", "html", "html"]   # every export is logged
 
 
 def test_search_still_works_when_investigation_is_closed(api):
@@ -441,7 +444,7 @@ def test_missing_thumbnail_file_does_not_break_the_report(api):
                                                      search_mode="ranked", thumbnail=frame), expect=201)
     (ws.frames_dir / frame).unlink()
     html = client.post(f"/api/investigations/{iid}/report", headers={"X-CSRF-Token": _token(client)},
-                       json={"format": "html"})
+                       json={"format": "html", "include_frames": True})
     assert html.status_code == 200 and "frame image unavailable" in html.data.decode()
 
 

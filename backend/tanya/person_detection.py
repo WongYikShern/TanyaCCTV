@@ -35,6 +35,7 @@ MIN_DURATION_SEC = 0.5
 CAUTION = ("YOLO person detection only: a candidate that someone may be in view. It is not a fall, fight, "
            "entry or any other action, can miss small or overhead people, and needs human review.")
 _sha_cache: dict[tuple, str] = {}
+_summary_cache: dict[tuple, dict] = {}   # (file, size, mtime, configured weights hash) -> summary
 
 
 class PersonDetectionError(RuntimeError):
@@ -92,20 +93,28 @@ def cache_dir(settings) -> Path:
 
 def presence_intervals(detections: list[dict], conf: float = PRESENCE_CONF, gap: float = MERGE_GAP_SEC,
                        min_duration: float = MIN_DURATION_SEC, fps: float = 25.0) -> list[dict]:
-    """Merge frames with a person box >= conf into intervals; report detector-score statistics per interval."""
+    """Merge frames with a person box >= conf into intervals; report detector-score statistics per interval.
+
+    Each interval also keeps its peak: the frame, time and pixel box [x1, y1, x2, y2] of its highest-scoring
+    person box, and the largest number of people boxed in one frame. Coordinates are in the analysed video."""
     out, cur = [], None
     step = 1.0 / fps if fps else 0.04
     for d in sorted(detections, key=lambda d: d["frame"]):
-        scores = [b[4] for b in d["boxes"] if b[4] >= conf]
-        if not scores:
+        boxes = [b for b in d["boxes"] if b[4] >= conf]
+        if not boxes:
             continue
+        best = max(boxes, key=lambda b: b[4])
         t = float(d["t"])
         if cur and t - cur["end_sec"] <= gap:
             cur["end_sec"] = t + step
             cur["frames"] += 1
-            cur["scores"].append(max(scores))
+            cur["scores"].append(best[4])
+            cur["max_people"] = max(cur["max_people"], len(boxes))
+            if best[4] > cur["peak"]["conf"]:
+                cur["peak"] = {"frame": d["frame"], "t": round(t, 2), "box": [round(v, 1) for v in best[:4]], "conf": best[4]}
         else:
-            cur = {"start_sec": t, "end_sec": t + step, "frames": 1, "scores": [max(scores)]}
+            cur = {"start_sec": t, "end_sec": t + step, "frames": 1, "scores": [best[4]], "max_people": len(boxes),
+                   "peak": {"frame": d["frame"], "t": round(t, 2), "box": [round(v, 1) for v in best[:4]], "conf": best[4]}}
             out.append(cur)
     result = []
     for c in out:
@@ -135,12 +144,15 @@ def summary(data: dict, config: YoloConfig | None = None) -> dict:
         configured = file_sha256(config.weights)
     recorded = model.get("weights_sha256")
     stale = bool(configured and recorded and configured != recorded)
+    verified = bool(configured and recorded and configured == recorded)
+    # cached = same video and verified weights; cached_unverified = video matches but the weights hash was not
+    # recorded (saved experiment run) or no weights are configured to compare with; stale = other weights.
+    status = "stale" if stale else "cached" if verified else "cached_unverified"
     fps = float(data["video"].get("fps") or 25.0)
     return {"intervals": presence_intervals(data["detections"], fps=fps), "presence_conf": PRESENCE_CONF,
             "video": {k: data["video"][k] for k in ("name", "sha256", "frames")}, "model": model,
             "runner": data.get("runner", {}), "provenance": data.get("provenance"),
-            "stale": stale, "weights_verified": bool(configured and recorded and configured == recorded),
-            "caution": CAUTION}
+            "stale": stale, "weights_verified": verified, "status": status, "caution": CAUTION}
 
 
 def load_cached(settings, video_sha: str, config: YoloConfig | None = None) -> dict | None:
@@ -149,12 +161,16 @@ def load_cached(settings, video_sha: str, config: YoloConfig | None = None) -> d
     if not folder.is_dir():
         return None
     best = None
+    configured = file_sha256(config.weights) if config and config.weights and config.weights.is_file() else None
     for path in sorted(folder.glob(f"{video_sha}_*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
         try:
-            data = _validate(json.loads(path.read_text(encoding="utf-8")), video_sha)
+            st = path.stat()
+            key = (str(path), st.st_size, st.st_mtime_ns, configured)
+            if key not in _summary_cache:   # parsing and merging detections once per file version, not per search
+                _summary_cache[key] = summary(_validate(json.loads(path.read_text(encoding="utf-8")), video_sha), config)
+            result = _summary_cache[key]
         except (OSError, ValueError, KeyError, TypeError, PersonDetectionError):
             continue
-        result = summary(data, config)
         if not result["stale"]:
             return result
         best = best or result
@@ -203,7 +219,7 @@ def run(settings, source: Path, video_sha: str, duration_sec: float | None, conf
         store(settings, data, video_sha)
     finally:
         out.unlink(missing_ok=True)
-    return summary(data, config)
+    return dict(summary(data, config), status="new")
 
 
 def import_saved_run(settings, run_dir: Path, video_name: str, video_sha: str, manifest_sha: str | None) -> Path | None:

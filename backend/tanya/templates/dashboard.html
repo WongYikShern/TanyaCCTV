@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
   <script defer src="{{ url_for('static', filename='dashboard.js') }}"></script>
   <script defer src="{{ url_for('static', filename='investigations.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='timeline.js') }}"></script>
 </head>
 <body>
 <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -111,6 +112,14 @@
           <section id="people-section" hidden><h2 class="spaced">People in this video</h2><p class="muted small-note">Optional, on this computer: YOLO person detection. It finds people in view, not what they are doing.</p><div id="people-panel" aria-live="polite"></div></section>
         </aside>
       </div>
+      <article class="card event-timeline-card" id="event-timeline-card">
+        <div class="card-head"><h2>Event timeline</h2><span class="muted" id="evt-hint">Select an event, or a point on the bar, to jump there.</span></div>
+        <div id="evt-legend" class="evt-legend"></div>
+        <div id="evt-track" class="evt-track"><div id="evt-lanes" class="evt-lanes"></div><div id="evt-playhead" class="evt-playhead" aria-hidden="true"></div></div>
+        <div class="evt-axis" aria-hidden="true"><span>0:00</span><span id="evt-axis-mid"></span><span id="evt-axis-end"></span></div>
+        <p id="evt-status" class="muted small-note" role="status"></p>
+        <ol id="evt-list" class="evt-list"></ol>
+      </article>
       <article class="card"><div class="card-head"><h2>Frame timeline</h2><span class="muted">Scroll sideways; select a frame to jump to that moment.</span></div><div id="frames" class="frame-grid"></div><button type="button" class="secondary" id="more-frames" hidden>Load more frames</button></article>
     </section>
 
@@ -124,6 +133,21 @@
           <label for="scan-video" id="scan-video-label">Search in <select id="scan-video" class="input"><option value="all">All recordings</option></select></label>
           <label class="save-to" for="save-to">Save clips to <select id="save-to" class="input"><option value="">No investigation</option></select></label>
         </div>
+        <details id="filter-panel" class="more-options filter-panel" hidden><summary>Filters <span id="filter-count" class="filter-count" hidden></span></summary>
+          <div class="filter-grid">
+            <fieldset><legend>Event type</legend><div id="f-types" class="check-chips"></div></fieldset>
+            <fieldset><legend>Result source</legend><div id="f-sources" class="check-chips"></div></fieldset>
+            <fieldset><legend>Label status</legend><div id="f-statuses" class="check-chips"></div></fieldset>
+            <div class="filter-fields">
+              <label for="f-recording">Recording <select id="f-recording" class="input"><option value="">All recordings</option></select></label>
+              <label for="f-start">From (seconds) <input id="f-start" class="input" type="number" min="0" step="0.1" placeholder="0"></label>
+              <label for="f-end">To (seconds) <input id="f-end" class="input" type="number" min="0" step="0.1" placeholder="End"></label>
+              <label for="f-minconf" id="f-minconf-label">Minimum YOLO confidence <input id="f-minconf" class="input" type="number" min="0" max="1" step="0.05" placeholder="0.40"></label>
+            </div>
+          </div>
+          <p class="muted small-note">Filters narrow what the words describe. Leave the search box empty, or type “all”, to list every event that passes the filters. Minimum YOLO confidence applies to person detections only: it is a detector score, not evidence of any action.</p>
+          <button type="button" id="filter-clear" class="secondary small">Clear filters</button>
+        </details>
         <details id="more-options" class="more-options"><summary>More options</summary>
           <div class="search-options">
             <label for="search-mode">Search type <select id="search-mode" class="input"><option value="direct" {% if offline_demo %}disabled{% else %}selected{% endif %}>Thorough: AI looks at the footage (recommended)</option><option value="ranked" {% if offline_demo %}selected{% endif %}>Quick: similarity ranking (needs set-up)</option></select></label>
@@ -160,7 +184,7 @@
           <div id="case-empty" class="card empty-state"><svg><use href="#i-case"/></svg><h2>No investigation open</h2><p class="muted">Create one, or choose one from the list.</p></div>
           <div id="case" class="card" hidden>
             <div class="case-head"><div><p class="eyebrow" id="case-status">OPEN</p><h2 id="case-title" class="case-title"></h2><p id="case-description" class="muted"></p></div>
-              <div class="case-actions"><button type="button" class="secondary" id="case-rename">Rename</button><button type="button" class="secondary" id="case-close">Close</button><button type="button" id="case-report-html">Export report (HTML)</button><button type="button" class="secondary" id="case-report-json">Export data (JSON)</button></div></div>
+              <div class="case-actions"><button type="button" class="secondary" id="case-rename">Rename</button><button type="button" class="secondary" id="case-close">Close</button><button type="button" id="case-report-html">Export report (HTML)</button><button type="button" class="secondary" id="case-report-json">Export data (JSON)</button><label class="check report-frames" for="case-report-frames"><input id="case-report-frames" type="checkbox"><span>Include frame images (footage) in the HTML report</span></label></div></div>
             <form id="rename-form" class="inline-form" hidden><label class="sr-only" for="rename-title">New title</label><input id="rename-title" class="input" maxlength="200" required><button>Save title</button><button type="button" class="secondary" id="rename-cancel">Cancel</button></form>
             <h3 class="section-title"><svg aria-hidden="true"><use href="#i-arrow"/></svg>Saved searches</h3><div id="case-queries"></div>
             <h3 class="section-title"><svg aria-hidden="true"><use href="#i-arrow"/></svg>Evidence timeline</h3><p id="case-basis" class="muted"></p><div id="case-clocks"></div><div id="case-evidence" class="timeline" aria-live="polite"></div>
