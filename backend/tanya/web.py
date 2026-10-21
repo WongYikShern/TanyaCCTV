@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 from .config import SUPPORTED_EXTENSIONS, SEARCHABLE_EXTENSIONS, load_settings, load_search_settings
 from .indexer import Indexer, scan_video_dir, sha256_file
 from . import playback
+from . import person_detection
 from .search import search_videos
 from .sentry_client import SearchError, redact
 from . import sentry_client
@@ -57,6 +58,12 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
                       SESSION_COOKIE_SAMESITE="Strict")
     lock = threading.Lock()
     scan_jobs = {}
+    # Identifies this website process, so an open page can tell that the server was restarted (possibly with a
+    # different library, where the same video id names other footage) instead of mixing old and new state.
+    instance = secrets.token_hex(8)
+    # "replay" (recorded ranked results) or "event_index" (preset annotated events); None = normal app.
+    demo_mode = getattr(offline_search, "mode", "replay") if offline_search is not None else None
+    yolo = person_detection.load_config()   # optional; nothing runs until a user asks for one video
     settings.video_dir.mkdir(parents=True, exist_ok=True)
 
     def rows(sql, params=()):
@@ -116,6 +123,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
     @app.after_request
     def headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-TanyaCCTV-Instance"] = instance
         response.headers["Referrer-Policy"] = "same-origin"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self'; style-src 'self'; "
@@ -137,7 +145,8 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
     @app.get("/")
     def home():
         session.setdefault("csrf", secrets.token_hex(32))
-        return render_template("dashboard.html", csrf=session["csrf"], offline_demo=offline_search is not None)
+        return render_template("dashboard.html", csrf=session["csrf"], instance=instance,
+                               offline_demo=offline_search is not None, demo_mode=demo_mode)
 
     @app.get("/api/status")
     def status():
@@ -149,7 +158,8 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             except SearchError:
                 engine = False
         key = bool(os.environ.get("GEMINI_API_KEY"))
-        return jsonify(offline_demo=offline_search is not None, engine_ready=engine, key_ready=key,
+        return jsonify(offline_demo=offline_search is not None, demo_mode=demo_mode, engine_ready=engine, key_ready=key,
+                       yolo_ready=yolo.available,
                        search_ready=(offline_search is not None) or (engine and key),
                        scan_ready=bool(key and search_settings.sentry_python and search_settings.sentry_python.is_file()
                                        and offline_search is None),
@@ -260,6 +270,39 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         for frame in result:
             frame["url"] = url_for("frame_file", rel=frame["image_path"])
         return jsonify(frames=result[:60], has_more=len(result) > 60)
+
+    @app.get("/api/videos/<int:video_id>/people")
+    def people(video_id):
+        """Cached YOLO person-presence candidates for this exact video (never runs the detector)."""
+        video = rows("SELECT id, sha256 FROM videos WHERE id=? AND status='done'", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        return jsonify(available=yolo.available, reason=yolo.reason(),
+                       result=person_detection.load_cached(settings, video[0]["sha256"], yolo))
+
+    @app.post("/api/videos/<int:video_id>/people")
+    def find_people(video_id):
+        """Run local YOLO person detection on this one video, in the separate YOLO environment."""
+        video = rows("SELECT id, sha256, rel_path, filename, duration_sec FROM videos WHERE id=? AND status='done'",
+                     (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        if not yolo.available:
+            abort(503, description=yolo.reason())
+        source = source_path(video[0])
+        if source is None:
+            abort(404, description="The original file is no longer in the video folder.")
+        if sha256_file(source) != video[0]["sha256"]:
+            abort(409, description="This file has changed since it was indexed. Re-index it first.")
+        if not lock.acquire(blocking=False):   # one GPU job at a time (4 GB laptop GPU)
+            abort(409, description="Another operation is running. Try again when it finishes.")
+        try:
+            result = person_detection.run(settings, source, video[0]["sha256"], video[0]["duration_sec"], yolo)
+        except person_detection.PersonDetectionError as error:
+            return jsonify(error=str(error)), 500
+        finally:
+            lock.release()
+        return jsonify(available=True, reason=None, result=result)
 
     @app.get("/media/frames/<path:rel>")
     def frame_file(rel):
@@ -412,7 +455,8 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         try:
             result = (offline_search or search_videos)(query.strip(), settings, search_settings).to_dict()
             coverage = search_coverage()
-            if coverage["needs_preparation"]:
+            # The preset event index does not use AI preparation, so that warning does not apply to it.
+            if coverage["needs_preparation"] and demo_mode != "event_index":
                 result["warnings"].insert(0, "These videos are not prepared for current AI search: "
                                           + ", ".join(coverage["needs_preparation"])
                                           + ". Review the AI indexing plan to include them.")

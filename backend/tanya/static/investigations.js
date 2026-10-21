@@ -201,8 +201,8 @@ async function downloadReport(format) {
   buttons.forEach(b => { b.disabled = true; });
   notice(format === "html" ? "Preparing the report… (checking each source video's content hash)" : "Preparing the data export…");
   try {
-    const response = await fetch(`/api/investigations/${activeCase.id}/report`, {
-      method: "POST", headers: {"X-CSRF-Token": token, "Content-Type": "application/json"}, body: JSON.stringify({format})});
+    const response = await serverFetch(`/api/investigations/${activeCase.id}/report`, {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({format})});
     if (!response.ok) throw new Error((await response.json()).error || "The report could not be created.");
     const url = URL.createObjectURL(await response.blob());
     const link = element("a"); link.href = url; link.download = `investigation-${activeCase.id}-report.${format}`;

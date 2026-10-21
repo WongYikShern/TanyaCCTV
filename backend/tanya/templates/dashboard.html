@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" content="{{ csrf }}">
+  <meta name="tanya-instance" content="{{ instance }}">
   <title>TanyaCCTV · Investigation workspace</title>
   <link rel="icon" href="{{ url_for('static', filename='brand/favicon-32.png') }}" type="image/png" sizes="32x32">
   <link rel="icon" href="{{ url_for('static', filename='brand/favicon-64.png') }}" type="image/png" sizes="64x64">
@@ -50,7 +51,8 @@
 
   <main>
     {% if config.get('LOCAL_RESEARCH_SOURCE') %}<div class="banner warn" role="status"><strong>{{ config.get('LOCAL_RESEARCH_TITLE', 'CAVIAR real-camera research set — staged scenes.') }}</strong> Local review only; Google processing disabled. Showing MP4 review copies; publisher originals are kept separately. Attribution: {{ config.get('LOCAL_RESEARCH_ATTRIBUTION', 'EC Funded CAVIAR project/IST 2001 37540. Publisher states CC BY-SA.') }} <a href="{{ config['LOCAL_RESEARCH_SOURCE'] }}" target="_blank" rel="noreferrer">Publisher and usage terms</a></div>{% endif %}
-    {% if offline_demo %}<div class="banner warn" role="status"><strong>OFFLINE REPLAY DEMO — no live AI.</strong> Search replays four recorded queries on synthetic footage. Image checking and AI preparation are disabled. Demo uploads are local and are not added to recorded search results.</div>{% endif %}
+    {% if offline_demo and demo_mode == "event_index" %}<div class="banner warn" role="status" id="demo-banner"><strong>OFFLINE DEMO — preset event index, no live AI.</strong> Search matches your words to events that were annotated in advance (CAVIAR labels, scripted demo clips) and, where cached, YOLO person detections. Each result shows its source. Nothing is sent over the network; image checking and AI preparation are disabled.</div>
+    {% elif offline_demo %}<div class="banner warn" role="status"><strong>OFFLINE REPLAY DEMO — no live AI.</strong> Search replays four recorded queries on synthetic footage. Image checking and AI preparation are disabled. Demo uploads are local and are not added to recorded search results.</div>{% endif %}
     <!-- Dashboard -->
     <section class="page" data-page="dashboard">
       <form id="dash-search" class="card dash-search">
@@ -106,6 +108,7 @@
           <label class="sr-only" for="watch-case">Investigation</label><select id="watch-case" class="input"><option value="">Choose an open investigation</option></select>
           <button type="button" id="watch-add">Add current moment</button>
           <h2 class="spaced">About this recording</h2><dl id="watch-details" class="details"></dl>
+          <section id="people-section" hidden><h2 class="spaced">People in this video</h2><p class="muted small-note">Optional, on this computer: YOLO person detection. It finds people in view, not what they are doing.</p><div id="people-panel" aria-live="polite"></div></section>
         </aside>
       </div>
       <article class="card"><div class="card-head"><h2>Frame timeline</h2><span class="muted">Scroll sideways; select a frame to jump to that moment.</span></div><div id="frames" class="frame-grid"></div><button type="button" class="secondary" id="more-frames" hidden>Load more frames</button></article>

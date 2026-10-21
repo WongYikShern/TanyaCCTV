@@ -14,8 +14,22 @@ function icon(name) { const ns="http://www.w3.org/2000/svg", svg=document.create
 let noticeTimer=null;
 function notice(text) { $("notice").textContent=text; clearTimeout(noticeTimer); if(text) noticeTimer=setTimeout(()=>{$("notice").textContent="";},9000); }
 $("notice").addEventListener("click",()=>notice("")); // click the message to dismiss it
+// Each website process sends its own instance id. A different id means the website was restarted since this
+// page loaded (e.g. switching to or from the offline demo), so cached video ids may now name other footage.
+const instance = document.querySelector('meta[name="tanya-instance"]').content;
+const SERVER_GONE = "Can't reach the TanyaCCTV website. It may have been stopped or restarted (for example when switching to or from the offline demo). Start it again, then reload this page.";
+const SERVER_CHANGED = "The TanyaCCTV website was restarted since this page was opened, possibly with a different video library. Reload this page (F5) so the videos, times and evidence shown match the server.";
+const serverProblem = message => message===SERVER_GONE || message===SERVER_CHANGED;
+async function serverFetch(path, options={}) {
+  let response;
+  try{ response=await fetch(path,{...options,headers:{"X-CSRF-Token":token,...options.headers}}); }
+  catch(e){ throw new Error(SERVER_GONE); }   // no HTTP response at all: the browser only says "Failed to fetch"
+  const served=response.headers.get("X-TanyaCCTV-Instance");
+  if(served && served!==instance) throw new Error(SERVER_CHANGED);
+  return response;
+}
 async function api(path, options={}) {
-  const response=await fetch(path,{...options,headers:{"X-CSRF-Token":token,...options.headers}});
+  const response=await serverFetch(path,options);
   let data; try{data=await response.json();}catch(e){throw new Error(`The server returned an unexpected response (${response.status}).`);}
   if(!response.ok) throw new Error(data.error || "The request failed. Please try again.");
   return data;
@@ -51,7 +65,7 @@ function openVideo(id,name,url,start=0,end=null) {
 async function status() {
   const data=await api("/api/status"); connection=data;
   if(data.offline_demo){$("visual-check").checked=false;$("visual-consent").checked=false;
-    const examples=["a person walking","a red car","a person lying on the floor","fire and smoke"];
+    const examples=data.demo_mode==="event_index"?["a person falling","someone entering a shop","a red car","a fight"]:["a person walking","a red car","a person lying on the floor","fire and smoke"];
     document.querySelectorAll("#examples .chip").forEach((chip,i)=>{chip.textContent=examples[i];});
   }
   const ready=data.offline_demo || data.scan_ready || data.search_ready;
@@ -62,6 +76,7 @@ async function status() {
 }
 function statusItems() {
   if(!connection) return [["warn","Checking…"]];
+  if(connection.demo_mode==="event_index") return [["ok","Offline demo: searches a preset index of annotated events (CAVIAR labels, scripted demo clips). No API key, network or live AI is used."],["ok","Playback, investigations and report export work on this computer."],[connection.yolo_ready?"ok":"warn",connection.yolo_ready?"Optional local YOLO person detection is available from each video's player page.":"Optional YOLO person detection is not set up; cached detections still appear where available."],["warn","AI image checks and quick-search set-up are off in the demo. New uploads have no annotated events."]];
   if(connection.offline_demo) return [["ok","Offline demo: recorded searches on sample footage; no API key or live AI is used."],["ok","Playback, investigations and report export work on this computer."],["warn","AI image checks and quick-search set-up are off in the demo. New uploads aren't in the recorded searches."]];
   const c=connection.coverage, items=[];
   items.push(["ok","Videos are stored and played on this computer."]);
@@ -78,6 +93,7 @@ function renderStatusList(list, items=statusItems()) {
 function searchHints(direct) {
   const c=connection;
   if(!c) return ["",""];
+  if(c.demo_mode==="event_index") return ["Offline demo: describe an event, e.g. a person falling, someone entering a shop, people meeting, a red car, a person in the corridor. Words are matched to annotated events; there is no AI.",""];
   if(c.offline_demo) return ["Offline demo: try a red car, a person walking, a person lying on the floor, or fire and smoke. Only these recorded searches work.",""];
   if(direct){
     if(!c.scan_ready) return ["The AI isn't connected yet, so search can't run. See Settings.",""];
@@ -162,6 +178,7 @@ function videoStatus(v) {
   if(v.status!=="done") return ["Processing…","pending"];
   if(v.playback?.status==="missing") return ["File missing","failed"];
   if(v.playback?.changed) return ["File changed","failed"];
+  if(connection?.demo_mode==="event_index") return ["In the demo library",""];
   if(connection?.offline_demo) return v.search_state==="prepared"?["In the recorded demo",""]:["Not in the recorded demo","neutral"];
   return ["Ready to search",""];
 }
@@ -238,7 +255,7 @@ async function showWatch(id,start,end) {
   $("download-video").hidden=false; $("download-video").href=video.video_url; $("download-video").download=video.filename;
   $("player-window").hidden=!watchWindow; $("replay-window").hidden=!watchWindow;
   if(watchWindow) $("player-window").textContent=`Result window ${time(watchWindow[0])}–${time(watchWindow[1])}`;
-  updateTime(); loadFrames(); fillWatchCases();
+  updateTime(); loadFrames(); fillWatchCases(); loadPeople(id,myToken);
   overlay("Checking whether this browser can play the recording…");
   try{
     let info=await api(`/api/videos/${id}/playback`);
@@ -258,7 +275,7 @@ async function showWatch(id,start,end) {
     p.onerror=()=>{ if(myToken!==watchToken||!p.getAttribute("src")) return; playerError((mediaErrors[p.error?.code]||"The video could not be played.")+" The frame timeline below still works."); };
     p.src=info.url;
     if(info.status==="copy_ready") $("watch-meta").textContent+=" · playing a browser copy (original unchanged)";
-  }catch(error){ if(myToken===watchToken) playerError(error.message+" The frame timeline below still works."); }
+  }catch(error){ if(myToken===watchToken) playerError(error.message+(serverProblem(error.message)?"":" The frame timeline below still works.")); }
 }
 function updateTime(){ const p=$("player"); if(p.getAttribute("src")) currentMoment=p.currentTime; $("player-time").textContent=`${time(currentMoment)} / ${time(p.duration||videosCache.find(v=>v.id===activeVideo)?.duration_sec)}`; }
 $("player").addEventListener("timeupdate",updateTime);
@@ -269,6 +286,32 @@ $("player").addEventListener("playing",()=>overlay(null));
 $("player").addEventListener("canplay",()=>{ if($("player-overlay-text").textContent==="Buffering…") overlay(null); });
 $("replay-window").onclick=()=>{ if(!watchWindow) return; const p=$("player"); p.currentTime=watchWindow[0]; p.play().catch(()=>{}); };
 $("watch-back").onclick=()=>{ location.hash="#library"; };
+// ---------------------------------------------------------------- optional YOLO person detection
+function renderPeople(data, id, myToken){
+  const panel=$("people-panel"); panel.replaceChildren();
+  $("people-section").hidden=!data.available && !data.result;
+  const r=data.result;
+  if(r){
+    if(r.stale) panel.append(element("p","These detections were made with different model weights than the ones set up now; run again to refresh them.","warning"));
+    if(!r.intervals.length) panel.append(element("p",`No person detected at confidence ≥ ${r.presence_conf}. That does not prove nobody was there (small or overhead people are often missed).`,"muted"));
+    const list=element("div",undefined,"actions");
+    for(const iv of r.intervals){ const b=element("button",`${time(iv.start_sec)}–${time(iv.end_sec)} · up to ${iv.max_conf.toFixed(2)}`,"secondary small"); b.type="button"; b.onclick=()=>seek(iv.start_sec); list.append(b); }
+    if(r.intervals.length) panel.append(element("p",`${r.intervals.length} time range(s) with a person detected (confidence ≥ ${r.presence_conf}). Select one to jump there:`,"muted"),list);
+    panel.append(element("p",r.caution,"muted small-note"));
+    panel.append(element("p",`Model ${r.model.weights||"unknown"}, ${r.model.imgsz} px${r.runner.device?`, ${r.runner.device}`:""}${r.weights_verified?" (weights hash matches)":""}. Video hash ${r.video.sha256.slice(0,12)}… matches this recording.`+(r.provenance?" "+r.provenance:""),"muted small-note"));
+  }
+  if(data.available){
+    const run=element("button",r?"Run person detection again":"Find people (YOLO, on this computer)","secondary"); run.type="button";
+    run.onclick=async()=>{ run.disabled=true; busy(true); notice("Finding people with the local YOLO model… about half a second per second of video.");
+      try{ const fresh=await post(`/api/videos/${id}/people`,{}); if(myToken===watchToken) renderPeople(fresh,id,myToken); notice("Person detection finished. Review the time ranges: they are candidates, not events."); }
+      catch(error){ notice(error.message); } finally{ run.disabled=false; busy(false); } };
+    panel.append(run);
+  } else if(data.reason && r) panel.append(element("p","Running it again needs the YOLO environment: "+data.reason,"muted small-note"));
+}
+async function loadPeople(id, myToken){
+  $("people-section").hidden=true; $("people-panel").replaceChildren();
+  try{ const data=await api(`/api/videos/${id}/people`); if(myToken===watchToken) renderPeople(data,id,myToken); }catch(e){ /* optional feature: the player still works */ }
+}
 function seek(t){ currentMoment=t; const p=$("player"); if(p.getAttribute("src")&&!p.error) p.currentTime=t; updateTime(); }
 async function loadFrames() {
   const id=activeVideo, page=framePage; $("more-frames").disabled=true;
@@ -354,10 +397,11 @@ $("search-form").onsubmit=async event=>{
   $("results").replaceChildren(loading);
   try{
     const data=await post("/api/search",{query:$("query").value,visual_check:visual,approve_frame_upload:approved,...(saveToId()?{investigation_id:saveToId()}:{})});
-    $("results").replaceChildren(element("p",visual?`Results for “${data.query}”. These are AI suggestions from a few images per clip: always watch before deciding.`:`Closest-looking clips for “${data.query}”. They appear even if what you described never happened: watch to check.`,"results-intro"));
+    const indexed=data.mode==="event_index";
+    $("results").replaceChildren(element("p",indexed?`Events in the preset index for “${data.query}”. Each result says where its label comes from: watch the footage before deciding.`:visual?`Results for “${data.query}”. These are AI suggestions from a few images per clip: always watch before deciding.`:`Closest-looking clips for “${data.query}”. They appear even if what you described never happened: watch to check.`,"results-intro"));
     for(const warning of data.warnings) $("results").append(element("p",warning,"warning"));
     if(data.visual_review) $("results").append(element("h3",`${data.visual_review.supported} likely · ${data.visual_review.unclear} maybe · ${data.visual_review.rejected} no match`));
-    if(!data.hits.length){ const e=element("div",undefined,"card empty-state"); e.append(icon("search"),element("h2","No likely matches"),element("p",visual?(data.unclear_hits?.length?"Check the “maybe” clips below. ":"")+"Not finding it doesn't prove it didn't happen.":"No clips came back. Try different wording.","muted")); $("results").append(e); }
+    if(!data.hits.length){ const e=element("div",undefined,"card empty-state"); e.append(icon("search"),element("h2",indexed?"No matching events":"No likely matches"),element("p",indexed?"No annotated event matches. Not finding it doesn't prove it didn't happen.":visual?(data.unclear_hits?.length?"Check the “maybe” clips below. ":"")+"Not finding it doesn't prove it didn't happen.":"No clips came back. Try different wording.","muted")); $("results").append(e); }
     const ranked=[...data.hits,...(data.unclear_hits||[]),...(data.rejected_hits||[])];
     if(data.saved_query) $("results").append(element("p",`Search saved to your investigation.`,"muted"));
     for(const hit of data.hits) $("results").append(resultCard(hit,data.query,visual,ranked.indexOf(hit)+1));
@@ -375,19 +419,25 @@ function resultCard(hit, query, visual, rank){
   const card=element("article",undefined,"result"), review=hit.visual_review, focus=hit.review_focus, span=review?.evidence_span;
   const play=(start,end)=>openVideo(hit.video_id,hit.filename,hit.video_url,start,end);
   // The checker's cited frames give a tighter range than the scanned window (a hint, not a boundary).
-  const playBest=()=>span?play(span.start_sec,span.end_sec):play(hit.start_sec,hit.end_sec);
+  // Event-index results play from a little before the event to a little after it.
+  const playBest=()=>span?play(span.start_sec,span.end_sec):ev?play(ev.context_start_sec,ev.context_end_sec):play(hit.start_sec,hit.end_sec);
   const pic=element("button",undefined,"thumb-button result-thumb"); pic.type="button"; pic.setAttribute("aria-label",`Play ${displayName(hit.filename)}`);
   if(hit.thumbnail_url){ const img=element("img"); img.src=hit.thumbnail_url; img.alt=`Frame from ${displayName(hit.filename)}`; pic.append(img); }
   else pic.append(element("div","No frame","video-placeholder"));
   const overlay=element("span",undefined,"play"); overlay.append(icon("play")); pic.append(overlay); pic.onclick=playBest;
   const info=element("div",undefined,"result-info");
-  const [verdict,kind]=review?verdictLabels[review.verdict]:["Similar clip","info"];
+  const ev=hit.event;
+  const [verdict,kind]=review?verdictLabels[review.verdict]:ev?[ev.source_label,{provisional_review:"info",publisher_annotation:"info",synthetic_script:"neutral",yolo_person:"pending"}[ev.source]]:["Similar clip","info"];
   const head=element("div",undefined,"result-head");
   head.append(element("span",verdict,"badge "+kind),element("span",`${time(hit.start_sec)} – ${time(hit.end_sec)}`,"when"),element("span",displayName(hit.filename),"muted"));
   info.append(head);
   if(review?.reason) info.append(element("p",review.reason,"reason"));
+  if(ev){
+    info.append(element("p",ev.needs_human_review?`${ev.label}. Needs human review: a person detection is not an event.`:`${ev.label} (${ev.dataset}${ev.views.length?", "+ev.views.join(", ")+" view":""}).`,"reason"));
+    if(ev.detector) info.append(element("p",`Detector confidence up to ${ev.detector.max_conf.toFixed(2)} (mean ${ev.detector.mean_conf.toFixed(2)}) over ${ev.detector.frames} frames at ≥ ${ev.detector.threshold}. A detector score, not the probability of an event.`,"muted"));
+  }
   const actions=element("div",undefined,"actions");
-  const main=element("button",span?`Play key moment ${time(span.start_sec)}–${time(span.end_sec)}`:`Play ${time(hit.start_sec)}–${time(hit.end_sec)}`); main.type="button"; main.prepend(icon("play")); main.onclick=playBest; actions.append(main);
+  const main=element("button",span?`Play key moment ${time(span.start_sec)}–${time(span.end_sec)}`:ev?`Play event ${time(hit.start_sec)}–${time(hit.end_sec)}`:`Play ${time(hit.start_sec)}–${time(hit.end_sec)}`); main.type="button"; main.prepend(icon("play")); main.onclick=playBest; actions.append(main);
   if(span){ const whole=element("button","Play whole clip","secondary"); whole.type="button"; whole.onclick=()=>play(hit.start_sec,hit.end_sec); actions.append(whole); }
   const hasFocus=focus && (focus.start_sec!==hit.start_sec || focus.end_sec!==hit.end_sec);
   if(hasFocus){ const inspect=element("button",`Play strongest part ${time(focus.start_sec)}–${time(focus.end_sec)}`,"secondary"); inspect.type="button"; inspect.onclick=()=>play(focus.start_sec,focus.end_sec); actions.append(inspect); }
@@ -395,7 +445,8 @@ function resultCard(hit, query, visual, rank){
   info.append(actions);
   // Technical detail stays available, but out of the way.
   const more=element("details",undefined,"tech"); more.append(element("summary","Details"));
-  more.append(element("p",Number.isFinite(hit.best_score)?`Result #${rank}. Ranking score ${hit.best_score.toFixed(3)}: used for ordering only, not a probability.`:`Found by looking through the footage (part ${hit.scan_window}); no similarity score.`,"muted"));
+  if(ev){ more.append(element("p",ev.provenance,"muted")); more.append(element("p",`Exact label times ${hit.start_sec.toFixed(2)}–${hit.end_sec.toFixed(2)} s. Playback includes ${time(ev.context_start_sec)}–${time(ev.context_end_sec)} for context. No similarity score: matched by keywords.`,"muted")); if(ev.detector?.provenance) more.append(element("p",ev.detector.provenance,"muted")); }
+  else more.append(element("p",Number.isFinite(hit.best_score)?`Result #${rank}. Ranking score ${hit.best_score.toFixed(3)}: used for ordering only, not a probability.`:`Found by looking through the footage (part ${hit.scan_window}); no similarity score.`,"muted"));
   if(span) more.append(element("p","The key moment comes from the frames the AI pointed to. The event may run longer.","muted"));
   if(hasFocus) more.append(element("p","This clip combines several shorter pieces. “Strongest part” is the best-scoring piece, not the exact start and end of the event.","muted"));
   if(review){

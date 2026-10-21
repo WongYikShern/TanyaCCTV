@@ -332,3 +332,56 @@ did not consistently improve localization. No full accuracy, negative-query or r
 comparison is established. The normal app and model prompt were not changed during the run.
 The previous section's “approval pending” statement is now historical; do not rerun the
 failed request or other paid tests without a fresh scoped approval.
+
+## Hackathon demo build (Windows laptop, 21 October 2026)
+
+Pulled `93940bc` (fast-forward from `7e09bea`; no local changes). Baseline on this Windows
+laptop before changes: **509 passed, 10 skipped** (`TANYA_SENTRY_PYTHON` unset: four synthetic
+trial-index tests, two FFmpeg playback tests, one setup check, three symlink/junction tests).
+After the changes: **521 passed, 10 skipped** (same skips). The Mac's 513/6 used different
+optional environments.
+
+**Playback "Failed to fetch".** Traced with a copy of the owner's library: `synthetic_cam1.mp4`
+is MPEG-4 Part 2; the browser copy route, range requests (206), seeking and frame timeline all
+work, through both a harness and the real `run_web.py`. The exact message reproduced only when
+the page made a request while the website process was not running: `api()` passed the browser's
+network `TypeError` text through, and the player appended "The frame timeline below still
+works". A related defect: after a restart with a different library (e.g. switching to or from the
+offline demo on port 5001), an open page kept its cached video list, so a video id could name
+different footage than the title shown. Fix: every response carries a per-process
+`X-TanyaCCTV-Instance` id; the page compares it with the one it was rendered with and asks for a
+reload, and network failures now say the website cannot be reached. No API, guard or data
+model changed. A server-side crash cause could not be reproduced and is not claimed.
+
+**Preset offline search** (`tanya/event_index.py`, default `run_offline_demo.py` mode): keyword
+and synonym rules over existing labels (CAVIAR provisional single-reviewer file when present,
+else publisher labels; scripted synthetic events), each bound to the labelled video's SHA-256,
+plus camera-view, colour and time filters. Results are labelled by source and play with 2 s of
+context. Unsupported requests (fight, fire/smoke, weapon, theft, running) return an explicit
+no-match. The index is built per demo workspace and never read by the benchmark tools, so
+ranked-search evaluation stays separate. Known gap: investigation evidence from index results is
+stored as `ranked` with no score, because adding an evidence mode would change the data model;
+the report therefore does not yet name the label source. Decide this before relying on reports.
+
+**YOLO reuse**: `experiments/yolo/person_candidates.py` (one video, same offline guards) and
+`tanya/person_detection.py` (cache, identity checks, presence intervals at confidence >= 0.40).
+The saved `results-384` run is reused for the CAVIAR clips; on-demand detection runs only when a
+user selects it for one video. Person boxes are presence candidates, never actions. The
+reception-region filter remains disabled. Observed in the demo: no candidate at >= 0.40 on the
+staged-fall clip (overhead), none on the cartoon synthetic clips.
+
+### Evaluation priorities (unchanged gates, restated)
+
+1. **Second independent review.** The owner's own review at http://127.0.0.1:5003/ is still
+   pending. Compare it with the first CSV using `apply_label_review.py`; keep disagreements
+   (including the two note-free rejections) unresolved until both reviewers agree. The demo
+   index will use whichever label file is current; it never merges reviews itself.
+2. **Measured pilot issues to work on**, each to be validated on separate footage or held-out
+   queries, not on the pilot that exposed them: the unrelated fall result in Browse2 0-12 s
+   (overhead motion read as a collapse), the missed 0.48 s corridor shop entry (sparse sampling and
+   view geometry are hypotheses, not established causes), and loose window timing (mean matched
+   start/end error 2.10 / 3.64 s; cited-frame spans did not reliably improve IoU).
+3. **No reliability claim.** Two completed positive queries on five staged clips with one
+   reviewer's labels do not establish real-CCTV accuracy. The fire/smoke negative is unmeasured.
+4. **Paid work needs explicit approval first**: any further indexing, ranked queries or scan
+   retries, with an exact image/request/cost bound. No automatic retry after HTTP 503.

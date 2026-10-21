@@ -120,3 +120,33 @@ See [continuation guide](../../docs/evaluation-next-phase.md) for commands and i
 It reports baseline/filtered precision, recall, misses and size buckets at each confidence.
 Ground truth is never masked, so suppressing a genuine person counts against recall.
 Without the actual saved runs, this is a tested analysis tool, not a measured improvement.
+
+## App integration: optional person-presence candidates (21 October 2026)
+
+`person_candidates.py` runs this experiment's detector (same offline guards and socket guard,
+batch 1, FP32, person class only, local weights) on **one** video and writes detections in the
+same per-frame format, plus the identity of everything that produced them: video SHA-256,
+weights SHA-256, image size, confidence floor, the script's line-ending-independent SHA-256,
+package versions and device. On the corridor-front clip it reproduced the saved GPU 384 run
+exactly (383/383 frames identical boxes; 18 s; 51 MB peak GPU; 0 network attempts).
+
+The app (`backend/tanya/person_detection.py`, no torch import) uses it only when a person
+selects **Find people** on a video's player page. Nothing runs at start-up. Results are cached
+per video/weights/image size under `<data>/person_detections/`; a cache entry for different
+footage is refused and one made with different weights is shown as stale. The offline demo
+reuses the saved `results-384` run for the CAVIAR clips (bound via the prepared-media manifest,
+since that run did not record input hashes; its weights hash is shown as unverifiable).
+
+Candidates are frames with a person box at confidence >= 0.40, merged across gaps <= 0.5 s and
+kept when >= 0.5 s long. On the saved GPU 384 run that threshold measured precision 0.987 and
+recall 0.267 against the publisher's boxes (cached recount; same footage, not held-out). They
+are **person-presence candidates for human review**: never falls, fights, entries or any other
+action, and missing small/overhead people is common (the staged-fall clip yields no candidate at
+this threshold). The reception-region filter stays disabled: its effect was measured only
+post hoc on the same footage. The detector does not recognise the cartoon synthetic people.
+
+Setup for the app: `TANYA_YOLO_HOME` (folder with `venv\` and `weights\`), or
+`TANYA_YOLO_PYTHON` and `TANYA_YOLO_WEIGHTS`. Default: `%LOCALAPPDATA%\TanyaCCTV-YOLO`. Note:
+an environment created from inside the Claude desktop app (a packaged app) is stored physically
+under `%LOCALAPPDATA%\Packages\Claude_<id>\LocalCache\Local\TanyaCCTV-YOLO`; point
+`TANYA_YOLO_HOME` there when starting the website from an ordinary terminal.

@@ -9,6 +9,45 @@ folder. On macOS/Linux, use `.venv/bin/python` instead.
 > are ranked by similarity, not detected incidents. Every result stays unverified until a person
 > reviews it, and a low or missing result does not prove that something did not happen.
 
+## Hackathon demo: preset event index, fully offline (default launcher mode)
+
+No Gemini key, no network and no paid call. Searches match your words (explicit synonym rules,
+no AI) to events that were annotated in advance, then open the real footage at that time.
+
+```powershell
+$env:TANYA_SENTRY_PYTHON = "$HOME\sentrysearch-trial\tools\sentrysearch\Scripts\python.exe"   # FFmpeg for H.264 demo clips
+$env:TANYA_YOLO_HOME = "$env:LOCALAPPDATA\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\TanyaCCTV-YOLO"   # optional: this laptop's YOLO env
+.\.venv\Scripts\python.exe backend\scripts\run_offline_demo.py
+```
+
+Open http://localhost:5001/ (stop the normal website first; both use port 5001). The launcher
+makes a new workspace with:
+
+- the five generated synthetic clips and their scripted events (`make_demo_footage.py`:
+  walking, falling, lying, entering/leaving through a door, standing still, red and blue cars);
+- the five CAVIAR clips, copied only if `data/cctv_validation/caviar/videos/` holds files whose
+  SHA-256 matches the labelled video; labels are the local single-reviewer provisional file when
+  present, otherwise the publisher-derived labels;
+- the saved YOLO GPU 384 run's person detections for those CAVIAR clips, if found.
+
+Every result shows its source: **Annotated · reviewed by one person** (provisional, not
+independently verified), **Annotated (publisher)**, **Scripted demo event** (known by
+construction, cartoon footage) or **Person detected (YOLO) · needs review**. Results play from
+2 s before to 2 s after the labelled interval; the exact label times are under Details.
+Camera words (corridor, front, overhead, lobby, car park, entrance, driveway), colours and
+"after/before/between N s" filter results. Unknown or unsupported requests (fights, fire, weapons,
+theft, running) return an explicit no-match. YOLO detections appear only for plain person
+queries, never for falls or other actions. A video's player page can run YOLO on that one video
+when the YOLO environment is set up (about 0.5 s per second of footage on the RTX 3050 Ti).
+
+Suggested script: `a person falling` (CAVIAR staged fall + scripted falls) → open the first
+result → `someone entering a shop` (two CAVIAR views + a scripted door entry) → `a person`
+(annotated presence plus unreviewed YOLO candidates) → `two people fighting` (honest no-match).
+Investigations and reports work as before; index results are saved as ranked-mode clips with no
+score (the report does not yet name the index source; see the evaluation notes).
+
+`--dataset synthetic|caviar` limits the footage; `--search replay` starts the older recorded-search demo below.
+
 ## Free offline rehearsal (recommended when internet is unreliable)
 
 1. Stop the existing website (Ctrl+C in its terminal).

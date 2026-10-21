@@ -75,9 +75,9 @@ def test_offline_demo_warns_clearly_without_ffmpeg(tmp_path, monkeypatch, capsys
     monkeypatch.delenv('TANYA_FFMPEG', raising=False)
     monkeypatch.setattr(run_offline_demo, 'find_local_ffmpeg', lambda root: None)
     made = []
-    monkeypatch.setattr(run_offline_demo, 'make', lambda folder, ffmpeg, log: made.append(ffmpeg))
+    monkeypatch.setattr(run_offline_demo, 'make', lambda folder, ffmpeg, log, scenes=None: made.append(ffmpeg))
     monkeypatch.setattr(run_offline_demo, 'Indexer', lambda s: type('I', (), {'run': lambda self: None})())
     import sqlite3
     with pytest.raises(sqlite3.OperationalError):     # nothing was indexed (mocked); only the warning matters
-        run_offline_demo.prepare(tmp_path / 'ws')
+        run_offline_demo.prepare(tmp_path / 'ws', search='replay')
     assert made == [None] and 'will NOT play in the browser' in capsys.readouterr().err
