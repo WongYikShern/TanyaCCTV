@@ -15,14 +15,27 @@
     $("watch-log").prepend(li);
     while ($("watch-log").children.length > 6) $("watch-log").lastChild.remove();
   }
+  // Watch mode sends images to Gemini, so it needs the live AI connection (not available in the demo).
+  function unavailable() {
+    const ai = window.aiState?.();
+    if (!ai?.known || ai.live) return "";
+    return ai.demo ? "Watch mode is off in the offline demo." : "Watch mode needs the AI connection.";
+  }
   function controls() {
-    const on = !!watching;
-    $("watch-rule").disabled = on; $("watch-consent").disabled = on;
+    const on = !!watching, off = !on && unavailable();
+    $("watch-rule").disabled = on || !!off; $("watch-consent").disabled = on || !!off;
     $("watch-start").textContent = on ? "Stop watching" : "Start watching";
     $("watch-start").classList.toggle("secondary", on);
-    $("watch-start").disabled = !on && !($("watch-rule").value.trim() && $("watch-consent").checked);
+    $("watch-start").disabled = !on && (!!off || !($("watch-rule").value.trim() && $("watch-consent").checked));
     $("watch-card").classList.toggle("on", on);
+    $("watch-card").classList.toggle("ai-off", !!off);
+    const note = $("watch-ai-note"); note.hidden = !off; note.replaceChildren();
+    if (off) {
+      note.append(element("span", off + " "));
+      if (!window.aiState().demo) { const link = element("a", "Connect it in Settings →"); link.href = "#system"; note.append(link); }
+    }
   }
+  document.addEventListener("tanya:status", controls);
 
   function beep() {
     try {
@@ -81,7 +94,7 @@
         const result = await post("/api/search/scan/batch", {scan_id: plan.scan_id, batch, approve_frame_upload: true});
         for (const hit of [...result.hits, ...result.unclear_hits]) { alertFor(video, hit, rule); found++; }
       }
-      log(found ? `${displayName(video.filename)}: ${found} possible match(es). Alert raised.` : `${displayName(video.filename)}: no match.`, found ? "hit" : "");
+      log(found ? `${displayName(video.filename)}: ${plural(found, "possible match", "possible matches")}. Alert raised.` : `${displayName(video.filename)}: no match.`, found ? "hit" : "");
     } catch (error) {
       log(`${displayName(video.filename)}: check stopped (${error.message}).`, "warn");
     } finally { post("/api/search/scan/cancel", {scan_id: plan.scan_id}).catch(() => {}); }
@@ -94,13 +107,13 @@
     try {
       let data = await api("/api/videos");
       if (data.waiting_files.length) {   // footage copied straight into the folder: add it first
-        log(`${data.waiting_files.length} new file(s) in the video folder. Adding…`);
+        log(`${plural(data.waiting_files.length, "new file")} in the video folder. Adding…`);
         await post("/api/index"); data = await api("/api/videos");
       }
       const fresh = data.videos.filter(v => v.status === "done" && !v.camera?.hidden && !watching.seen.has(v.id));
       if (fresh.length) await library().catch(() => {});
       for (const v of fresh) { if (!watching) break; if (await check(v)) watching.seen.add(v.id); }
-      if (watching) status(`Watching for “${watching.rule}” · ${watching.seen.size} recording(s) known · checked ${fmtClock()}`);
+      if (watching) status(`Watching for “${watching.rule}” · ${plural(watching.seen.size, "recording")} known · checked ${fmtClock()}`);
     } catch (error) { status(`Watching (last check failed: ${error.message})`); }
     finally { if (watching) watching.checking = false; }
   }

@@ -3,13 +3,15 @@
 // All server and user text is inserted with textContent; nothing is inserted as HTML.
 const $ = id => document.getElementById(id);
 const token = document.querySelector('meta[name="csrf-token"]').content;
-let connection = null, operationRunning = false, planHasChanges = false;
+let connection = null, operationRunning = false, planHasChanges = false, libraryLoaded = false;
 let scenarioPlan=null, scenarioStop=false, scenarioActive=false;
 let videosCache = [], waitingFiles = [], unsupportedFiles = [], activeVideo = null, framePage = 0, watchToken = 0, currentMoment = 0, watchWindow = null;
 const time = seconds => `${Math.floor((seconds || 0) / 60)}:${String(Math.floor((seconds || 0) % 60)).padStart(2,"0")}`;
 // A camera name the user gave the recording, else the original upload name ("<12-hex id>_<name>" on disk).
 const cameraNames = new Map();
 const displayName = filename => cameraNames.get(filename) || String(filename||"").replace(/^[0-9a-f]{12}_/,"");
+// "1 clip" / "3 clips": a count with the right word, instead of "clip(s)".
+function plural(n, one, many) { return `${n} ${n === 1 ? one : (many || one + "s")}`; }
 function element(tag, text, className) { const node=document.createElement(tag); if(text !== undefined) node.textContent=text; if(className) node.className=className; return node; }
 function icon(name) { const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg"), use=document.createElementNS(ns,"use"); use.setAttribute("href","#i-"+name); svg.append(use); return svg; }
 let noticeTimer=null;
@@ -66,6 +68,11 @@ function openVideo(id,name,url,start=0,end=null,follow=null) {
 }
 
 // ---------------------------------------------------------------- status
+// canSearch: some search works (live AI, quick search or an offline demo). liveAi: Gemini-backed
+// features (thorough search, watch mode, AI summary) can run. Unknown until /api/status answers.
+const canSearch = () => !!(connection && (connection.offline_demo || connection.scan_ready || connection.search_ready));
+const liveAi = () => !!connection?.scan_ready;
+window.aiState = () => ({known: !!connection, demo: !!connection?.offline_demo, live: liveAi(), search: canSearch()});
 async function status() {
   const data=await api("/api/status"); connection=data;
   if(data.offline_demo){$("visual-check").checked=false;$("visual-consent").checked=false;
@@ -75,6 +82,14 @@ async function status() {
   const ready=data.offline_demo || data.scan_ready || data.search_ready;
   $("ai-pill").textContent=data.offline_demo ? "Offline demo · no live AI" : ready ? "AI connected" : "AI not set up";
   $("ai-pill").classList.toggle("ready",ready);
+  $("ai-pill").classList.toggle("off",!ready);
+  $("ai-pill").title=ready ? "Open Settings to see the AI connection" : "AI search isn't connected. Open Settings to set it up.";
+  document.querySelectorAll("[data-ai-callout]").forEach(box=>{box.hidden=ready;});
+  if(libraryLoaded){   // re-label recordings now that readiness is known
+    renderLibrary();
+    if(!document.querySelector('[data-page="dashboard"]').hidden) renderDashboard();
+  }
+  document.dispatchEvent(new CustomEvent("tanya:status"));
   window.loadFilterOptions?.();
   $("setup-details").open=!data.search_ready;
   renderStatusList($("system-status")); updateControls();
@@ -87,9 +102,9 @@ function statusItems() {
   items.push(["ok","Videos are stored and played on this computer."]);
   items.push([connection.engine_ready?"ok":"warn",connection.engine_ready?"Search engine installed.":"Search engine not set up (TANYA_SENTRY_PYTHON)."]);
   items.push([connection.key_ready?"ok":"warn",connection.key_ready?"Gemini API key found.":"No Gemini API key, so AI search won't work."]);
-  items.push(["ok",`Quick search (optional): ${c.prepared.length} of ${c.prepared.length+c.needs_preparation.length} video(s) set up.`]);
-  if(c.unsupported.length) items.push(["warn",`${c.unsupported.length} video(s) can't use quick search (MP4 / MOV only). Thorough search still works.`]);
-  if(waitingFiles.length) items.push(["warn",`${waitingFiles.length} file(s) in the video folder haven't been added yet.`]);
+  items.push(["ok",`Quick search (optional): ${c.prepared.length} of ${plural(c.prepared.length+c.needs_preparation.length,"video")} set up.`]);
+  if(c.unsupported.length) items.push(["warn",`${plural(c.unsupported.length,"video")} can't use quick search (MP4 / MOV only). Thorough search still works.`]);
+  if(waitingFiles.length) items.push(["warn",`${plural(waitingFiles.length,"file")} in the video folder ${waitingFiles.length===1?"hasn't":"haven't"} been added yet.`]);
   return items;
 }
 function renderStatusList(list, items=statusItems()) {
@@ -102,11 +117,11 @@ function searchHints(direct) {
   if(c.offline_demo) return ["Offline demo: try a red car, a person walking, a person lying on the floor, or fire and smoke. Only these recorded searches work.",""];
   if(direct){
     if(!c.scan_ready) return ["The AI isn't connected yet, so search can't run. See Settings.",""];
-    return [videosCache.some(v=>v.status==="done")?"":"Add a video in the Video Library first.",""];
+    return [videosCache.some(v=>v.status==="done")?"":"Add a video on the Cameras page first.",""];
   }
   if(!c.search_ready) return ["Quick search needs the AI connection. See Settings.",""];
   const prepared=c.coverage.prepared.length, pending=c.coverage.needs_preparation;
-  return [prepared?`Quick search covers ${prepared} video(s).`:"No videos are set up for quick search yet. Set it up in Settings, or switch back to Thorough.",
+  return [prepared?`Quick search covers ${plural(prepared,"video")}.`:"No videos are set up for quick search yet. Set it up in Settings, or switch back to Thorough.",
     pending.length?`Not set up for quick search yet: ${pending.map(displayName).join(", ")}.`:""];
 }
 function updateControls() {
@@ -115,14 +130,16 @@ function updateControls() {
   $("scenario-options").hidden=!direct;
   $("scan-video-label").hidden=!direct;
   const [setup,coverage]=searchHints(direct);
-  $("setup").textContent=setup; $("coverage").textContent=coverage;
+  const callout=connection && !canSearch();   // the callout above the search box already explains this
+  $("setup").textContent=callout?"":setup; $("coverage").textContent=callout?"":coverage;
   $("ranked-visual-option").hidden=direct;
   $("scenario-run").disabled=operationRunning || !scenarioPlan || !$("scenario-consent").checked || !connection?.scan_ready;
   for(const id of ["search-mode","scan-video","scan-start","scan-end","scenario-consent","scenario-cancel"]) $(id).disabled=operationRunning;
   $("scan-start").disabled ||= $("scan-video").value==="all";
   $("scan-end").disabled ||= $("scan-video").value==="all";
   $("search-button").disabled=operationRunning || !connection?.search_ready || !connection?.coverage.prepared.length || (visual && !$("visual-consent").checked);
-  if(direct) $("search-button").disabled=operationRunning || !videosCache.some(v=>v.status==="done") || connection?.offline_demo;
+  if(direct) $("search-button").disabled=operationRunning || !videosCache.some(v=>v.status==="done") || connection?.offline_demo || !liveAi();
+  $("dash-search-button").disabled=!!connection && !canSearch();
   $("visual-consent-panel").hidden=direct || !visual;
   for(const id of ["visual-check","visual-consent","query","index-button","upload-button"]) $(id).disabled=operationRunning;
   if(connection?.offline_demo) $("visual-check").disabled=true;
@@ -147,9 +164,11 @@ async function renderDashboard() {
   const open=cases.filter(c=>c.status==="open"), unreviewed=cases.reduce((s,c)=>s+c.unreviewed_count,0);
   const tiles=[
     stat("Recordings",videosCache.length,`${time(videosCache.reduce((s,v)=>s+(v.duration_sec||0),0))} of footage`+(waitingFiles.length?` · ${waitingFiles.length} waiting to be added`:""),"#library","primary"),
-    stat("Ready to search",done,done===videosCache.length?"all recordings":`of ${videosCache.length} recording(s)`,"#search"),
-    stat("Investigations",cases.length,unreviewed?`${unreviewed} clip(s) to review`:`${open.length} open`,"#investigations",unreviewed?"attention":"")];
-  if(failed) tiles.push(stat("Problems",failed,"recording(s) need attention","#library","alert"));
+    canSearch() || !connection
+      ? stat("Ready to search",done,done===videosCache.length?"all recordings":`of ${plural(videosCache.length,"recording")}`,"#search")
+      : stat("AI search","Off","Connect it in Settings to search footage","#system","attention"),
+    stat("Investigations",cases.length,unreviewed?`${plural(unreviewed,"clip")} to review`:`${open.length} open`,"#investigations",unreviewed?"attention":"")];
+  if(failed) tiles.push(stat("Problems",failed,failed===1?"recording needs attention":"recordings need attention","#library","alert"));
   $("stats").replaceChildren(...tiles);
   const recent=$("dash-videos"); recent.replaceChildren();
   if(!videosCache.length){ const a=element("a","No recordings yet. Add your first video →","empty"); a.href="#library"; a.onclick=()=>{$("upload-form").hidden=false;}; recent.append(a); }
@@ -162,7 +181,7 @@ async function renderDashboard() {
   if(!cases.length) box.append(element("p","None yet. Create one to collect clips for an incident.","empty"));
   for(const c of cases.slice(0,5)){
     const row=element("button",undefined,"row-link"); row.type="button";
-    row.append(element("strong",c.title),element("span",`${c.status==="open"?"Open":"Closed"} · ${c.evidence_count} clip(s)`+(c.unreviewed_count?` · ${c.unreviewed_count} to review`:""),"muted"));
+    row.append(element("strong",c.title),element("span",`${c.status==="open"?"Open":"Closed"} · ${plural(c.evidence_count,"clip")}`+(c.unreviewed_count?` · ${c.unreviewed_count} to review`:""),"muted"));
     row.onclick=()=>{ location.hash="#investigations"; if(window.openInvestigation) window.openInvestigation(c.id); }; box.append(row);
   }
   // Only problems are worth dashboard space; the full list lives under Settings.
@@ -186,7 +205,7 @@ function videoStatus(v) {
   if(v.playback?.changed) return ["File changed","failed"];
   if(connection?.demo_mode==="event_index") return ["In the demo library",""];
   if(connection?.offline_demo) return v.search_state==="prepared"?["In the recorded demo",""]:["Not in the recorded demo","neutral"];
-  return ["Ready to search",""];
+  return canSearch() ? ["Ready to search",""] : ["Ready to watch","neutral"];
 }
 function thumb(video) {
   const box=element("div",undefined,"thumb");
@@ -198,7 +217,7 @@ function thumb(video) {
 }
 async function library() {
   const data=await api("/api/videos");
-  videosCache=data.videos; waitingFiles=data.waiting_files; unsupportedFiles=data.unsupported_files;
+  videosCache=data.videos; waitingFiles=data.waiting_files; unsupportedFiles=data.unsupported_files; libraryLoaded=true;
   cameraNames.clear(); for(const v of videosCache) if(v.camera?.name) cameraNames.set(v.filename,v.camera.name);
   refreshScanVideos(); updateControls();
   renderLibrary();
@@ -216,7 +235,7 @@ function renderLibrary() {
   const banner=$("waiting"); banner.replaceChildren();
   banner.hidden=!waitingFiles.length && !unsupported.length;
   if(waitingFiles.length){
-    banner.append(icon("alert"),element("span",`${waitingFiles.length} video(s) in the video folder haven't been added yet: ${waitingFiles.slice(0,5).map(displayName).join(", ")}${waitingFiles.length>5?"…":""}.`));
+    banner.append(icon("alert"),element("span",`${plural(waitingFiles.length,"video")} in the video folder ${waitingFiles.length===1?"hasn't":"haven't"} been added yet: ${waitingFiles.slice(0,5).map(displayName).join(", ")}${waitingFiles.length>5?"…":""}.`));
     const b=element("button","Add them now","secondary"); b.type="button"; b.onclick=()=>$("index-button").click(); banner.append(b);
   }
   if(unsupported.length) banner.append(element("span",`Skipped (not a video type we support): ${unsupported.slice(0,5).join(", ")}${unsupported.length>5?"…":""}.`,"muted"));
@@ -257,7 +276,7 @@ async function showWatch(id,start,end) {
   let video=videosCache.find(v=>v.id===id);
   if(!video){ try{await library();}catch(e){} video=videosCache.find(v=>v.id===id); }
   if(myToken!==watchToken) return;
-  if(!video){ $("watch-title").textContent="Recording not found"; $("watch-meta").textContent=""; $("watch-details").replaceChildren(); $("download-video").hidden=true; playerError("This video is no longer in the library. Go back to the library and choose another recording."); return; }
+  if(!video){ $("watch-title").textContent="Recording not found"; $("watch-meta").textContent=""; $("watch-details").replaceChildren(); $("download-video").hidden=true; playerError("This video is no longer in the library. Go back to Cameras and choose another recording."); return; }
   $("watch-title").textContent=displayName(video.filename);
   $("watch-meta").textContent=`${time(video.duration_sec)} · ${video.width||"—"} × ${video.height||"—"} · ${video.frame_count} frames`;
   const dl=$("watch-details"); dl.replaceChildren();
@@ -307,7 +326,7 @@ function renderPeople(data, id, myToken){
     if(!r.intervals.length) panel.append(element("p",`No person detected at confidence ≥ ${r.presence_conf}. That does not prove nobody was there (small or overhead people are often missed).`,"muted"));
     const list=element("div",undefined,"actions");
     for(const iv of r.intervals){ const b=element("button",`${time(iv.start_sec)}–${time(iv.end_sec)} · up to ${iv.max_conf.toFixed(2)}`,"secondary small"); b.type="button"; b.onclick=()=>seek(iv.start_sec); list.append(b); }
-    if(r.intervals.length) panel.append(element("p",`${r.intervals.length} time range(s) with a person detected (confidence ≥ ${r.presence_conf}). Select one to jump there:`,"muted"),list);
+    if(r.intervals.length) panel.append(element("p",`${plural(r.intervals.length,"time range")} with a person detected (confidence ≥ ${r.presence_conf}). Select one to jump there:`,"muted"),list);
     panel.append(element("p",r.caution,"muted small-note"));
     panel.append(element("p",`Model ${r.model.weights||"unknown"}, ${r.model.imgsz} px${r.runner.device?`, ${r.runner.device}`:""}${r.weights_verified?" (weights hash matches)":""}. Video hash ${r.video.sha256.slice(0,12)}… matches this recording.`+(r.provenance?" "+r.provenance:""),"muted small-note"));
   }
@@ -369,8 +388,8 @@ async function indexVideos() {
   const duplicates=summary.outcomes.filter(item=>item.status==="skipped" && item.message.startsWith("duplicate content of"));
   await Promise.all([library(),status()]);
   $("sync-plan").hidden=true;
-  const duplicateNote=duplicates.length ? ` ${duplicates.length} file(s) were identical to videos already in the library and were not added again.` : "";
-  notice((failed.length ? `${failed.length} video(s) couldn't be added. Filter the library by “Problems” to see why.` : "Done. Your footage is ready to search.")+duplicateNote);
+  const duplicateNote=duplicates.length ? ` ${plural(duplicates.length,"file")} ${duplicates.length===1?"was":"were"} identical to videos already in the library and were not added again.` : "";
+  notice((failed.length ? `${plural(failed.length,"video")} couldn't be added. On the Cameras page, filter by “Problems” to see why.` : (canSearch()?"Done. Your footage is ready to search.":"Done. Your footage is ready to watch. Connect the AI in Settings to search it."))+duplicateNote);
 }
 $("index-button").onclick=async()=>{ busy(true); notice("Adding videos from the folder… Keep this page open."); try{await indexVideos();}catch(error){notice(error.message);}finally{busy(false);} };
 $("upload-form").onsubmit=async event=>{
@@ -380,7 +399,7 @@ $("upload-form").onsubmit=async event=>{
   try{
     const uploaded=await api("/api/upload",{method:"POST",body:new FormData(event.target)});
     if(uploaded.duplicate_of){ notice(`This video is already in your library as ${uploaded.duplicate_of}. No second copy was added.`); event.target.reset(); return; }
-    notice("Uploaded. Getting it ready to search…"); await indexVideos(); event.target.reset(); $("upload-form").hidden=true;
+    notice("Uploaded. Adding it to your library…"); await indexVideos(); event.target.reset(); $("upload-form").hidden=true;
   }catch(error){ notice(error.message); }finally{ busy(false); }
 };
 
@@ -522,7 +541,7 @@ async function reviewScenarioPlan(){
     const plan=await post("/api/search/scan/plan",{query:$("query").value,video_ids:ids,
       ...(selected!=="all"&&!follow?{start_sec:Number($("scan-start").value)||0,end_sec:$("scan-end").value===""?null:Number($("scan-end").value)}:{})});
     scenarioPlan=plan;
-    $("scenario-plan-summary").textContent=(follow?`Follow this person from ${displayName(follow.source.filename)}: look for them on ${plan.recordings.length} ${nearby.note}.`:`Look for “${plan.query}” in ${plan.recordings.length} recording(s).`)+` This sends up to ${plan.max_images} images in ${plan.max_calls} request(s) to Google Gemini.`;
+    $("scenario-plan-summary").textContent=(follow?`Follow this person from ${displayName(follow.source.filename)}: look for them on ${nearby.note(plan.recordings.length)}.`:`Look for “${plan.query}” in ${plural(plan.recordings.length,"recording")}.`)+` This sends up to ${plural(plan.max_images,"image")} in ${plural(plan.max_calls,"request")} to Google Gemini.`;
     $("scenario-plan-files").textContent=plan.recordings.map(v=>{const r=plan.ranges.find(r=>r.video_id===v.video_id);return `${displayName(v.filename)} (${time(r.start_sec)}–${time(r.end_sec)})`;}).join(" · ")+(plan.excluded.length?". Not included: "+plan.excluded.map(v=>displayName(v.filename)+" ("+v.reason+")").join("; "):"");
     $("scenario-plan-note").textContent=plan.note;
     $("scenario-plan").hidden=false;
@@ -592,7 +611,7 @@ $("plan-button").onclick=async()=>{
     const plan=await post("/api/search/plan");
     planHasChanges=plan.to_index.length>0 || plan.removals>0;
     $("sync-approval").hidden=!planHasChanges;
-    $("plan-summary").textContent=planHasChanges?`${plan.to_index.length} video(s) to upload · ${plan.removals} old entries to remove · ${plan.up_to_date} already set up. Estimated cost: about US$${plan.estimated_cost_usd.toFixed(4)} (an estimate, not a limit).`:`Everything is already set up (${plan.up_to_date} video(s)). Nothing to upload.`;
+    $("plan-summary").textContent=planHasChanges?`${plural(plan.to_index.length,"video")} to upload · ${plan.removals} old entries to remove · ${plan.up_to_date} already set up. Estimated cost: about US$${plan.estimated_cost_usd.toFixed(4)} (an estimate, not a limit).`:`Everything is already set up (${plural(plan.up_to_date,"video")}). Nothing to upload.`;
     $("plan-files").textContent=(plan.to_index.map(displayName).join(", "))+(plan.not_searchable.length?` Can't be used with quick search: ${plan.not_searchable.map(displayName).join(", ")}.`:"");
     $("sync-consent").checked=false; $("sync-plan").hidden=false;
   }catch(error){ notice(error.message); }finally{ busy(false); }

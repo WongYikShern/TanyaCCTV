@@ -33,7 +33,7 @@ async function loadInvestigations() {
   for (const inv of investigations) {
     const card = element("button", undefined, "case-card" + (activeCase && activeCase.id === inv.id ? " active" : ""));
     card.type = "button";
-    card.append(element("strong", inv.title), element("span", `${inv.status === "open" ? "Open" : "Closed"} · ${inv.evidence_count} clip(s) · ${inv.unreviewed_count} unreviewed`, "muted"));
+    card.append(element("strong", inv.title), element("span", `${inv.status === "open" ? "Open" : "Closed"} · ${plural(inv.evidence_count, "clip")} · ${inv.unreviewed_count} unreviewed`, "muted"));
     card.onclick = () => openCase(inv.id);
     list.append(card);
     if (inv.status === "open") select.append(new Option(inv.title, String(inv.id)));
@@ -75,7 +75,7 @@ function renderCase() {
   const list = $("case-evidence");
   list.replaceChildren();
   for (const e of c.evidence) list.append(evidenceCard(e, open));
-  if (c.removed_evidence.length) list.append(element("p", `${c.removed_evidence.length} clip(s) removed; they remain in the change history and the report.`, "muted"));
+  if (c.removed_evidence.length) list.append(element("p", `${plural(c.removed_evidence.length, "clip")} removed; ${c.removed_evidence.length === 1 ? "it remains" : "they remain"} in the change history and the report.`, "muted"));
   $("case-history").open = false;
   $("case-history-items").replaceChildren();
 }
@@ -87,7 +87,7 @@ function renderQueries(c, open) {
   for (const q of c.queries) {
     const row = element("div", undefined, "case-row");
     const filtered = q.settings && q.settings.filters ? " · with filters" : "";
-    row.append(element("span", `“${q.query}” · ${q.search_mode === "visual" ? "with image check" : q.settings && q.settings.engine && q.settings.engine.startsWith("Preset") ? "event index" : "ranked"}${filtered} · last run ${q.last_run_at ? new Date(q.last_run_at).toLocaleString() : "never"} · ${q.last_result_count ?? "?"} result(s)`));
+    row.append(element("span", `“${q.query}” · ${q.search_mode === "visual" ? "with image check" : q.settings && q.settings.engine && q.settings.engine.startsWith("Preset") ? "event index" : "ranked"}${filtered} · last run ${q.last_run_at ? new Date(q.last_run_at).toLocaleString() : "never"} · ${q.last_result_count == null ? "? results" : plural(q.last_result_count, "result")}`));
     const run = element("button", "Run again", "secondary");
     run.type = "button"; run.disabled = !open;
     run.onclick = () => {
@@ -176,7 +176,7 @@ function evidenceCard(e, open) {
   const decisions = (e.history || []).filter(h => h.action !== "note_changed");
   if (decisions.length) review.append(element("p", "History: not reviewed → " + decisions.map(h => `${decisionNames[h.to] || h.to} (${new Date(h.at).toLocaleString()})`).join(" → "), "muted small-note"));
   const notes = (e.history || []).filter(h => h.action === "note_changed").length;
-  if (notes) review.append(element("p", `The note was changed ${notes} time(s); earlier versions are in the change history.`, "muted small-note"));
+  if (notes) review.append(element("p", `The note was changed ${plural(notes, "time")}; earlier versions are in the change history.`, "muted small-note"));
   info.append(review);
   card.append(info);
   return card;
@@ -220,19 +220,20 @@ window.investigationClipButton = function (hit, query, visual, rank) {
 };
 
 async function downloadReport(format) {
-  const buttons = [$("case-report-html"), $("case-report-json")];
+  const buttons = [$("case-report-html"), $("case-report-json")], frames = format === "html" && $("case-report-frames").checked;
+  $("case-export").open = false;
   buttons.forEach(b => { b.disabled = true; });
   notice(format === "html" ? "Preparing the report… (checking each source video's content hash)" : "Preparing the data export…");
   try {
     const response = await serverFetch(`/api/investigations/${activeCase.id}/report`, {
       method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({format, include_frames: format === "html" && $("case-report-frames").checked})});
+      body: JSON.stringify({format, include_frames: frames})});
     if (!response.ok) throw new Error((await response.json()).error || "The report could not be created.");
     const url = URL.createObjectURL(await response.blob());
     const link = element("a"); link.href = url; link.download = `investigation-${activeCase.id}-report.${format}`;
     document.body.append(link); link.click(); link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
-    notice(format === "html" ? "Report downloaded. It contains frame images: share it only with authorised people." : "Investigation data downloaded.");
+    notice(format === "json" ? "Investigation data downloaded." : frames ? "Report downloaded. It contains frame images: share it only with authorised people." : "Report downloaded.");
   } catch (error) { notice(error.message); }
   finally { buttons.forEach(b => { b.disabled = false; }); }
 }
@@ -253,6 +254,9 @@ $("rename-cancel").onclick = () => { $("rename-form").hidden = true; };
 $("rename-form").onsubmit = event => { event.preventDefault(); $("rename-form").hidden = true; change(post(`/api/investigations/${activeCase.id}`, {title: $("rename-title").value}), "Title saved."); };
 $("case-close").onclick = () => change(post(`/api/investigations/${activeCase.id}/status`, {status: activeCase.status === "open" ? "closed" : "open"}));
 $("case-report-html").onclick = () => downloadReport("html");
+// Close the export menu when clicking elsewhere or pressing Escape.
+document.addEventListener("click", event => { if ($("case-export").open && !$("case-export").contains(event.target)) $("case-export").open = false; });
+document.addEventListener("keydown", event => { if (event.key === "Escape" && $("case-export").open) { $("case-export").open = false; $("case-export").querySelector("summary").focus(); } });
 $("case-report-json").onclick = () => downloadReport("json");
 $("case-history").addEventListener("toggle", async () => {
   if (!$("case-history").open || !activeCase) return;

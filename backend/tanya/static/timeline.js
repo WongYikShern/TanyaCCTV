@@ -49,7 +49,7 @@ function lane(title, rows, hiddenCount) {
   const box = element("div", undefined, "evt-lane");
   box.append(element("span", title, "evt-lane-title"));
   for (const row of rows) { const r = element("div", undefined, "evt-row"); row.forEach(item => r.append(barFor(item))); box.append(r); }
-  if (hiddenCount) box.append(element("span", `+${hiddenCount} more overlapping event(s): see the list below.`, "muted small-note"));
+  if (hiddenCount) box.append(element("span", `+${hiddenCount} more overlapping ${hiddenCount === 1 ? "event" : "events"}: see the list below.`, "muted small-note"));
   return box;
 }
 function personItems() {
@@ -79,6 +79,8 @@ function renderTimeline() {
   if (!p && timelineState.peopleAvailable) status.push("No person detections yet: use “Find people” beside the player to run YOLO on this video.");
   if (!p && !timelineState.peopleAvailable) status.push("YOLO person detection is not set up on this computer.");
   $("evt-status").textContent = status.filter(Boolean).join(" ");
+  // Nothing to show and nothing to run (no event index here, no YOLO): hide the card instead of an empty bar.
+  card.hidden = !indexAvailable && !people.length && !timelineState.people && !timelineState.peopleAvailable;
   $("evt-track").hidden = !events.length && !people.length;
   $("evt-hint").hidden = !events.length && !people.length;
   // Accessible, scrollable list of everything on the bar (also the fallback for very dense timelines).
@@ -88,7 +90,7 @@ function renderTimeline() {
     jump.append(element("span", `${time(item.start_sec)}–${time(item.end_sec)}`, "evt-time"), element("strong", item.label),
                 element("span", src.name, `evt-key ${src.cls}`));
     if (item.source === "yolo_person") {
-      jump.append(element("span", `Detector confidence up to ${item.max_conf.toFixed(2)} (mean ${item.mean_conf.toFixed(2)}) over ${item.frames} frames; up to ${item.max_people} person box(es) in one frame. Not an action or incident.`, "muted"));
+      jump.append(element("span", `Detector confidence up to ${item.max_conf.toFixed(2)} (mean ${item.mean_conf.toFixed(2)}) over ${plural(item.frames, "frame")}; up to ${plural(item.max_people, "person box", "person boxes")} in one frame. Not an action or incident.`, "muted"));
     } else if (item.status_label) jump.append(element("span", item.status_label, "muted"));
     jump.onclick = () => timelineJump(item.start_sec, jump);
     li.append(jump);
