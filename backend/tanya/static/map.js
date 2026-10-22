@@ -228,9 +228,14 @@
   }
   function fit(target, list, animate = true) {
     const points = list.filter(located).map(v => [v.camera.lat, v.camera.lng]);
-    // Keep pins out from under the camera list on the right of the main map (it sits below the map on phones).
-    const listOpen = target === map && !$("map-panel").classList.contains("collapsed") && window.innerWidth > 820;
-    const pad = {paddingTopLeft: [70, 110], paddingBottomRight: [listOpen ? 500 : 150, 90]};
+    // Keep pins out from under the camera list: beside the map on wide screens, along the bottom on phones.
+    const pad = {paddingTopLeft: [70, 120], paddingBottomRight: [150, 90]};
+    if (target === map) {
+      const box = target.getContainer().getBoundingClientRect(), list = $("map-panel").getBoundingClientRect();
+      if (list.width && list.left > box.left + box.width / 2) pad.paddingBottomRight[0] = Math.max(150, box.right - list.left + 150);
+      else if (list.height && list.top > box.top + box.height / 3) pad.paddingBottomRight = [150, Math.max(90, box.bottom - list.top + 60)];   // 150: room for pin names
+      if (window.innerWidth <= 820) pad.paddingTopLeft = [60, 130];
+    }
     if (points.length > 1) target.fitBounds(points, {...pad, maxZoom: 18, animate});
     else if (points.length) target.setView(points[0], 17, {animate});
     else target.setView(DEMO_CENTRE, 15, {animate});
@@ -248,7 +253,7 @@
       // Set a view straight away: Leaflet only attaches markers and lines once the map has one.
       map = L.map("map-canvas", {zoomControl: false, worldCopyJump: true, maxZoom: 19}).setView(DEMO_CENTRE, 15);
       if (navigator.onLine === false || connection?.offline_demo) setStyle("plain");
-      L.control.zoom({position: "bottomright"}).addTo(map);
+      L.control.zoom({position: "bottomleft"}).addTo(map);   // left, above the legend: pop-up messages appear bottom right
       L.control.scale({position: "bottomright", imperial: false}).addTo(map);
       base = tiles(map);
       map.on("click", async event => {
