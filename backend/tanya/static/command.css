@@ -124,7 +124,7 @@
 .lg.route::before { width: 18px; height: 0; border-radius: 0; border-top: 3px dashed #3DD68C; }
 .leaflet-container { font-family: inherit; }
 /* dashboard.css sizes every svg as an 18 px icon; the map's drawing layer sets its own size. */
-.leaflet-container svg { width: auto; height: auto; }
+.leaflet-overlay-pane svg { width: auto; height: auto; }
 .leaflet-bar a { background: rgba(13,16,21,.8); color: #E8ECF2; border-color: rgba(255,255,255,.12); }
 .leaflet-bar a:hover { background: var(--orange-strong); color: #fff; }
 .leaflet-control-attribution { background: rgba(11,14,19,.7) !important; color: #9AA4B2; }
