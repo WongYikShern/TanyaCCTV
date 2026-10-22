@@ -54,7 +54,9 @@ def test_default_model_and_structured_request(bridge, capsys):
     assert module.main() == 0
     assert json.loads(capsys.readouterr().out) == {"ok": True, "results": []}
     assert calls[0]["model"] == "gemini-3.8-flash"
-    assert module.client_options["http_options"]["retry_options"] == {"attempts": 1}
+    # Only "busy" replies are retried, a bounded number of times.
+    assert module.client_options["http_options"]["retry_options"] == {
+        "attempts": 3, "initial_delay": 2.0, "max_delay": 8.0, "http_status_codes": [429, 503]}
     assert calls[0]["config"]["response_json_schema"] == module.SCHEMA
     # LOW is documented for 3.8 Flash; MINIMAL is not supported for that model.
     assert calls[0]["config"]["thinking_config"] == {"thinking_level": "low"}
@@ -98,3 +100,17 @@ def test_timeout_is_not_retransmitted(bridge, capsys):
     result = json.loads(capsys.readouterr().out)
     assert not result["ok"] and "No matches were accepted" in result["error"]
     assert "sensitive transport details" not in result["error"]
+
+
+def test_free_tier_quota_error_is_explained_in_plain_words(bridge, capsys):
+    module, _, _ = bridge
+    class ClientError(Exception):
+        code = 429
+        message = ("You exceeded your current quota, please check your plan and billing details. "
+                   "* Quota exceeded for metric: generate_content_free_tier_requests, limit: 20, model: x\n"
+                   "Please retry in 3h13m55.06s.")
+    module.fake_error = ClientError()
+    assert module.main() == 1
+    error = json.loads(capsys.readouterr().out)["error"]
+    assert "HTTP 429" in error and "usage limit for this API key is used up (20 requests on the free tier)" in error
+    assert "resets in about 3h13m" in error and "Enable billing" in error

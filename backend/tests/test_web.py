@@ -455,3 +455,27 @@ def test_unreadable_review_file_does_not_break_search(reviewed_search, web):
     _, _, ws = web
     (ws.db_path.with_name("search_feedback.db")).write_bytes(b"not a database" * 50)
     assert [h["human_review"] for h in search()] == [None, None]
+
+
+def test_each_server_process_identifies_itself_so_a_page_can_detect_a_restart(web):
+    """An open page compares this id with the one it was rendered with; after a restart (e.g. switching to the
+    offline demo on the same port) the same video id may name other footage, so the page must not reuse it."""
+    client, _headers, ws = web
+    page = client.get("/")
+    served = page.headers["X-TanyaCCTV-Instance"]
+    assert f'<meta name="tanya-instance" content="{served}">' in page.text
+    assert client.get("/api/videos").headers["X-TanyaCCTV-Instance"] == served          # same process: same id
+    assert client.get("/api/missing").headers["X-TanyaCCTV-Instance"] == served          # errors carry it too
+    other = create_app(ws.settings(), SearchSettings(None, ws.video_dir / "bridge.py")).test_client()
+    assert other.get("/api/videos").headers["X-TanyaCCTV-Instance"] != served             # restarted process
+
+
+def test_dashboard_explains_an_unreachable_or_restarted_server_instead_of_failed_to_fetch():
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1] / "tanya" / "static"
+    dashboard = (root / "dashboard.js").read_text(encoding="utf-8")
+    investigations = (root / "investigations.js").read_text(encoding="utf-8")
+    assert "catch(e){ throw new Error(SERVER_GONE); }" in dashboard
+    assert 'served!==instance) throw new Error(SERVER_CHANGED)' in dashboard
+    # Every request goes through serverFetch, so none can surface the browser's bare "Failed to fetch".
+    assert dashboard.count("fetch(") == 1 and "fetch(" not in investigations

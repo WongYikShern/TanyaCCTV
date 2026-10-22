@@ -23,6 +23,7 @@ data/frames/*
 data/playback/
 *.db
 data/search_index_manifest.json
+data/cameras.json
 data/*.html
 *.db-journal
 *.sqlite
@@ -46,3 +47,10 @@ desktop.ini
 
 # Public research footage, labels, derivatives and local validation data
 /data/cctv_validation/
+
+# Local evaluation / experiment outputs (regenerable; may contain reviewer initials)
+evaluation/provisional/
+caviar-review-*.csv
+*.pt
+*.onnx
+experiments/yolo/results*/

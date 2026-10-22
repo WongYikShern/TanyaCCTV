@@ -4,7 +4,6 @@ import hashlib
 import json
 from pathlib import Path
 import ssl
-import os
 import subprocess
 import sys
 import urllib.request
@@ -57,9 +56,8 @@ def prepare(folder, clips):
     import cv2
     from tanya.config import Settings
     from tanya.indexer import Indexer
-    from tanya.playback import find_ffmpeg
-    sentry = ROOT / '.venv/sentry' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-    ffmpeg = find_ffmpeg(sentry)
+    from tanya.playback import find_local_ffmpeg
+    ffmpeg = find_local_ffmpeg(ROOT)   # PATH, TANYA_FFMPEG, TANYA_SENTRY_PYTHON (Windows) or .venv/sentry
     if not ffmpeg:
         raise ValueError('Local FFmpeg is required for research MP4 copies; originals are unchanged.')
     videos = folder / 'videos';videos.mkdir(parents=True, exist_ok=True)
@@ -100,7 +98,7 @@ def prepare(folder, clips):
     summary = Indexer(settings, log=lambda _: None).run()
     if summary.has_failures:
         raise ValueError('Local indexing reported failures; inspect the separate research database.')
-    (folder/'media-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
+    (folder/'media-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding="utf-8")
     print('Prepared and locally indexed five research clips; no AI search preparation.')
 
 
@@ -127,7 +125,7 @@ def main():
     parser.add_argument('--prepare', action='store_true', help='locally convert/index already downloaded clips; no network')
     parser.add_argument('--serve', action='store_true', help='view the prepared local dataset at localhost:5001; all AI endpoints disabled')
     args = parser.parse_args()
-    plan = json.loads(MANIFEST.read_text())
+    plan = json.loads(MANIFEST.read_text(encoding="utf-8"))
     print('Source:', plan['source_page']);print('Attribution:', plan['attribution'])
     print('Five staged real-camera clips plus publisher XML labels; no Google processing.')
     if not args.download and not args.prepare and not args.serve:
@@ -144,7 +142,7 @@ def main():
                 print(clip['name'],kind,entry[kind]['bytes'],'bytes',flush=True)
             results.append(entry)
         if args.download:
-            (folder/'download-manifest.json').write_text(json.dumps(results,indent=2)+'\n')
+            (folder/'download-manifest.json').write_text(json.dumps(results,indent=2)+'\n', encoding="utf-8")
         if args.prepare:
             prepare(folder, plan['clips'])
     except (OSError, ValueError, subprocess.SubprocessError) as error:

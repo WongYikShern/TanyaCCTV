@@ -1,0 +1,394 @@
+{
+  "dataset": "CAVIAR",
+  "source_page": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA1/",
+  "licence": "Publisher states Creative Commons BY-SA (version not specified)",
+  "attribution": "EC Funded CAVIAR project/IST 2001 37540",
+  "label_source": "CAVIAR publisher ground-truth XML; intervals derived by tanya.real_dataset",
+  "verification": "publisher_label_unverified",
+  "fps": 25.0,
+  "merge_gap_sec": 0.5,
+  "rules": {
+    "walking": {
+      "description": "a person's movement label is 'walking'",
+      "min_duration_sec": 1.0
+    },
+    "standing_still": {
+      "description": "a person's movement label is 'inactive' for at least 2 s (excluding a fallen person)",
+      "min_duration_sec": 2.0
+    },
+    "browsing": {
+      "description": "a person's situation label is 'browsing'",
+      "min_duration_sec": 1.0
+    },
+    "shop_enter": {
+      "description": "a person's situation label is 'shop enter' (the entering moment)",
+      "min_duration_sec": 0.4
+    },
+    "shop_exit": {
+      "description": "a person's situation label is 'shop exit' (the leaving moment)",
+      "min_duration_sec": 0.4
+    },
+    "fallen": {
+      "description": "the 'drop down' person is no longer walking (falling, then on the floor)",
+      "min_duration_sec": 1.0
+    },
+    "meeting": {
+      "description": "a group's situation label is 'interacting'",
+      "min_duration_sec": 1.0
+    },
+    "person_present": {
+      "description": "any tracked person is in view",
+      "min_duration_sec": 1.0
+    }
+  },
+  "clips": [
+    {
+      "clip_id": "caviar-walk1",
+      "video": "Walk1.mp4",
+      "relative_path": "data/cctv_validation/caviar/videos/Walk1.mp4",
+      "duration_sec": 24.48,
+      "fps": 25.0,
+      "width": 384,
+      "height": 288,
+      "decoded_frames": 612,
+      "video_sha256": "d078b061315582d20a273d6c275b2ff8a8ed81690edb8e8638b60610ade0c7ce",
+      "purpose": "walking",
+      "label_frames": 611
+    },
+    {
+      "clip_id": "caviar-browse2",
+      "video": "Browse2.mp4",
+      "relative_path": "data/cctv_validation/caviar/videos/Browse2.mp4",
+      "duration_sec": 35.04,
+      "fps": 25.0,
+      "width": 384,
+      "height": 288,
+      "decoded_frames": 876,
+      "video_sha256": "c00c0903d45d21432405ffd6929c106229561ae8560d640c7434d55efb922e4f",
+      "purpose": "browsing and standing",
+      "label_frames": 875
+    },
+    {
+      "clip_id": "caviar-rest_fallonfloor",
+      "video": "Rest_FallOnFloor.mp4",
+      "relative_path": "data/cctv_validation/caviar/videos/Rest_FallOnFloor.mp4",
+      "duration_sec": 40.32,
+      "fps": 25.0,
+      "width": 384,
+      "height": 288,
+      "decoded_frames": 1008,
+      "video_sha256": "c50c47923edefea8ecd31128fd336bc29b7e8b39107372daa2ab69f29ed74ccf",
+      "purpose": "staged fall",
+      "label_frames": 1007
+    },
+    {
+      "clip_id": "caviar-enterexitcrossingpaths1cor",
+      "video": "EnterExitCrossingPaths1cor.mp4",
+      "relative_path": "data/cctv_validation/caviar/videos/EnterExitCrossingPaths1cor.mp4",
+      "duration_sec": 15.32,
+      "fps": 25.0,
+      "width": 384,
+      "height": 288,
+      "decoded_frames": 383,
+      "video_sha256": "01ee0509c269856428d50797de0875fcb47e9e82191e488baf0a0e53623bdcbd",
+      "purpose": "entry/exit, corridor view",
+      "label_frames": 383
+    },
+    {
+      "clip_id": "caviar-enterexitcrossingpaths1front",
+      "video": "EnterExitCrossingPaths1front.mp4",
+      "relative_path": "data/cctv_validation/caviar/videos/EnterExitCrossingPaths1front.mp4",
+      "duration_sec": 15.32,
+      "fps": 25.0,
+      "width": 384,
+      "height": 288,
+      "decoded_frames": 383,
+      "video_sha256": "78b79436bcb4ecf27537330e0cef956304dae1119887be9f89bb38c4f22ba8c8",
+      "purpose": "entry/exit, front view",
+      "label_frames": 383
+    }
+  ],
+  "events": {
+    "walking": [
+      {
+        "video": "Walk1.mp4",
+        "start_sec": 0.68,
+        "end_sec": 7.2,
+        "derived_start_sec": 0.68,
+        "derived_end_sec": 7.2,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Walk1.mp4",
+        "start_sec": 9.44,
+        "end_sec": 20.48,
+        "derived_start_sec": 9.44,
+        "derived_end_sec": 20.48,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Browse2.mp4",
+        "start_sec": 0.0,
+        "end_sec": 3.32,
+        "derived_start_sec": 0.0,
+        "derived_end_sec": 3.32,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Browse2.mp4",
+        "start_sec": 5.92,
+        "end_sec": 9.92,
+        "derived_start_sec": 5.92,
+        "derived_end_sec": 9.92,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Browse2.mp4",
+        "start_sec": 11.92,
+        "end_sec": 21.92,
+        "derived_start_sec": 11.92,
+        "derived_end_sec": 21.92,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Browse2.mp4",
+        "start_sec": 30.0,
+        "end_sec": 34.36,
+        "derived_start_sec": 30.0,
+        "derived_end_sec": 34.36,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Rest_FallOnFloor.mp4",
+        "start_sec": 3.2,
+        "end_sec": 7.08,
+        "derived_start_sec": 3.2,
+        "derived_end_sec": 7.08,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Rest_FallOnFloor.mp4",
+        "start_sec": 7.72,
+        "end_sec": 11.92,
+        "derived_start_sec": 7.72,
+        "derived_end_sec": 11.92,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Rest_FallOnFloor.mp4",
+        "start_sec": 19.2,
+        "end_sec": 26.2,
+        "derived_start_sec": 19.2,
+        "derived_end_sec": 26.2,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Rest_FallOnFloor.mp4",
+        "start_sec": 38.0,
+        "end_sec": 40.28,
+        "derived_start_sec": 38.0,
+        "derived_end_sec": 40.28,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "EnterExitCrossingPaths1cor.mp4",
+        "start_sec": 0.0,
+        "end_sec": 15.32,
+        "derived_start_sec": 0.0,
+        "derived_end_sec": 15.32,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "EnterExitCrossingPaths1front.mp4",
+        "start_sec": 0.0,
+        "end_sec": 1.08,
+        "derived_start_sec": 0.0,
+        "derived_end_sec": 1.08,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "EnterExitCrossingPaths1front.mp4",
+        "start_sec": 3.76,
+        "end_sec": 15.32,
+        "derived_start_sec": 3.76,
+        "derived_end_sec": 15.32,
+        "verification": "publisher_label_unverified"
+      }
+    ],
+    "standing_still": [
+      {
+        "video": "Walk1.mp4",
+        "start_sec": 7.2,
+        "end_sec": 10.88,
+        "derived_start_sec": 7.2,
+        "derived_end_sec": 10.88,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Walk1.mp4",
+        "start_sec": 12.48,
+        "end_sec": 16.6,
+        "derived_start_sec": 12.48,
+        "derived_end_sec": 16.6,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Walk1.mp4",
+        "start_sec": 19.92,
+        "end_sec": 24.44,
+        "derived_start_sec": 19.92,
+        "derived_end_sec": 24.44,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Rest_FallOnFloor.mp4",
+        "start_sec": 4.28,
+        "end_sec": 7.12,
+        "derived_start_sec": 4.28,
+        "derived_end_sec": 7.12,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Rest_FallOnFloor.mp4",
+        "start_sec": 13.36,
+        "end_sec": 19.28,
+        "derived_start_sec": 13.36,
+        "derived_end_sec": 19.28,
+        "verification": "publisher_label_unverified"
+      }
+    ],
+    "meeting": [
+      {
+        "video": "Walk1.mp4",
+        "start_sec": 5.72,
+        "end_sec": 24.44,
+        "derived_start_sec": 5.72,
+        "derived_end_sec": 24.44,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Rest_FallOnFloor.mp4",
+        "start_sec": 0.0,
+        "end_sec": 2.6,
+        "derived_start_sec": 0.0,
+        "derived_end_sec": 2.6,
+        "verification": "publisher_label_unverified"
+      }
+    ],
+    "person_present": [
+      {
+        "video": "Walk1.mp4",
+        "start_sec": 0.68,
+        "end_sec": 24.44,
+        "derived_start_sec": 0.68,
+        "derived_end_sec": 24.44,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Browse2.mp4",
+        "start_sec": 0.0,
+        "end_sec": 9.92,
+        "derived_start_sec": 0.0,
+        "derived_end_sec": 9.92,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Browse2.mp4",
+        "start_sec": 11.92,
+        "end_sec": 34.36,
+        "derived_start_sec": 11.92,
+        "derived_end_sec": 34.36,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "Rest_FallOnFloor.mp4",
+        "start_sec": 0.0,
+        "end_sec": 40.28,
+        "derived_start_sec": 0.0,
+        "derived_end_sec": 40.28,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "EnterExitCrossingPaths1cor.mp4",
+        "start_sec": 0.0,
+        "end_sec": 15.32,
+        "derived_start_sec": 0.0,
+        "derived_end_sec": 15.32,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "EnterExitCrossingPaths1front.mp4",
+        "start_sec": 0.0,
+        "end_sec": 1.08,
+        "derived_start_sec": 0.0,
+        "derived_end_sec": 1.08,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "EnterExitCrossingPaths1front.mp4",
+        "start_sec": 3.76,
+        "end_sec": 15.32,
+        "derived_start_sec": 3.76,
+        "derived_end_sec": 15.32,
+        "verification": "publisher_label_unverified"
+      }
+    ],
+    "browsing": [
+      {
+        "video": "Browse2.mp4",
+        "start_sec": 21.92,
+        "end_sec": 30.0,
+        "derived_start_sec": 21.92,
+        "derived_end_sec": 30.0,
+        "verification": "publisher_label_unverified"
+      }
+    ],
+    "fallen": [
+      {
+        "video": "Rest_FallOnFloor.mp4",
+        "start_sec": 26.2,
+        "end_sec": 38.0,
+        "derived_start_sec": 26.2,
+        "derived_end_sec": 38.0,
+        "verification": "publisher_label_unverified"
+      }
+    ],
+    "shop_enter": [
+      {
+        "video": "EnterExitCrossingPaths1cor.mp4",
+        "start_sec": 5.88,
+        "end_sec": 6.36,
+        "derived_start_sec": 5.88,
+        "derived_end_sec": 6.36,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "EnterExitCrossingPaths1front.mp4",
+        "start_sec": 8.0,
+        "end_sec": 10.04,
+        "derived_start_sec": 8.0,
+        "derived_end_sec": 10.04,
+        "verification": "publisher_label_unverified"
+      }
+    ],
+    "shop_exit": [
+      {
+        "video": "EnterExitCrossingPaths1cor.mp4",
+        "start_sec": 4.68,
+        "end_sec": 6.68,
+        "derived_start_sec": 4.68,
+        "derived_end_sec": 6.68,
+        "verification": "publisher_label_unverified"
+      },
+      {
+        "video": "EnterExitCrossingPaths1front.mp4",
+        "start_sec": 8.68,
+        "end_sec": 10.88,
+        "derived_start_sec": 8.68,
+        "derived_end_sec": 10.88,
+        "verification": "publisher_label_unverified"
+      }
+    ]
+  },
+  "rejected_events": []
+}

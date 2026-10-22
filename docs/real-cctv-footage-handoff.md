@@ -85,6 +85,9 @@ existing files, clean failed partial downloads and extract only the expected arc
 
 Windows: replace Python paths with `.\.venv\sentry\Scripts\python.exe` and
 `.\.venv\Scripts\python.exe`. Downloads use trusted TLS verification; no certificate bypass.
+`--prepare` finds FFmpeg through `TANYA_SENTRY_PYTHON` (the documented Windows search environment),
+so set it first; verified on Windows on 20 October 2026 (CAVIAR: same decoded frame counts as the
+Mac copies). Labels, queries and the benchmark for CAVIAR: `docs/real-cctv-evaluation.md`.
 Files are excluded from Git, so your friend must run these commands to obtain their own copy.
 
 ## Remaining work for your friend

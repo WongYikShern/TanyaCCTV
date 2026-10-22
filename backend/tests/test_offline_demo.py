@@ -49,3 +49,35 @@ def test_replay_workflow_and_api_guards(search_env, monkeypatch):
     monkeypatch.delenv('GEMINI_API_KEY', raising=False)
     assert client.get('/api/status').json['search_ready'] is True
     assert env.calls() == []
+
+
+def test_offline_demo_finds_local_ffmpeg_via_documented_windows_setting(tmp_path, monkeypatch):
+    """Windows setups point TANYA_SENTRY_PYTHON at the search env; without this the demo footage
+    was MPEG-4 Part 2 and no demo video could play in the browser."""
+    import sys as _sys
+    _sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[1] / 'scripts'))
+    import run_offline_demo
+    sentry = tmp_path / 'python.exe'
+    sentry.write_text('', encoding='utf-8')
+    seen = []
+    monkeypatch.setenv('TANYA_SENTRY_PYTHON', str(sentry))
+    monkeypatch.delenv('TANYA_FFMPEG', raising=False)
+    monkeypatch.setattr('tanya.playback.find_ffmpeg',
+                        lambda p: (seen.append(p), 'C:/ffmpeg.exe' if p == sentry else None)[1])
+    assert run_offline_demo.local_ffmpeg() == 'C:/ffmpeg.exe' and sentry in seen
+
+
+def test_offline_demo_warns_clearly_without_ffmpeg(tmp_path, monkeypatch, capsys):
+    import sys as _sys
+    _sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[1] / 'scripts'))
+    import run_offline_demo
+    monkeypatch.delenv('TANYA_SENTRY_PYTHON', raising=False)
+    monkeypatch.delenv('TANYA_FFMPEG', raising=False)
+    monkeypatch.setattr(run_offline_demo, 'find_local_ffmpeg', lambda root: None)
+    made = []
+    monkeypatch.setattr(run_offline_demo, 'make', lambda folder, ffmpeg, log, scenes=None: made.append(ffmpeg))
+    monkeypatch.setattr(run_offline_demo, 'Indexer', lambda s: type('I', (), {'run': lambda self: None})())
+    import sqlite3
+    with pytest.raises(sqlite3.OperationalError):     # nothing was indexed (mocked); only the warning matters
+        run_offline_demo.prepare(tmp_path / 'ws', search='replay')
+    assert made == [None] and 'will NOT play in the browser' in capsys.readouterr().err

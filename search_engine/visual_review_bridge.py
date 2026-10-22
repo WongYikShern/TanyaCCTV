@@ -24,12 +24,18 @@ with a black shirt: describe what is visible and use unclear if the requested ga
 Do not infer identities, intent, wrongdoing, or events between sampled frames. Never call any
 result a confirmed incident. Cite only supplied timestamps. supported requires at least one
 evidence timestamp. Explain each decision briefly in ordinary language, including ambiguous attributes.
+For supported or unclear decisions, you may add evidence_boxes: for an evidence timestamp where the
+requested person or object is clearly visible, give box_2d as [ymin, xmin, ymax, xmax] scaled 0-1000
+around it, with a short label (e.g. "person in dark jacket"). Omit a box rather than guess.
 """
 
 SCHEMA = {"type": "object", "properties": {"results": {"type": "array", "items": {
     "type": "object", "properties": {"id": {"type": "string"},
     "verdict": {"type": "string", "enum": ["supported", "not_supported", "unclear"]},
-    "reason": {"type": "string"}, "evidence_timestamps": {"type": "array", "items": {"type": "number"}}},
+    "reason": {"type": "string"}, "evidence_timestamps": {"type": "array", "items": {"type": "number"}},
+    "evidence_boxes": {"type": "array", "items": {"type": "object", "properties": {
+        "timestamp": {"type": "number"}, "box_2d": {"type": "array", "items": {"type": "integer"}},
+        "label": {"type": "string"}}, "required": ["timestamp", "box_2d", "label"]}}},
     "required": ["id", "verdict", "reason", "evidence_timestamps"]}}}, "required": ["results"]}
 
 
@@ -51,8 +57,10 @@ def main():
             for frame in candidate["frames"]:
                 contents.append(types.Part.from_text(text=f"Timestamp: {frame['timestamp_sec']} seconds"))
                 contents.append(types.Part.from_bytes(data=base64.b64decode(frame["jpeg"], validate=True), mime_type="image/jpeg"))
-        # Approval covers a bounded image send; retries need a new reviewed request.
-        http_options = types.HttpOptions(timeout=150000, retry_options=types.HttpRetryOptions(attempts=1))
+        # Approval covers this bounded image send. Only "busy" replies (429/503) are retried, resending the
+        # same approved images: at most 3 attempts in total, a few seconds apart. Other errors are not retried.
+        http_options = types.HttpOptions(timeout=150000, retry_options=types.HttpRetryOptions(
+            attempts=3, initial_delay=2.0, max_delay=8.0, http_status_codes=[429, 503]))
         model = os.getenv("TANYA_VERIFY_MODEL", "gemini-3.8-flash")
         # Google documents low thinking for this model; avoid unbounded reasoning latency.
         thinking = {"thinking_config": types.ThinkingConfig(thinking_level="low")} if model == "gemini-3.8-flash" else {}
@@ -71,6 +79,13 @@ def main():
         detail = str(getattr(error, "message", ""))
         if type(error).__name__ in {"ReadTimeout", "ConnectTimeout", "RemoteProtocolError", "ConnectError"}:
             detail = "The connection to Google did not finish. No matches were accepted; you can retry after reviewing the frame-upload approval."
+        if type(code) is int and code == 429 and "quota" in detail.lower():
+            limit = re.search(r"limit: (\d+)", detail)
+            wait = re.search(r"retry in ((?:\d+h)?(?:\d+m)?)", detail)
+            detail = ("Google's usage limit for this API key is used up"
+                      + (f" ({limit.group(1)} requests on the free tier)" if limit else "")
+                      + (f"; it resets in about {wait.group(1)}" if wait and wait.group(1) else "")
+                      + ". Enable billing for the key in Google AI Studio to remove the free-tier limit.")
         key = os.environ.get("GEMINI_API_KEY", "")
         if key:
             detail = detail.replace(key, "[REDACTED]")

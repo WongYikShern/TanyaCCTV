@@ -1,0 +1,626 @@
+{
+  "description": "CAVIAR real-camera (staged) events derived from publisher labels. Each event says whether two independent reviewers verified it (human_verified) or not (publisher_label_unverified). Only cases with measurable=true are scored. Not deployment accuracy.",
+  "attribution": "EC Funded CAVIAR project/IST 2001 37540",
+  "licence": "Publisher states Creative Commons BY-SA (version not specified)",
+  "cases": [
+    {
+      "query": "a person walking",
+      "event_type": "walking",
+      "query_kind": "direct",
+      "split": "dev",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 0.68,
+          "end_sec": 7.2,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 9.44,
+          "end_sec": 20.48,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 0.0,
+          "end_sec": 3.32,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 5.92,
+          "end_sec": 9.92,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 11.92,
+          "end_sec": 21.92,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 30.0,
+          "end_sec": 34.36,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 3.2,
+          "end_sec": 7.08,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 7.72,
+          "end_sec": 11.92,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 19.2,
+          "end_sec": 26.2,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 38.0,
+          "end_sec": 40.28,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1cor.mp4",
+          "start_sec": 0.0,
+          "end_sec": 15.32,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1front.mp4",
+          "start_sec": 0.0,
+          "end_sec": 1.08,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1front.mp4",
+          "start_sec": 3.76,
+          "end_sec": 15.32,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "pedestrian moving through the area",
+      "event_type": "walking",
+      "query_kind": "paraphrase",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 0.68,
+          "end_sec": 7.2,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 9.44,
+          "end_sec": 20.48,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 0.0,
+          "end_sec": 3.32,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 5.92,
+          "end_sec": 9.92,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 11.92,
+          "end_sec": 21.92,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 30.0,
+          "end_sec": 34.36,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 3.2,
+          "end_sec": 7.08,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 7.72,
+          "end_sec": 11.92,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 19.2,
+          "end_sec": 26.2,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 38.0,
+          "end_sec": 40.28,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1cor.mp4",
+          "start_sec": 0.0,
+          "end_sec": 15.32,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1front.mp4",
+          "start_sec": 0.0,
+          "end_sec": 1.08,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1front.mp4",
+          "start_sec": 3.76,
+          "end_sec": 15.32,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "a person standing still",
+      "event_type": "standing_still",
+      "query_kind": "direct",
+      "split": "dev",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 7.2,
+          "end_sec": 10.88,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 12.48,
+          "end_sec": 16.6,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 19.92,
+          "end_sec": 24.44,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 4.28,
+          "end_sec": 7.12,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 13.36,
+          "end_sec": 19.28,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "someone waiting in one place without moving",
+      "event_type": "standing_still",
+      "query_kind": "paraphrase",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 7.2,
+          "end_sec": 10.88,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 12.48,
+          "end_sec": 16.6,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 19.92,
+          "end_sec": 24.44,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 4.28,
+          "end_sec": 7.12,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 13.36,
+          "end_sec": 19.28,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "a person browsing at a display",
+      "event_type": "browsing",
+      "query_kind": "direct",
+      "split": "dev",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 21.92,
+          "end_sec": 30.0,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "someone stopping to look at information on a board",
+      "event_type": "browsing",
+      "query_kind": "paraphrase",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 21.92,
+          "end_sec": 30.0,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "a person entering a shop",
+      "event_type": "shop_enter",
+      "query_kind": "direct",
+      "split": "dev",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "EnterExitCrossingPaths1cor.mp4",
+          "start_sec": 5.88,
+          "end_sec": 6.36,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1front.mp4",
+          "start_sec": 8.0,
+          "end_sec": 10.04,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "a customer walking into a store",
+      "event_type": "shop_enter",
+      "query_kind": "paraphrase",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "EnterExitCrossingPaths1cor.mp4",
+          "start_sec": 5.88,
+          "end_sec": 6.36,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1front.mp4",
+          "start_sec": 8.0,
+          "end_sec": 10.04,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "a person leaving a shop",
+      "event_type": "shop_exit",
+      "query_kind": "direct",
+      "split": "dev",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "EnterExitCrossingPaths1cor.mp4",
+          "start_sec": 4.68,
+          "end_sec": 6.68,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1front.mp4",
+          "start_sec": 8.68,
+          "end_sec": 10.88,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "someone coming out of a store",
+      "event_type": "shop_exit",
+      "query_kind": "paraphrase",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "EnterExitCrossingPaths1cor.mp4",
+          "start_sec": 4.68,
+          "end_sec": 6.68,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1front.mp4",
+          "start_sec": 8.68,
+          "end_sec": 10.88,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "a person falling to the floor",
+      "event_type": "fallen",
+      "query_kind": "direct",
+      "split": "dev",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 26.2,
+          "end_sec": 38.0,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "someone collapsed and lying on the ground",
+      "event_type": "fallen",
+      "query_kind": "paraphrase",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 26.2,
+          "end_sec": 38.0,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "two people meeting and talking",
+      "event_type": "meeting",
+      "query_kind": "direct",
+      "split": "dev",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 5.72,
+          "end_sec": 24.44,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 0.0,
+          "end_sec": 2.6,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "a small group of people standing together chatting",
+      "event_type": "meeting",
+      "query_kind": "paraphrase",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 5.72,
+          "end_sec": 24.44,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 0.0,
+          "end_sec": 2.6,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "a person",
+      "event_type": "person_present",
+      "query_kind": "ambiguous",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": [
+        {
+          "video": "Walk1.mp4",
+          "start_sec": 0.68,
+          "end_sec": 24.44,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 0.0,
+          "end_sec": 9.92,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Browse2.mp4",
+          "start_sec": 11.92,
+          "end_sec": 34.36,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "Rest_FallOnFloor.mp4",
+          "start_sec": 0.0,
+          "end_sec": 40.28,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1cor.mp4",
+          "start_sec": 0.0,
+          "end_sec": 15.32,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1front.mp4",
+          "start_sec": 0.0,
+          "end_sec": 1.08,
+          "verification": "publisher_label_unverified"
+        },
+        {
+          "video": "EnterExitCrossingPaths1front.mp4",
+          "start_sec": 3.76,
+          "end_sec": 15.32,
+          "verification": "publisher_label_unverified"
+        }
+      ]
+    },
+    {
+      "query": "someone acting suspiciously",
+      "event_type": "ambiguous",
+      "query_kind": "ambiguous",
+      "split": "test",
+      "measurable": false,
+      "verification": "unlabelled",
+      "note": "No objective publisher label; unmeasured until a reviewer defines and labels it.",
+      "events": []
+    },
+    {
+      "query": "a person wearing a dark coat",
+      "event_type": "appearance",
+      "query_kind": "appearance",
+      "split": "test",
+      "measurable": false,
+      "verification": "unlabelled",
+      "note": "CAVIAR does not label clothing; needs human labels before it can be scored.",
+      "events": []
+    },
+    {
+      "query": "a person carrying a bag",
+      "event_type": "appearance",
+      "query_kind": "appearance",
+      "split": "test",
+      "measurable": false,
+      "verification": "unlabelled",
+      "note": "CAVIAR does not label carried items in these clips; needs human labels.",
+      "events": []
+    },
+    {
+      "query": "a car driving past",
+      "event_type": "negative",
+      "query_kind": "negative",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "Indoor lobby and shopping-centre views; no vehicles are labelled.",
+      "events": []
+    },
+    {
+      "query": "fire or smoke",
+      "event_type": "negative",
+      "query_kind": "negative",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": []
+    },
+    {
+      "query": "a dog walking",
+      "event_type": "negative",
+      "query_kind": "negative",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "",
+      "events": []
+    },
+    {
+      "query": "a person running",
+      "event_type": "hard_negative",
+      "query_kind": "hard_negative",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "Visually close to walking; no 'running' movement label occurs in these clips.",
+      "events": []
+    },
+    {
+      "query": "two people fighting",
+      "event_type": "hard_negative",
+      "query_kind": "hard_negative",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "Visually close to meeting; CAVIAR fight clips are not in this subset.",
+      "events": []
+    },
+    {
+      "query": "a person leaving a bag behind",
+      "event_type": "hard_negative",
+      "query_kind": "hard_negative",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "Visually close to standing/browsing; CAVIAR left-bag clips are not in this subset.",
+      "events": []
+    },
+    {
+      "query": "a person riding a bicycle",
+      "event_type": "hard_negative",
+      "query_kind": "hard_negative",
+      "split": "test",
+      "measurable": true,
+      "verification": "publisher_label_unverified",
+      "note": "Visually close to walking; no bicycle is labelled.",
+      "events": []
+    }
+  ]
+}

@@ -59,7 +59,7 @@ def test_changed_archive_is_rejected(tmp_path, monkeypatch):
 def test_default_is_plan_only_and_manifest_prohibits_cloud():
     result = subprocess.run([sys.executable, str(SCRIPT)], capture_output=True, text=True, check=True)
     assert 'Plan only' in result.stdout
-    plan = json.loads(module.MANIFEST.read_text())
+    plan = json.loads(module.MANIFEST.read_text(encoding="utf-8"))
     assert plan['google_processing_approved'] is False
     assert plan['license'] == 'CC BY 4.0'
 

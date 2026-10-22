@@ -22,8 +22,14 @@ from pathlib import Path
 
 DECISIONS = ("correct", "wrong", "unsure")
 MODES = ("ranked", "visual")
-# Evidence can also be a moment an operator chose by hand in the video player (not a search result).
-EVIDENCE_MODES = MODES + ("manual",)
+# Evidence can also be a moment an operator chose by hand in the video player (not a search result),
+# a window from a direct footage scan (sampled images checked in order; no similarity ranking), or an
+# event from the preset offline event index (a label or a person detection; no ranking).
+# The evidence table has no constraint on this column, so existing files need no migration.
+EVIDENCE_MODES = MODES + ("manual", "scan", "index")
+# Provenance of an event-index clip, recorded by the server (never the client) in the append-only
+# "evidence_added" audit entry rather than in a new column, so no schema change is needed.
+EVENT_KEYS = ("label", "source", "source_label", "verification", "provenance", "dataset", "category", "detector")
 VISUAL_VERDICTS = ("supported", "not_supported", "unclear")
 STATUSES = ("open", "closed")
 
@@ -218,6 +224,22 @@ class Store:
                 q.pop("settings_json")
             inv["evidence"] = [dict(r) for r in conn.execute(
                 "SELECT * FROM evidence WHERE investigation_id=? AND removed_at IS NULL ORDER BY id", (inv_id,))]
+            # Event provenance and the full review history come from the append-only audit log (one query).
+            events, history = {}, {}
+            for a in conn.execute("SELECT at, action, detail_json FROM audit_log WHERE investigation_id=? AND action IN "
+                                  "('evidence_added','decision_recorded','decision_changed','note_changed') ORDER BY id",
+                                  (inv_id,)):
+                detail = json.loads(a["detail_json"])
+                ev = detail.get("evidence_id")
+                if a["action"] == "evidence_added":
+                    if detail.get("event"):
+                        events[ev] = detail["event"]
+                else:
+                    history.setdefault(ev, []).append({"at": a["at"], "action": a["action"],
+                                                       "from": detail.get("from"), "to": detail.get("to")})
+            for e in inv["evidence"]:
+                e["event"] = events.get(e["id"])
+                e["history"] = history.get(e["id"], [])
             inv["removed_evidence"] = [dict(r) for r in conn.execute(
                 "SELECT * FROM evidence WHERE investigation_id=? AND removed_at IS NOT NULL ORDER BY id", (inv_id,))]
             inv["recording_clocks"] = {r["video_sha256"]: r["recorded_start"] for r in conn.execute(
@@ -319,7 +341,16 @@ class Store:
         query = _text(item.get("query"), "Query", 1, 500)
         mode = item.get("search_mode")
         if mode not in EVIDENCE_MODES:
-            raise InvestigationError("Search mode must be ranked, visual or manual.")
+            raise InvestigationError("Search mode must be ranked, visual, scan, manual or index.")
+        if mode in ("scan", "index") and (item.get("rank") is not None or item.get("best_score") is not None):
+            raise InvestigationError("A footage-scan or event-index clip has no similarity rank or score.")
+        event = item.get("event")
+        if (mode == "index") != (event is not None):
+            raise InvestigationError("An event-index clip must carry its event provenance (and only such a clip may).")
+        if event is not None:
+            if not isinstance(event, dict) or not isinstance(event.get("label"), str) or not isinstance(event.get("source"), str):
+                raise InvestigationError("Invalid event provenance.")
+            event = {k: event[k] for k in EVENT_KEYS if event.get(k) is not None}
         rank = item.get("rank")
         if rank is not None and (type(rank) is not int or rank < 1):
             raise InvestigationError("rank must be a positive integer.")
@@ -353,8 +384,9 @@ class Store:
             ev_id = conn.execute(f"INSERT INTO evidence ({cols}) VALUES ({marks})",
                                  (*values.values(), inv_id, now())).lastrowid
             self._touch(conn, inv_id)
+            extra = {"event": event} if event else {}
             self._audit(conn, inv_id, "evidence_added", evidence_id=ev_id, video=values["video_filename"],
-                        video_sha256=sha, start_sec=start, end_sec=end, query=query, search_mode=mode)
+                        video_sha256=sha, start_sec=start, end_sec=end, query=query, search_mode=mode, **extra)
             return ev_id
         ev_id = self._run(fn)
         return next(e for e in self.get(inv_id)["evidence"] if e["id"] == ev_id)
@@ -488,7 +520,8 @@ def resolve_sources(evidence: list[dict], library: dict[str, dict], video_dir: P
     """Annotate evidence with where its source recording is now. Never rewrites stored references.
 
     library: {sha256: current video row}. source_status is "available", "renamed" (same content,
-    new name) or "missing" (content no longer in the library, or its file is gone)."""
+    new name), "missing" (content no longer in the library, or its file is gone) or "changed" (the
+    file's size no longer matches the indexed size: a cheap hint; exports re-hash every source)."""
     out = []
     root = video_dir.resolve()
     for e in evidence:
@@ -498,7 +531,10 @@ def resolve_sources(evidence: list[dict], library: dict[str, dict], video_dir: P
         if current is None or not path.is_relative_to(root) or not path.is_file():
             e.update(source_status="missing", current_video_id=None, current_filename=None, current_rel_path=None)
         else:
-            e.update(source_status="available" if current["rel_path"] == e["video_rel_path"] else "renamed",
+            status = "available" if current["rel_path"] == e["video_rel_path"] else "renamed"
+            if current.get("size_bytes") is not None and path.stat().st_size != current["size_bytes"]:
+                status = "changed"
+            e.update(source_status=status,
                      current_video_id=current["id"], current_filename=current["filename"],
                      current_rel_path=current["rel_path"])
         out.append(e)

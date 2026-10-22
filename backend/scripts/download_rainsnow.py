@@ -3,7 +3,6 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import os
 import shutil
 import ssl
 import subprocess
@@ -78,9 +77,8 @@ def prepare(clips):
     import cv2
     from tanya.config import Settings
     from tanya.indexer import Indexer
-    from tanya.playback import find_ffmpeg
-    executable = ROOT / '.venv/sentry' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-    ffmpeg = find_ffmpeg(executable)
+    from tanya.playback import find_local_ffmpeg
+    ffmpeg = find_local_ffmpeg(ROOT)   # PATH, TANYA_FFMPEG, TANYA_SENTRY_PYTHON (Windows) or .venv/sentry
     if not ffmpeg:
         raise ValueError('Local FFmpeg is required')
     videos = FOLDER / 'videos'
@@ -117,7 +115,7 @@ def prepare(clips):
     summary = Indexer(Settings(videos, FOLDER/'frames', FOLDER/'videos.db'), log=lambda _: None).run()
     if summary.has_failures:
         raise ValueError('Local research indexing failed')
-    (FOLDER/'media-manifest.json').write_text(json.dumps(media, indent=2)+'\n')
+    (FOLDER/'media-manifest.json').write_text(json.dumps(media, indent=2)+'\n', encoding="utf-8")
 
 
 def main():
@@ -126,7 +124,7 @@ def main():
     p.add_argument('--prepare', action='store_true')
     p.add_argument('--serve', action='store_true')
     args = p.parse_args()
-    plan = json.loads(MANIFEST.read_text())
+    plan = json.loads(MANIFEST.read_text(encoding="utf-8"))
     print(plan['attribution'], '; CC BY 4.0; Google processing disabled.')
     if not any(vars(args).values()):
         print('Plan only: six RGB recordings; use --download, then --prepare, then --serve.')

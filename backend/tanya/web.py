@@ -18,6 +18,8 @@ from werkzeug.utils import secure_filename
 from .config import SUPPORTED_EXTENSIONS, SEARCHABLE_EXTENSIONS, load_settings, load_search_settings
 from .indexer import Indexer, scan_video_dir, sha256_file
 from . import playback
+from . import person_detection
+from . import event_index
 from .search import search_videos
 from .sentry_client import SearchError, redact
 from . import sentry_client
@@ -26,6 +28,9 @@ from . import scenario_scan
 from .visual_review import review_results
 from . import feedback
 from . import case_report
+from . import cameras
+from . import incident_summary
+from . import tracking
 from .investigations import (InvestigationError, NotFound, Store, StoreUnavailable, resolve_sources,
                              timeline, verify_sources)
 
@@ -47,6 +52,12 @@ def safe_upload_name(original):
     return name
 
 
+# Map pictures for the camera map. Only tile images are fetched from this host; no footage, frames or
+# camera details are sent to it (a tile request reveals only which map area is being viewed). data: covers
+# the blank placeholder the map library swaps in for tiles that scroll out of view.
+MAP_TILE_SOURCES = "data: https://server.arcgisonline.com"
+
+
 def create_app(settings=None, search_settings=None, *, offline_search=None):
     settings = settings or load_settings()
     search_settings = search_settings or load_search_settings()
@@ -57,6 +68,20 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
                       SESSION_COOKIE_SAMESITE="Strict")
     lock = threading.Lock()
     scan_jobs = {}
+    # Up to three batches of an approved scan may be checked at once. While any run, they share the
+    # global lock, so uploads, indexing and preparation still wait for the whole scan.
+    scan_slots = threading.BoundedSemaphore(3)
+    # Tracking is local CPU work and read-only: one at a time, independent of the global lock.
+    track_slot = threading.Lock()
+    track_cache = {}
+    scans_running = [0]
+    scans_mutex = threading.Lock()
+    # Identifies this website process, so an open page can tell that the server was restarted (possibly with a
+    # different library, where the same video id names other footage) instead of mixing old and new state.
+    instance = secrets.token_hex(8)
+    # "replay" (recorded ranked results) or "event_index" (preset annotated events); None = normal app.
+    demo_mode = getattr(offline_search, "mode", "replay") if offline_search is not None else None
+    yolo = person_detection.load_config()   # optional; nothing runs until a user asks for one video
     settings.video_dir.mkdir(parents=True, exist_ok=True)
 
     def rows(sql, params=()):
@@ -80,7 +105,18 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
 
     store = Store(settings.db_path.with_name("investigations.db"))
 
-    def search_run_settings(visual_check):
+    def box_frames(hit):
+        """URLs of the extracted frames the checker drew boxes on, so the page can draw them."""
+        review = hit.get("visual_review") or {}
+        for box in review.get("evidence_boxes", []):
+            frame = rows("SELECT image_path FROM frames WHERE video_id=? AND timestamp_sec=?",
+                         (hit["video_id"], box["timestamp"]))
+            box["frame_url"] = url_for("frame_file", rel=frame[0]["image_path"]) if frame else None
+
+    def search_run_settings(visual_check, filters=None):
+        if demo_mode == "event_index":
+            return {"engine": "Preset offline event index (keyword and synonym rules; no AI)",
+                    "filters": filters.as_dict() if filters is not None and filters.active else None}
         return {"chunks_requested": 10, "merge_ratio": search_settings.merge_ratio,
                 "merge_gap_sec": search_settings.merge_gap_sec, "visual_check": visual_check,
                 "engine": "SentrySearch d3efd6a (Gemini Embedding 2), 10 s chunks / 2 s overlap"}
@@ -116,10 +152,11 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
     @app.after_request
     def headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-TanyaCCTV-Instance"] = instance
         response.headers["Referrer-Policy"] = "same-origin"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self'; style-src 'self'; "
-            "img-src 'self'; media-src 'self'; connect-src 'self'; frame-ancestors 'none'")
+            f"img-src 'self' {MAP_TILE_SOURCES}; media-src 'self'; connect-src 'self'; frame-ancestors 'none'")
         return response
 
     @app.errorhandler(HTTPException)
@@ -137,7 +174,8 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
     @app.get("/")
     def home():
         session.setdefault("csrf", secrets.token_hex(32))
-        return render_template("dashboard.html", csrf=session["csrf"], offline_demo=offline_search is not None)
+        return render_template("dashboard.html", csrf=session["csrf"], instance=instance,
+                               offline_demo=offline_search is not None, demo_mode=demo_mode)
 
     @app.get("/api/status")
     def status():
@@ -149,7 +187,8 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             except SearchError:
                 engine = False
         key = bool(os.environ.get("GEMINI_API_KEY"))
-        return jsonify(offline_demo=offline_search is not None, engine_ready=engine, key_ready=key,
+        return jsonify(offline_demo=offline_search is not None, demo_mode=demo_mode, engine_ready=engine, key_ready=key,
+                       yolo_ready=yolo.available,
                        search_ready=(offline_search is not None) or (engine and key),
                        scan_ready=bool(key and search_settings.sentry_python and search_settings.sentry_python.is_file()
                                        and offline_search is None),
@@ -171,7 +210,12 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
                     "message": "The original file is no longer in the video folder. Restore it, or re-index "
                                "to update the library."}
         code = playback.codec_of(source)
-        info = {"codec": code, "codec_name": playback.codec_name(code)}
+        info = {"codec": code, "codec_name": playback.codec_name(code), "changed": False, "changed_message": None}
+        # Cheap integrity hint (no hashing on every page view): the size recorded at indexing no longer matches.
+        if video.get("size_bytes") is not None and source.stat().st_size != video["size_bytes"]:
+            info.update(changed=True, changed_message=("This file has changed since it was indexed (its size differs), so it may not be the footage "
+                       "the frames, search results and evidence refer to. Re-index it before relying on it; "
+                       "report exports re-check every source's content hash."))
         if playback.browser_playable(source, code):
             return dict(info, status="playable", url=url_for("video_file", video_id=video["id"]), message=None)
         if playback.copy_path(playback_dir, video["sha256"]).is_file():
@@ -188,8 +232,10 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
     def videos():
         result = rows("SELECT * FROM videos ORDER BY id DESC")
         manifest = load_manifest(settings)
+        camera_details = cameras.load(settings)
         for video in result:
             video["search_state"] = search_state(video, manifest)
+            video["camera"] = camera_details.get(video["sha256"], {})
             frame = rows("SELECT image_path FROM frames WHERE video_id=? ORDER BY timestamp_sec LIMIT 1",
                          (video["id"],))
             video["thumbnail_url"] = url_for("frame_file", rel=frame[0]["image_path"]) if frame else None
@@ -207,9 +253,48 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             pass
         return jsonify(videos=result, waiting_files=waiting, unsupported_files=unsupported)
 
+    @app.post("/api/videos/<int:video_id>/camera")
+    def set_camera(video_id):
+        """Save a person-entered camera name, place and map location for this recording."""
+        video = rows("SELECT sha256 FROM videos WHERE id=?", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        try:
+            return jsonify(camera=cameras.update(settings, video[0]["sha256"], request.get_json(silent=True)))
+        except cameras.CameraError as error:
+            abort(400, description=str(error))
+
+    @app.post("/api/videos/<int:video_id>/track")
+    def track_target(video_id):
+        """Follow a boxed person or object through this recording, on this computer (nothing is sent)."""
+        video = rows("SELECT sha256, rel_path, duration_sec FROM videos WHERE id=? AND status='done'", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            abort(400, description="Send a moment and a box.")
+        source = source_path(video[0])
+        if source is None:
+            abort(404, description="The original file is no longer in the video folder.")
+        key = (video[0]["sha256"], data.get("timestamp"), str(data.get("box_2d")))
+        if key in track_cache:
+            return jsonify(track_cache[key])
+        if not track_slot.acquire(blocking=False):
+            abort(409, description="Another tracking job is running. Try again in a moment.")
+        try:
+            result = tracking.track(source, data.get("timestamp"), data.get("box_2d"), video[0]["duration_sec"])
+        except tracking.TrackingError as error:
+            abort(400, description=str(error))
+        finally:
+            track_slot.release()
+        if len(track_cache) > 50:
+            track_cache.clear()
+        track_cache[key] = result
+        return jsonify(result)
+
     @app.get("/api/videos/<int:video_id>/playback")
     def video_playback(video_id):
-        video = rows("SELECT id, sha256, rel_path, filename, duration_sec FROM videos WHERE id=?", (video_id,))
+        video = rows("SELECT id, sha256, rel_path, filename, duration_sec, size_bytes FROM videos WHERE id=?", (video_id,))
         if not video:
             abort(404, description="This video is no longer in the library.")
         info = playback_info(video[0])
@@ -219,7 +304,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
 
     @app.post("/api/videos/<int:video_id>/playback-copy")
     def make_playback_copy(video_id):
-        video = rows("SELECT id, sha256, rel_path, filename, duration_sec FROM videos WHERE id=?", (video_id,))
+        video = rows("SELECT id, sha256, rel_path, filename, duration_sec, size_bytes FROM videos WHERE id=?", (video_id,))
         if not video:
             abort(404, description="This video is no longer in the library.")
         video = video[0]
@@ -255,6 +340,57 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         for frame in result:
             frame["url"] = url_for("frame_file", rel=frame["image_path"])
         return jsonify(frames=result[:60], has_more=len(result) > 60)
+
+    @app.get("/api/videos/<int:video_id>/events")
+    def video_events(video_id):
+        """Indexed labels for this exact video (by content hash), for the player's event timeline.
+        Person detections are separate: see /people. Outside the event-index demo there is no label index."""
+        video = rows("SELECT id, sha256, duration_sec FROM videos WHERE id=? AND status='done'", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        if demo_mode != "event_index":
+            return jsonify(index_available=False, events=[], duration_sec=video[0]["duration_sec"])
+        return jsonify(index_available=True, duration_sec=video[0]["duration_sec"],
+                       events=offline_search.events_for_video(video[0]["sha256"], video[0]["duration_sec"]))
+
+    @app.get("/api/search/filters")
+    def search_filters():
+        if demo_mode != "event_index":
+            return jsonify(available=False)
+        return jsonify(available=True, **offline_search.filter_options(settings))
+
+    @app.get("/api/videos/<int:video_id>/people")
+    def people(video_id):
+        """Cached YOLO person-presence candidates for this exact video (never runs the detector)."""
+        video = rows("SELECT id, sha256 FROM videos WHERE id=? AND status='done'", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        return jsonify(available=yolo.available, reason=yolo.reason(),
+                       result=person_detection.load_cached(settings, video[0]["sha256"], yolo))
+
+    @app.post("/api/videos/<int:video_id>/people")
+    def find_people(video_id):
+        """Run local YOLO person detection on this one video, in the separate YOLO environment."""
+        video = rows("SELECT id, sha256, rel_path, filename, duration_sec FROM videos WHERE id=? AND status='done'",
+                     (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        if not yolo.available:
+            abort(503, description=yolo.reason())
+        source = source_path(video[0])
+        if source is None:
+            abort(404, description="The original file is no longer in the video folder.")
+        if sha256_file(source) != video[0]["sha256"]:
+            abort(409, description="This file has changed since it was indexed. Re-index it first.")
+        if not lock.acquire(blocking=False):   # one GPU job at a time (4 GB laptop GPU)
+            abort(409, description="Another operation is running. Try again when it finishes.")
+        try:
+            result = person_detection.run(settings, source, video[0]["sha256"], video[0]["duration_sec"], yolo)
+        except person_detection.PersonDetectionError as error:
+            return jsonify(error=str(error)), 500
+        finally:
+            lock.release()
+        return jsonify(available=True, reason=None, result=result)
 
     @app.get("/media/frames/<path:rel>")
     def frame_file(rel):
@@ -350,8 +486,13 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         data = request.get_json(silent=True)
         if not isinstance(data, dict) or data.get('approve_frame_upload') is not True:
             abort(400, description="Review the scan plan and approve its Google frame uploads first.")
-        if not lock.acquire(blocking=False):
+        if not scan_slots.acquire(blocking=False):
             abort(409, description="Wait for the current operation to finish.")
+        with scans_mutex:
+            if scans_running[0] == 0 and not lock.acquire(blocking=False):
+                scan_slots.release()
+                abort(409, description="Wait for the current operation to finish.")
+            scans_running[0] += 1
         job = None
         try:
             ident = data.get('scan_id')
@@ -363,6 +504,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             for hit in result['hits']+result['unclear_hits']+result['rejected_hits']:
                 hit['video_url'] = url_for('video_file', video_id=hit['video_id'])
                 hit['thumbnail_url'] = url_for('frame_file', rel=hit['thumbnail']) if hit['thumbnail'] else None
+                box_frames(hit)
             result['excluded_recordings'] = job['plan']['excluded']
             if result['done']:
                 scan_jobs.pop(ident, None)
@@ -372,7 +514,11 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
                 job['stopped'] = True
             return jsonify(error=redact(str(error))), 503
         finally:
-            lock.release()
+            with scans_mutex:
+                scans_running[0] -= 1
+                if scans_running[0] == 0:
+                    lock.release()
+            scan_slots.release()
 
     @app.post("/api/search/scan/cancel")
     def scenario_cancel():
@@ -402,12 +548,24 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         investigation_id = data.get("investigation_id")
         if investigation_id is not None and type(investigation_id) is not int:
             abort(400, description="investigation_id must be a number.")
+        filters = None
+        if data.get("filters") not in (None, {}):
+            if demo_mode != "event_index":
+                abort(400, description="Search filters are available for the preset event index only.")
+            try:
+                filters = event_index.parse_filters(data["filters"])
+            except event_index.FilterError as error:
+                abort(400, description=str(error))
         if not lock.acquire(blocking=False):
             abort(409, description="Wait for local indexing to finish before searching.")
         try:
-            result = (offline_search or search_videos)(query.strip(), settings, search_settings).to_dict()
+            if demo_mode == "event_index":
+                result = offline_search(query.strip(), settings, search_settings, filters=filters).to_dict()
+            else:
+                result = (offline_search or search_videos)(query.strip(), settings, search_settings).to_dict()
             coverage = search_coverage()
-            if coverage["needs_preparation"]:
+            # The preset event index does not use AI preparation, so that warning does not apply to it.
+            if coverage["needs_preparation"] and demo_mode != "event_index":
                 result["warnings"].insert(0, "These videos are not prepared for current AI search: "
                                           + ", ".join(coverage["needs_preparation"])
                                           + ". Review the AI indexing plan to include them.")
@@ -427,12 +585,13 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         for hit in all_hits:
             hit["video_url"] = url_for("video_file", video_id=hit["video_id"])
             hit["thumbnail_url"] = url_for("frame_file", rel=hit["thumbnail"]) if hit["thumbnail"] else None
+            box_frames(hit)
             hit["human_review"] = earlier.get((hit["video_id"], hit["start_sec"], hit["end_sec"]))
         if investigation_id is not None:
             # Save the query and the settings it ran with, so the investigation can re-run it.
             try:
                 result["saved_query"] = store.save_query(
-                    investigation_id, query, mode, search_run_settings(visual_check), result_count=len(all_hits))
+                    investigation_id, query, mode, search_run_settings(visual_check, filters), result_count=len(all_hits))
             except (InvestigationError, StoreUnavailable) as error:
                 result["warnings"].insert(0, f"The search ran, but was not saved to the investigation: {error}")
         return jsonify(result)
@@ -515,7 +674,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
     # ------------------------------------------------------------------ investigations
 
     def library_by_sha():
-        return {v["sha256"]: v for v in rows("SELECT id, sha256, filename, rel_path, duration_sec FROM videos "
+        return {v["sha256"]: v for v in rows("SELECT id, sha256, filename, rel_path, duration_sec, size_bytes FROM videos "
                                              "WHERE status = 'done'")}
 
     def body():
@@ -563,6 +722,25 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         store.update(inv_id, title=data.get("title"), description=data.get("description"))
         return jsonify(investigation_view(inv_id))
 
+    @app.post("/api/investigations/<int:inv_id>/summary")
+    def draft_summary(inv_id):
+        """An AI-drafted incident summary from the investigation's text facts. Returned for a person to read;
+        it is saved only if they choose to (as the case description)."""
+        if offline_search is not None:
+            abort(403, description="AI summaries are off in the offline demo; no Google calls are made.")
+        if body().get("approve_text_upload") is not True:
+            abort(400, description="Approve sending this investigation's text (times, camera names, decisions and "
+                                   "notes; no images) to Google first.")
+        inv = investigation_view(inv_id)
+        items = incident_summary.facts(inv, cameras.load(settings))
+        if not items:
+            abort(400, description="Add at least one clip to this investigation first.")
+        try:
+            text = incident_summary.run_summary({"title": inv["title"], "facts": items[:60]}, search_settings)
+        except SearchError as error:
+            return jsonify(error=redact(str(error))), 503
+        return jsonify(summary=text, facts=len(items))
+
     @app.post("/api/investigations/<int:inv_id>/status")
     def investigation_status(inv_id):
         store.set_status(inv_id, body().get("status"))
@@ -588,6 +766,18 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         if not isinstance(thumbnail, str) or not rows("SELECT 1 FROM frames WHERE video_id=? AND image_path=?",
                                                       (video["id"], thumbnail)):
             thumbnail = None  # anything that is not one of this video's own frames is dropped
+        event = None
+        if data.get("search_mode") == "index":
+            if demo_mode != "event_index":
+                abort(400, description="Event-index clips can only be added while the event index is loaded.")
+            source = data.get("event_source")
+            start, end = data.get("start_sec"), data.get("end_sec")
+            if source not in event_index.SOURCES or type(start) not in (int, float) or type(end) not in (int, float):
+                abort(400, description="An event-index clip needs its event source and times.")
+            event = offline_search.lookup(settings, video["sha256"], float(start), float(end), source)
+            if event is None:
+                abort(400, description="This clip does not match an indexed event or current person detection, "
+                                       "so its provenance cannot be recorded. Search again and add it from the results.")
         store.add_evidence(inv_id, dict(
             video_sha256=video["sha256"], video_filename=video["filename"], video_rel_path=video["rel_path"],
             video_duration_sec=video["duration_sec"], start_sec=data.get("start_sec"), end_sec=data.get("end_sec"),
@@ -595,7 +785,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             search_mode=data.get("search_mode"), rank=data.get("rank"), best_score=data.get("best_score"),
             score_above_median=data.get("score_above_median"), visual_verdict=data.get("visual_verdict"),
             visual_reason=redact(data["visual_reason"]) if isinstance(data.get("visual_reason"), str) else None,
-            thumbnail=thumbnail))
+            thumbnail=thumbnail, event=event))
         return jsonify(investigation_view(inv_id)), 201
 
     @app.post("/api/investigations/<int:inv_id>/evidence/<int:ev_id>/remove")
@@ -610,7 +800,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         # Mirror the decision into search feedback so result cards show it ("Your earlier review").
         current = library_by_sha().get(updated["video_sha256"])
         warning = None
-        if (data.get("decision") and current and updated["search_mode"] != "manual"
+        if (data.get("decision") and current and updated["search_mode"] in ("ranked", "visual")
                 and updated["end_sec"] <= (current["duration_sec"] or 0)):
             try:
                 feedback.save(feedback_path(), dict(
@@ -638,14 +828,19 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
 
     @app.post("/api/investigations/<int:inv_id>/report")
     def investigation_report(inv_id):
-        fmt = body().get("format")
+        options = body()
+        fmt = options.get("format")
         if fmt not in ("html", "json"):
             abort(400, description="Choose an HTML or JSON report.")
+        include_frames = options.get("include_frames", False)
+        if type(include_frames) is not bool:
+            abort(400, description="include_frames must be true or false.")
         inv = investigation_view(inv_id)
         store.record_export(inv_id, fmt)  # recorded before rendering, so the report includes it
         items = verify_sources(inv["evidence"], settings.video_dir, sha256_file)
-        report = case_report.build_report(inv, items, inv["timeline_basis"], store.audit(inv_id))
-        text = (case_report.render_html(report, settings.frames_dir) if fmt == "html"
+        report = case_report.build_report(inv, items, inv["timeline_basis"], store.audit(inv_id),
+                                          include_frames=include_frames and fmt == "html")
+        text = (case_report.render_html(report, settings.frames_dir if include_frames else None) if fmt == "html"
                 else case_report.render_json(report))
         name = f"investigation-{inv_id}-report.{fmt}"
         return app.response_class(text, mimetype="text/html" if fmt == "html" else "application/json",

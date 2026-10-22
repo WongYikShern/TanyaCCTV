@@ -9,11 +9,162 @@ folder. On macOS/Linux, use `.venv/bin/python` instead.
 > are ranked by similarity, not detected incidents. Every result stays unverified until a person
 > reviews it, and a low or missing result does not prove that something did not happen.
 
+## Command-centre walkthrough (about 4 minutes, live AI)
+
+The dark command-centre view on real public CCTV footage: camera wall, camera map, a search you can
+watch, boxes from the AI, following a person across cameras, watch-mode alerts and an AI case summary.
+Uses the normal website (`run_web.py`) with a Gemini key. Run each step once beforehand; if Google is
+busy the app retries "busy" replies up to 3 times, and the offline demo below needs no internet.
+
+**Footage.** The library holds 4 CAVIAR mall clips (lobby, atrium, corridor, shop front; the corridor
+and shop front are the same moment from two cameras) and three 30-second RainSnow traffic cuts (rain,
+night, snow). Older test clips are *hidden* (Cameras → Hide), so they stay out of the wall, map and
+"All recordings". Names, places and map positions are a demo layout typed in by hand and kept in
+`data/cameras.json` (not in Git). The footer credits CAVIAR (CC BY-SA) and AAU RainSnow (CC BY 4.0).
+
+In front of the judges:
+
+1. **Dashboard.** The camera wall loops each recording, labelled RECORDED with its position in the
+   recording. "These are recordings; the same pipeline takes footage as it arrives (step 6)."
+2. **Search.** Type, or press the mic and say, "a person walking along the corridor". Approve the plan
+   (it shows how many images are sent). Up to three requests run at once: frames flip in the viewer,
+   cameras light up in the sweep row and on the mini map, and when the AI finds something it locks on
+   to the frame with the AI's box around the person.
+3. **Results.** Search time, footage searched, likely moments, "% less to watch". Each match shows the
+   AI's box and reason; press **Play key moment**.
+4. **Follow this person.** Search "a man in a white jumper walking along the corridor" on the
+   **Corridor** camera, then press **Follow this person** on the match. It searches only the cameras
+   within 150 m on the map (the mall cameras), using the AI's description of him. In this CAVIAR
+   recording the same man is filmed by two cameras: he leaves the shop (**Shop front, 10:35:17** on the
+   camera's burned-in clock) and walks down the corridor (**Corridor, 10:35:20**). With each camera's
+   "Recording started at" time set (Cameras → Rename / place), the route uses those clock times.
+   **Show route on map**: an animated path with time chips. Say "possibly the same person": the app
+   never identifies anyone.
+5. **Investigation.** Add the clips, mark them Relevant, then **AI incident summary → Draft with AI**
+   (text only, no images). Read it and **Save as case summary**; it goes into the report.
+6. **Watch mode.** On the dashboard, "Alert me when… a person lying on the floor", approve, **Start
+   watching**. Then **Cameras → Add footage** and upload `data/demo-upload/new_lobby_recording.mp4`
+   (a fresh encode of the CAVIAR fall scene; an identical copy would be refused as a duplicate). It is
+   added, checked automatically, and an alert pops up with a sound, the AI's box and **Play clip**.
+   Uploading it a second time is refused as a duplicate, so re-encode another copy for a rehearsal.
+
+**Follow a target in the player.** Opening a match that has the AI's box (**Play key moment**) tracks
+that person or object on this computer: a green square follows them during playback, turns grey "not
+visible" while they are hidden, and green again when they reappear. Without the AI (for example when
+the Google limit is used up), pause any video, press **Follow someone** and drag a square around a
+person. Rehearsed on the theft clips: *Garage driveway* (box the man at 0:09; he is not visible inside
+the garage 0:12-0:24 and is followed again at 0:28 with the motorbike) and *Parking bay* (box the man in
+the helmet at 0:20; followed to the motorbike). Tracking takes about 10 seconds and covers 4 s before to
+20 s after the boxed moment. It can drift in dark or crowded footage.
+
+**Map.** Map / Satellite / Hybrid styles, camera view cones (↺ ↻ to turn), a labelled site zone for
+cameras sharing a place prefix ("Mall · …"), hover a pin to play its footage.
+
+**Google quota.** A free-tier Gemini key allows only about 20 AI requests per day; a search across all
+cameras uses about 6. Enable billing on the key before presenting, or searches will stop with a
+"usage limit … used up" message.
+
+Honest points: boxes, reasons and verdicts are AI suggestions; matches are unconfirmed until a person
+marks them. Follow-routes are ordered by time within each recording, which assumes the recordings
+cover the same period. Watch mode works while the page is open and skips recordings needing more than
+60 images. Camera locations are set by a person. The map and voice search need internet.
+
+## Hackathon demo: preset event index, fully offline (default launcher mode)
+
+No Gemini key, no network and no paid call. Searches match your words (explicit synonym rules,
+no AI) to events that were annotated in advance, then open the real footage at that time.
+
+```powershell
+$env:TANYA_SENTRY_PYTHON = "$HOME\sentrysearch-trial\tools\sentrysearch\Scripts\python.exe"   # FFmpeg for H.264 demo clips
+$env:TANYA_YOLO_HOME = "$env:LOCALAPPDATA\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\TanyaCCTV-YOLO"   # optional: this laptop's YOLO env
+.\.venv\Scripts\python.exe backend\scripts\run_offline_demo.py
+```
+
+Open http://localhost:5001/ (stop the normal website first; both use port 5001). The launcher
+makes a new workspace with:
+
+- the five generated synthetic clips and their scripted events (`make_demo_footage.py`:
+  walking, falling, lying, entering/leaving through a door, standing still, red and blue cars);
+- the five CAVIAR clips, copied only if `data/cctv_validation/caviar/videos/` holds files whose
+  SHA-256 matches the labelled video; labels are the local single-reviewer provisional file when
+  present, otherwise the publisher-derived labels;
+- the saved YOLO GPU 384 run's person detections for those CAVIAR clips, if found.
+
+Every result shows its source: **Annotated · reviewed by one person** (provisional, not
+independently verified), **Annotated (publisher)**, **Scripted demo event** (known by
+construction, cartoon footage) or **Person detected (YOLO) · needs review**. Results play from
+2 s before to 2 s after the labelled interval; the exact label times are under Details.
+Camera words (corridor, front, overhead, lobby, car park, entrance, driveway), colours and
+"after/before/between N s" filter results. Unknown or unsupported requests (fights, fire, weapons,
+theft, running) return an explicit no-match. YOLO detections appear only for plain person
+queries, never for falls or other actions. A video's player page can run YOLO on that one video
+when the YOLO environment is set up (about 0.5 s per second of footage on the RTX 3050 Ti).
+
+Suggested script: `a person falling` (CAVIAR staged fall + scripted falls) → open the first
+result → `someone entering a shop` (two CAVIAR views + a scripted door entry) → `a person`
+(annotated presence plus unreviewed YOLO candidates) → `two people fighting` (honest no-match).
+Investigations and reports work as before; index results are saved as ranked-mode clips with no
+score (the report does not yet name the index source; see the evaluation notes).
+
+`--dataset synthetic|caviar` limits the footage; `--search replay` starts the older recorded-search demo below.
+
+### Investigation features in the offline demo (22 October 2026 build)
+
+1. **Event timeline (player page).** Below the player, every indexed label for that exact video
+   (matched by content hash) is drawn on a bar: provisional single-reviewer CAVIAR labels (solid
+   orange), publisher labels (slate), scripted demo events (grey stripes). Overlapping events go to
+   separate rows; very dense recordings keep a scrollable list. Select an event (bar or list) to
+   jump to its start, or click anywhere on the bar to seek there; a red line follows playback.
+   The frame timeline and video controls are unchanged. Outside the demo there is no label index,
+   and the card says so.
+2. **YOLO person-presence lane.** Cached detections appear in their own dashed amber lane, never
+   mixed with labels, with detector confidence, frame count, the largest number of people boxed in
+   one frame and the strongest box (time, frame, pixel coordinates; "Strongest box" jumps there).
+   The status line says whether results are newly generated, cached for this video and model,
+   cached with an unverifiable model (the saved experiment run did not record its weights hash),
+   or stale (made with other weights; then not shown). "Find people" beside the player runs YOLO
+   on that one video only (GPU if available, otherwise the existing CPU fallback; ~50 MB GPU).
+3. **Evidence review.** Decisions read Relevant / Not relevant / Uncertain (stored as
+   correct / wrong / unsure, so older data and reports stay valid). Each item shows how it was
+   found; event-index clips also show their label, source and status, recorded by the server from
+   its own index or detection cache when the clip is added (a client cannot assert provenance).
+   The card lists the decision history (earlier decisions are never overwritten: they stay in the
+   append-only change history) and how often the note changed.
+4. **Reports.** The HTML report is branded, printable and shows summary cards (including
+   unresolved = uncertain + unreviewed), label caveats (provisional single-reviewer labels; YOLO
+   is not action recognition; synthetic footage), per-item event provenance and detector details,
+   decision history, saved searches with their filters, missing/changed source warnings and the
+   change log. Frame images are footage, so they are **not** embedded unless "Include frame images"
+   is ticked. JSON is `report_version` 2: every version-1 field is kept; new fields are added.
+5. **Search filters.** "Filters" under the search box (event-index demo only): event type,
+   result source, label status, recording, time range and a minimum YOLO confidence that applies
+   to person detections only. Options list only values that exist in the loaded library. Filters
+   combine with the words typed (leave the box empty, or type "all", to list everything that
+   passes the filters); active filters are shown above the results with a Clear button; saved
+   searches remember their filters and "Run again" restores them. Unsupported requests (fights,
+   fire...) still return an honest no-match, whatever the filters.
+
+Suggested demo: `a person falling` → open the CAVIAR result → point at the event timeline and its
+provisional status → open `EnterExitCrossingPaths1cor.mp4` to show the separate YOLO lane and
+"Strongest box" → Filters: Result source = Scripted, search `a person falling` → add a clip to an
+investigation, mark it Relevant then Uncertain, add a note → export the HTML report (frames off)
+and point at the caveats, history and provenance.
+
 ## Free offline rehearsal (recommended when internet is unreliable)
 
 1. Stop the existing website (Ctrl+C in its terminal).
 2. On macOS/Linux run `.venv/bin/python backend/scripts/run_offline_demo.py`.
-   On Windows run `.\.venv\Scripts\python.exe backend\scripts\run_offline_demo.py`.
+   On Windows, first point it at the local FFmpeg bundled with the search environment, so the
+   generated footage is H.264 and plays in the browser (only the encoder is used; no key or Google
+   client is loaded):
+
+   ```powershell
+   $env:TANYA_SENTRY_PYTHON = "$HOME\sentrysearch-trial\tools\sentrysearch\Scripts\python.exe"
+   .\.venv\Scripts\python.exe backend\scripts\run_offline_demo.py
+   ```
+
+   If it prints "FFmpeg was not found … will NOT play", set `TANYA_SENTRY_PYTHON` (or
+   `TANYA_FFMPEG`) and start again; frames, replayed search and reports still work without it.
 3. Open http://localhost:5001/. Check the **OFFLINE REPLAY DEMO** banner. This generates the two
    synthetic clips in a new temporary workspace and indexes them locally. It does not load
    `.env`, use a key, call Google, or change the real library.
@@ -145,9 +296,28 @@ search results instead of live calls.
 
 ## Honest limitations to state
 
-- **Not validated on real CCTV.** Ranking was measured on 3 positive queries with cartoon footage.
+- **Not validated on real CCTV.** The recorded cartoon benchmark covers 16 queries
+  (11 positive, five negative); it does not establish real-camera accuracy.
 - **Results are 10-second chunks**, grouped into windows. They're good for finding a moment, not
   frame-accurate.
 - **Search needs internet and a Gemini key,** and AI preparation sends video to Google.
 - **Image checking is experimental.** It looks only at sampled frames and can be wrong.
 - **No alarms.** There are no automatic alarms, identity recognition or decisions about people.
+
+## Latest offline rehearsal — 21 October 2026
+
+A fresh isolated workspace was generated with two H.264 synthetic videos (60 s and 40 s).
+All four fixed replay searches completed. Local video byte-range playback returned HTTP
+206; creating an investigation, saving a search, adding evidence, recording an unsure
+decision, and exporting JSON/HTML succeeded. The exported report had zero human-confirmed
+incidents: this was an automated workflow rehearsal, not human validation. Live indexing
+and visual-check endpoints returned HTTP 403 in offline mode. No Google call was made.
+
+The local rehearsal summary and exports are under ignored
+`data/cctv_validation/demo-rehearsal-2d4b8a94/`; they are not part of Git. The normal
+website and owner library were left running and unchanged. This validates the local
+workflow with fresh playable assets, not new AI output or a browser UI walkthrough.
+
+The independent CAVIAR review page is separate: http://127.0.0.1:5003/ while its local
+server runs. A human must perform that review and export their own CSV; an automated
+demo decision cannot substitute for the second reviewer.
