@@ -40,7 +40,7 @@ async function api(path, options={}) {
 function post(path, payload) { return api(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload||{})}); }
 
 // ---------------------------------------------------------------- routing
-const titles={dashboard:"Dashboard",library:"Cameras",map:"Map",watch:"Video player",search:"Search",investigations:"Investigations",system:"Settings"};
+const titles={dashboard:"Dashboard",monitor:"Live monitor",library:"Cameras",map:"Map",watch:"Video player",search:"Search",investigations:"Investigations",system:"Settings"};
 function route() {
   const hash=location.hash.slice(1)||"dashboard", [path,query=""]=hash.split("?"), [view,arg]=path.split("/");
   const page=titles[view] ? view : "dashboard";
@@ -53,6 +53,8 @@ function route() {
   if(page==="search") library().catch(error=>notice(error.message));
   if(page==="library") library().catch(error=>notice(error.message));
   if(page==="map") library().then(()=>window.showMap?.()).catch(error=>notice(error.message));
+  if(page==="monitor") library().then(()=>window.showMonitor?.()).catch(error=>notice(error.message));
+  else window.leaveMonitor?.();
   if(page==="investigations" && window.refreshInvestigation) window.refreshInvestigation().catch(error=>notice(error.message)); // never show stale source status
   if(page==="system") Promise.all([library(),status()]).catch(error=>notice(error.message));
   window.scrollTo(0,0);

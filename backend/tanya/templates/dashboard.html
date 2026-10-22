@@ -20,6 +20,7 @@
   <script defer src="{{ url_for('static', filename='map.js') }}"></script>
   <script defer src="{{ url_for('static', filename='watch.js') }}"></script>
   <script defer src="{{ url_for('static', filename='follow.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='monitor.js') }}"></script>
 </head>
 <body>
 <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -48,6 +49,7 @@
   <a class="brand" href="#dashboard" aria-label="TanyaCCTV dashboard"><img class="brand-mark" src="{{ url_for('static', filename='brand/tanyacctv-mark.png') }}" alt="" width="40" height="40"><span class="brand-text" aria-hidden="true"><span class="brand-name">Tanya<span>CCTV</span></span><span class="brand-tagline">Your township's cameras, now listening.</span></span></a>
   <nav>
     <a class="nav" data-view="dashboard" href="#dashboard"><svg><use href="#i-dashboard"/></svg>Dashboard</a>
+    <a class="nav" data-view="monitor" href="#monitor"><svg><use href="#i-eye"/></svg>Live monitor</a>
     <a class="nav" data-view="library" href="#library"><svg><use href="#i-library"/></svg>Cameras</a>
     <a class="nav" data-view="map" href="#map"><svg><use href="#i-map"/></svg>Map</a>
     <a class="nav" data-view="search" href="#search"><svg><use href="#i-search"/></svg>Search</a>
@@ -114,6 +116,28 @@
       </div>
       <div id="waiting" class="banner warn" hidden></div>
       <div id="videos" class="video-grid" aria-live="polite"></div>
+    </section>
+
+    <!-- Live monitor -->
+    <section class="page" data-page="monitor" hidden>
+      <div class="page-head"><div><h1 class="display">Live monitor</h1><p class="muted">Early warnings while it is happening: movement in a watched zone, someone lingering, someone at a protected item, an item left alone, someone not moving. Recordings play here as live feeds. Warnings describe what is seen, never what anyone intends: a person checks each one.</p></div>
+        <div class="head-actions"><button type="button" class="secondary" id="mon-sound" aria-pressed="true">Sound on</button><button type="button" id="mon-restart">Restart feeds</button></div></div>
+      <div id="threat" class="threat level-normal" role="status" aria-live="polite"><div class="threat-label"><span class="threat-dot"></span><b id="threat-text">All clear</b><span id="threat-sub" class="muted">No warnings in the last 20 seconds</span></div><div class="threat-bar"><i></i><i></i><i></i><i></i></div></div>
+      <div class="mon-layout">
+        <div id="mon-grid" class="mon-grid"></div>
+        <aside class="card mon-feed"><div class="card-head"><h2>Alerts</h2><button type="button" class="ghost small" id="mon-clear">Clear</button></div><ol id="mon-alerts" class="mon-alerts"><li class="empty">No alerts yet. Feeds with rules are being watched.</li></ol></aside>
+      </div>
+      <div id="rule-editor" class="rule-editor" hidden role="dialog" aria-modal="true" aria-labelledby="re-title">
+        <div class="card re-card">
+          <div class="card-head"><h2 id="re-title">Set up warnings</h2><button type="button" class="ghost small" id="re-close">Close</button></div>
+          <p class="muted small-note">Choose a tool, then drag a box on the picture. <b>Zone</b>: an area to watch. <b>Protect from theft</b>: warn when someone reaches it, alarm when it moves. <b>Watch for unattended</b>: warn when nobody is near it.</p>
+          <div class="re-tools" role="group" aria-label="Drawing tool"><button type="button" class="secondary small" data-tool="zone" aria-pressed="true">Zone</button><button type="button" class="secondary small" data-tool="theft" aria-pressed="false">Protect from theft</button><button type="button" class="secondary small" data-tool="unattended" aria-pressed="false">Watch for unattended</button></div>
+          <div class="re-stage"><img id="re-frame" alt="Camera picture for drawing"><div id="re-layer" class="re-layer"></div></div>
+          <ul id="re-list" class="re-list"></ul>
+          <div class="re-hours"><label class="check"><input type="checkbox" id="re-hours-on"><span>Only warn about movement between</span></label><input type="time" id="re-from" class="input" value="22:00"><span>and</span><input type="time" id="re-to" class="input" value="06:00"></div>
+          <div class="confirm-actions"><button type="button" id="re-save">Save rules</button><button type="button" class="secondary" id="re-clear">Remove all rules</button></div>
+        </div>
+      </div>
     </section>
 
     <!-- Map -->

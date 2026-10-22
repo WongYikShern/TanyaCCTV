@@ -11,6 +11,8 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+from . import sentinel
+
 MAX_NAME = 60
 MAX_PLACE = 80
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -92,6 +94,12 @@ def update(settings, sha256, data):
         if value is not None and (type(value) not in (int, float) or not math.isfinite(value)):
             raise CameraError("Heading must be a number of degrees.")
         entry["heading"] = None if value is None else round(float(value) % 360, 1)
+    if "rules" in data:
+        # Early-warning rules for the live monitor (zones, protected items, watch hours); see sentinel.py.
+        try:
+            entry["rules"] = sentinel.clean_rules(data["rules"])
+        except sentinel.RuleError as error:
+            raise CameraError(str(error)) from None
     if "hidden" in data:
         if type(data["hidden"]) is not bool:
             raise CameraError("hidden must be true or false.")

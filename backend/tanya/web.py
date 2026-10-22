@@ -32,6 +32,7 @@ from . import cameras
 from . import incident_summary
 from . import tracking
 from . import footage_notes
+from . import sentinel
 from .investigations import (InvestigationError, NotFound, Store, StoreUnavailable, resolve_sources,
                              timeline, verify_sources)
 
@@ -292,6 +293,31 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             track_cache.clear()
         track_cache[key] = result
         return jsonify(result)
+
+    @app.post("/api/videos/<int:video_id>/sentinel")
+    def sentinel_events(video_id):
+        """Early-warning events for this camera's rules, found on this computer (nothing is sent)."""
+        video = rows("SELECT sha256, rel_path, duration_sec FROM videos WHERE id=? AND status='done'", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        camera = cameras.load(settings).get(video[0]["sha256"], {})
+        if not camera.get("rules"):
+            abort(400, description="Set a zone or an item to protect for this camera first.")
+        source = source_path(video[0])
+        if source is None:
+            abort(404, description="The original file is no longer in the video folder.")
+        key = ("sentinel", video[0]["sha256"], json.dumps(camera["rules"], sort_keys=True), camera.get("started_at"))
+        if key not in track_cache:
+            # Feeds ask together when the monitor opens; each analysis takes about a second, so wait our turn.
+            if not track_slot.acquire(timeout=60):
+                abort(409, description="Another analysis is running. Try again in a moment.")
+            try:
+                track_cache[key] = sentinel.analyse(source, video[0]["duration_sec"], camera["rules"], camera.get("started_at"))
+            except sentinel.RuleError as error:
+                abort(400, description=str(error))
+            finally:
+                track_slot.release()
+        return jsonify(events=track_cache[key], rules=camera["rules"])
 
     @app.get("/api/videos/<int:video_id>/playback")
     def video_playback(video_id):

@@ -48,6 +48,17 @@ In front of the judges:
    added, checked automatically, and an alert pops up with a sound, the AI's box and **Play clip**.
    Uploading it a second time is refused as a duplicate, so re-encode another copy for a rehearsal.
 
+**Live monitor: early warnings (no Google needed).** *Live monitor* plays each camera as a live feed and
+raises alerts on warning signs found on this computer (fixed-camera motion analysis, about a second per
+clip): movement in a watched zone (optionally only during watch hours), someone lingering, someone at a
+protected item, a protected item moving (alarm), an item left unattended, someone not moving. A threat
+bar shows the highest level in the last 20 s; alerts sound and offer **Watch clip** with the square
+following. Draw rules with **Set up warnings** on a feed. Rehearsed: *Parking bay* notice 0:07, warnings
+0:12 and 0:17, alarm 0:51 when the motorbike leaves; *Garage* notice at 04:02:51 during watch hours,
+lingering warning; *Departure hall* bag unattended at 0:06; *Lobby* "has not moved, may need help" at 0:30
+(fall at 0:26). It sees movement, not people or intent: shadows and headlights can trigger it, and
+someone who stays still blends into the background after a while.
+
 **Pre-analysed footage (no Google needed).** `data/footage_notes.json` (local, not in Git) holds moments
 described by watching each demo recording, with a box on the person or object. A search first checks
 these notes, instantly and offline; results are labelled **Pre-analysed match** and the player then tracks
