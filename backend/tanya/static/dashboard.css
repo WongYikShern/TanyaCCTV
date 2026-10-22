@@ -643,3 +643,49 @@ button.ghost.danger-link:hover:not(:disabled) { color: var(--red-text); text-dec
 .more-info { margin-top: 4px; }
 .more-info > summary { margin: 2px 0 0; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 .case-row button.ghost.danger-link { margin-left: 0; }
+
+/* ---- Winning polish ---- */
+/* Time-saved numbers above search results (same look as the live search summary, in both themes). */
+.results-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 12px; }
+.results-kpis .kpi { display: flex; flex-direction: column; padding: 10px 14px; border-radius: 10px; background: var(--raised); border: 1px solid var(--line); }
+.results-kpis b { font-size: 26px; font-weight: 850; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--text); }
+.results-kpis span { font-size: 12px; color: var(--muted); }
+.results-kpis .hot b { color: var(--orange-text); }
+.results-kpis .g b { color: var(--green); }
+
+/* Where the moment sits in its recording. */
+.pos-bar { position: relative; height: 8px; margin: 6px 0 18px; border-radius: 99px; background: var(--raised); border: 1px solid var(--line); cursor: pointer; max-width: 420px; }
+.pos-bar > span { position: absolute; top: -1px; bottom: -1px; border-radius: 99px; background: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); }
+.pos-bar > i { position: absolute; top: 10px; font-style: normal; font-size: 10.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.pos-bar > i:last-of-type { right: 0; }
+.pos-bar:hover > span { background: var(--orange-strong); }
+
+/* Getting-started steps tick off as they are done. */
+.steps > * { display: inline-flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; }
+.steps > a:hover { color: var(--orange-text); }
+.steps > .done { color: var(--text); }
+.steps > .done b { background: var(--green-soft); color: var(--green); }
+.steps.all-done::after { content: "You're all set."; margin-left: auto; color: var(--green); font-weight: 600; }
+
+/* Investigation review progress. */
+.case-progress { display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; align-items: center; margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--raised); }
+.case-progress .progress-text { margin: 0; font-weight: 650; }
+.case-progress .progress { grid-column: 1 / -1; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.case-progress .progress > span { display: block; height: 100%; border-radius: 99px; background: var(--orange); transition: width .4s ease; }
+.case-progress.complete { border-color: rgba(61,214,140,.4); }
+.case-progress.complete .progress > span { background: var(--green); }
+.case-progress.complete .progress-text { color: var(--green); }
+.case-progress > button { grid-row: 1; grid-column: 2; }
+
+/* Gentle motion: pages fade in, results rise in one after another. */
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.page:not([hidden]) { animation: page-in .22s ease-out; }
+.result, .results-head, .results-kpis .kpi { animation: page-in .3s ease-out both; animation-delay: calc(var(--i, 0) * 70ms); }
+@media (prefers-reduced-motion: reduce) {
+  .page:not([hidden]), .result, .results-head, .results-kpis .kpi { animation: none; }
+  .case-progress .progress > span { transition: none; }
+}
+@media (max-width: 820px) {
+  .results-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .steps.all-done::after { margin-left: 0; flex-basis: 100%; }
+}

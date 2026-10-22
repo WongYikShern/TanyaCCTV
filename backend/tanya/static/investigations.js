@@ -69,6 +69,7 @@ function renderCase() {
   $("case-status").textContent = open ? "OPEN INVESTIGATION" : "CLOSED · REOPEN TO MAKE CHANGES";
   $("case-close").textContent = open ? "Close" : "Reopen";
   $("case-rename").disabled = !open;
+  renderProgress(c);
   renderQueries(c, open);
   renderClocks(c, open);
   $("case-basis").textContent = basisText[c.timeline_basis];
@@ -78,6 +79,23 @@ function renderCase() {
   if (c.removed_evidence.length) list.append(element("p", `${plural(c.removed_evidence.length, "clip")} removed; ${c.removed_evidence.length === 1 ? "it remains" : "they remain"} in the change history and the report.`, "muted"));
   $("case-history").open = false;
   $("case-history-items").replaceChildren();
+}
+
+// How far the human review has got: every clip needs a decision before the report tells the full story.
+function renderProgress(c) {
+  const box = $("case-progress"), total = c.evidence.length, done = c.evidence.filter(e => e.decision).length;
+  box.hidden = !total; box.replaceChildren();
+  if (!total) return;
+  const complete = done === total;
+  box.classList.toggle("complete", complete);
+  const bar = element("div", undefined, "progress"), fill = element("span"); fill.style.width = `${Math.round(done / total * 100)}%`; bar.append(fill);
+  box.append(element("p", complete ? `All ${plural(total, "clip")} reviewed · ready for the report` : `${done} of ${plural(total, "clip")} reviewed`, "progress-text"), bar);
+  bar.setAttribute("role", "progressbar"); bar.setAttribute("aria-valuemin", "0"); bar.setAttribute("aria-valuemax", String(total)); bar.setAttribute("aria-valuenow", String(done));
+  if (complete) {
+    const exp = element("button", "Export report", "small"); exp.type = "button";
+    exp.onclick = event => { event.stopPropagation(); $("case-export").open = true; $("case-export").scrollIntoView({block: "nearest"}); };
+    box.append(exp);
+  }
 }
 
 function renderQueries(c, open) {
