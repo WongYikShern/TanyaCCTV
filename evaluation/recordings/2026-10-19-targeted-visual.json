@@ -1,0 +1,287 @@
+{
+  "model": "gemini-3.8-flash",
+  "synthetic_only": true,
+  "image_limit": 66,
+  "attempted_images": 66,
+  "results": [
+    {
+      "query": "a person standing still for a long time",
+      "sampled_images": 30,
+      "summary": {
+        "checked_candidates": 5,
+        "sampled_frames": 30,
+        "supported": 1,
+        "unclear": 1,
+        "rejected": 4
+      },
+      "candidates": [
+        {
+          "retrieval_rank": 1,
+          "filename": "cam1_lobby.mp4",
+          "start_sec": 16.0,
+          "end_sec": 42.0,
+          "visual_review": {
+            "verdict": "not_supported",
+            "reason": "The person walks across the room between 21.0s and 37.0s, and then is seen lying down on the floor at 42.0s rather than standing still.",
+            "evidence_timestamps": [],
+            "sampled_timestamps": [
+              16.0,
+              21.0,
+              26.0,
+              32.0,
+              37.0,
+              42.0
+            ]
+          }
+        },
+        {
+          "retrieval_rank": 2,
+          "filename": "cam5_corridor.mp4",
+          "start_sec": 8.0,
+          "end_sec": 18.0,
+          "visual_review": {
+            "verdict": "not_supported",
+            "reason": "The person is walking across the corridor rather than standing still.",
+            "evidence_timestamps": [],
+            "sampled_timestamps": [
+              8.0,
+              10.0,
+              12.0,
+              14.0,
+              16.0,
+              18.0
+            ]
+          }
+        },
+        {
+          "retrieval_rank": 3,
+          "filename": "cam1_lobby.mp4",
+          "start_sec": 40.0,
+          "end_sec": 58.0,
+          "visual_review": {
+            "verdict": "not_supported",
+            "reason": "The person is lying down on the floor throughout all sampled frames, not standing.",
+            "evidence_timestamps": [],
+            "sampled_timestamps": [
+              40.0,
+              44.0,
+              47.0,
+              51.0,
+              54.0,
+              58.0
+            ]
+          }
+        },
+        {
+          "retrieval_rank": 4,
+          "filename": "cam3_entrance.mp4",
+          "start_sec": 8.0,
+          "end_sec": 18.0,
+          "visual_review": {
+            "verdict": "not_supported",
+            "reason": "The person enters and walks across the frame rather than remaining stationary.",
+            "evidence_timestamps": [],
+            "sampled_timestamps": [
+              8.0,
+              10.0,
+              12.0,
+              14.0,
+              16.0,
+              18.0
+            ]
+          }
+        },
+        {
+          "retrieval_rank": 5,
+          "filename": "cam3_entrance.mp4",
+          "start_sec": 24.0,
+          "end_sec": 42.0,
+          "visual_review": {
+            "verdict": "supported",
+            "reason": "A person is observed standing completely still in the exact same spot from 24.0s through 42.0s.",
+            "evidence_timestamps": [
+              24.0,
+              28.0,
+              31.0,
+              35.0,
+              38.0,
+              42.0
+            ],
+            "sampled_timestamps": [
+              24.0,
+              28.0,
+              31.0,
+              35.0,
+              38.0,
+              42.0
+            ]
+          }
+        },
+        {
+          "retrieval_rank": 6,
+          "filename": "cam3_entrance.mp4",
+          "start_sec": 48.0,
+          "end_sec": 58.0,
+          "visual_review": {
+            "verdict": "unclear",
+            "reason": "Outside the first 5 candidates; not visually checked.",
+            "evidence_timestamps": [],
+            "sampled_timestamps": []
+          }
+        }
+      ],
+      "elapsed_sec": 42.51
+    },
+    {
+      "query": "a parked car",
+      "sampled_images": 12,
+      "summary": {
+        "checked_candidates": 2,
+        "sampled_frames": 12,
+        "supported": 1,
+        "unclear": 0,
+        "rejected": 1
+      },
+      "candidates": [
+        {
+          "retrieval_rank": 1,
+          "filename": "cam2_carpark.mp4",
+          "start_sec": 0.0,
+          "end_sec": 40.0,
+          "visual_review": {
+            "verdict": "not_supported",
+            "reason": "A red car is seen driving across the parking lot across the timestamps rather than being parked.",
+            "evidence_timestamps": [],
+            "sampled_timestamps": [
+              0.0,
+              8.0,
+              16.0,
+              24.0,
+              32.0,
+              39.0
+            ]
+          }
+        },
+        {
+          "retrieval_rank": 2,
+          "filename": "cam4_driveway.mp4",
+          "start_sec": 8.0,
+          "end_sec": 50.0,
+          "visual_review": {
+            "verdict": "supported",
+            "reason": "A blue car is parked stationary inside the marked parking spot.",
+            "evidence_timestamps": [
+              25.0,
+              33.0
+            ],
+            "sampled_timestamps": [
+              8.0,
+              16.0,
+              25.0,
+              33.0,
+              42.0,
+              49.0
+            ]
+          }
+        }
+      ],
+      "elapsed_sec": 69.95
+    },
+    {
+      "query": "a person falling down",
+      "sampled_images": 24,
+      "summary": {
+        "checked_candidates": 4,
+        "sampled_frames": 24,
+        "supported": 1,
+        "unclear": 1,
+        "rejected": 2
+      },
+      "candidates": [
+        {
+          "retrieval_rank": 1,
+          "filename": "cam5_corridor.mp4",
+          "start_sec": 16.0,
+          "end_sec": 40.0,
+          "visual_review": {
+            "verdict": "supported",
+            "reason": "A person is shown walking upright at 16.0s, tilting backwards as they fall at 21.0s, and lying flat on the floor by 26.0s.",
+            "evidence_timestamps": [
+              21.0,
+              26.0
+            ],
+            "sampled_timestamps": [
+              16.0,
+              21.0,
+              26.0,
+              30.0,
+              35.0,
+              39.0
+            ]
+          }
+        },
+        {
+          "retrieval_rank": 2,
+          "filename": "cam1_lobby.mp4",
+          "start_sec": 32.0,
+          "end_sec": 60.0,
+          "visual_review": {
+            "verdict": "unclear",
+            "reason": "A person is standing upright at 38.0s and seen lying on the floor from 43.0s onward, but the action of falling down itself is not captured within the sampled frames.",
+            "evidence_timestamps": [],
+            "sampled_timestamps": [
+              32.0,
+              38.0,
+              43.0,
+              49.0,
+              54.0,
+              59.0
+            ]
+          }
+        },
+        {
+          "retrieval_rank": 3,
+          "filename": "cam5_corridor.mp4",
+          "start_sec": 0.0,
+          "end_sec": 18.0,
+          "visual_review": {
+            "verdict": "not_supported",
+            "reason": "The sampled frames show a person walking upright along the corridor without falling down.",
+            "evidence_timestamps": [],
+            "sampled_timestamps": [
+              0.0,
+              4.0,
+              7.0,
+              11.0,
+              14.0,
+              18.0
+            ]
+          }
+        },
+        {
+          "retrieval_rank": 4,
+          "filename": "cam3_entrance.mp4",
+          "start_sec": 48.0,
+          "end_sec": 58.0,
+          "visual_review": {
+            "verdict": "not_supported",
+            "reason": "The person walks towards and through a doorway, with no indication or occurrence of falling down.",
+            "evidence_timestamps": [],
+            "sampled_timestamps": [
+              48.0,
+              50.0,
+              52.0,
+              54.0,
+              56.0,
+              58.0
+            ]
+          }
+        }
+      ],
+      "elapsed_sec": 108.7
+    }
+  ],
+  "recorded_at": "2026-10-19",
+  "retrieval_recording": "2026-10-19-events.json",
+  "notes": "Explicitly approved 66 sampled synthetic images; cached retrieval, no video re-indexing or text embeddings. Gemini 3.8 Flash requested, default 5-window/6-frame sampling, no automatic retries. Unreviewed candidates remain unclear. These are selected smoke checks, not a representative accuracy benchmark."
+}

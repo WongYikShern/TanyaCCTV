@@ -14,6 +14,22 @@ with Google's Gemini Embedding 2, in a separate Python 3.12 environment. See
 A local Flask website and API now provide video upload, frame browsing, and semantic-search
 review. Telegram alerts and monitoring rules remain future work.
 
+Latest synthetic live evaluation (19 October 2026): all 16 labelled queries were measured on
+five cartoon clips. Merged hit@1 was 9/11 positive queries, precision@5 0.508 and recall@5 1.000;
+mean temporal IoU was only 0.453. Broad windows inflate overlap-based recall, and all five
+negative queries returned irrelevant clips. See the event-support guide for details. Real CCTV
+accuracy and reliable event localization remain unverified.
+
+A small public [CAVIAR real-camera research set](docs/caviar-research-set.md) is now downloaded
+locally with publisher labels and browser-compatible copies. These are staged recordings,
+kept outside Git; AI processing has not been approved or run on them. See the guide to
+re-download and open the separate local-only viewer.
+
+For your teammate: [current handoff and remaining work](docs/teammate-handoff.md).
+Timing diagnostics now distinguish any-overlap retrieval from stricter event localization;
+see [temporal validation](docs/temporal-validation.md). These metrics expose timing failures
+rather than claiming they are fixed.
+
 **Guides:**
 
 - [Demo guide](docs/demo.md): search, review, then an investigation and its report, on synthetic footage
@@ -22,6 +38,36 @@ review. Telegram alerts and monitoring rules remain future work.
 - [Performance](docs/performance.md): measured indexing and search times
 - [Validating on real CCTV](docs/cctv-accuracy-checklist.md)
 - [Handover notes](docs/continue-work.md) and [Phases 6–9 progress](docs/progress.md)
+
+A separate approved 66-image check filtered the selected loitering, parked-car and fall samples:
+the expected candidate was first in the supported group for all three. This does not change
+raw rankings or establish real CCTV accuracy. See [targeted visual checks](docs/targeted-visual-validation.md).
+
+Merged search results keep the full-window **Play from…** button and offer **Inspect strongest
+chunk…** to review a shorter source chunk first. This changes navigation only: chunk boundaries
+are not event boundaries, and search rankings remain unchanged. See [window review](docs/window-review.md).
+
+## Offline hackathon demonstration (no Gemini calls)
+
+To rehearse with synthetic footage and recorded search results, stop any existing website and run:
+
+```bash
+.venv/bin/python backend/scripts/run_offline_demo.py
+```
+
+On Windows use `.\.venv\Scripts\python.exe backend\scripts\run_offline_demo.py`.
+Open **http://localhost:5001/**. The banner says **OFFLINE REPLAY DEMO**. Search examples are
+exactly `a red car`, `a person walking`, `a person lying on the floor`, and `fire and smoke`.
+You can create investigations, save searches, add evidence, seek, record decisions, and export
+HTML/JSON reports. Unknown queries return an explanatory error. Image checking and AI
+preparation are blocked by the server, even if an API key exists in the parent environment.
+This is a workflow demonstration, not a fresh AI measurement.
+
+A new temporary workspace is printed at startup; your real library and `.env` stay untouched.
+Each launch starts a fresh workspace, so export reports before stopping. To choose where the
+new demo data is saved, add `--workspace /path/to/new-empty-folder`. Non-empty folders are
+refused. H.264 generation uses a local FFmpeg when available (including the copy inside
+`.venv/sentry`); otherwise frame review still works. See [demo guide](docs/demo.md).
 
 ## Local website (macOS / Linux)
 
@@ -748,3 +794,19 @@ files and open without internet (the videos are local).
 
 Use authorised sample footage only. Do not commit videos, extracted frames or databases:
 they are excluded by `.gitignore`.
+
+### Varied real-camera research footage
+
+The local acquisition now includes 11 licensed clips: five staged CAVIAR indoor recordings
+and six AAU RainSnow natural traffic recordings with day/night, rain/snow and four intersection
+views. See [the footage handoff](docs/real-cctv-footage-handoff.md) for sources, attribution,
+exact coverage and download/view commands. Media stays outside Git. Research viewers block
+cloud AI calls; accuracy and event timing are not yet validated.
+
+### Search a described scene across uploaded recordings
+
+Open Search and use **Scan footage for this scene** (the default). It scans samples throughout
+all indexed recordings, with an optional single-recording/time-range filter, without depending
+on the top similarity matches or an embedding index. Review and approve the exact Google
+upload plan first. Results include evidence timestamps and separate unclear/contradicted
+windows. See [scenario search](docs/scenario-search.md) for the workflow and sampling limits.

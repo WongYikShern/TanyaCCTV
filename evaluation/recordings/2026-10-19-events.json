@@ -1,0 +1,1668 @@
+{
+  "recorded_at": "2026-10-18T23:01:54.141078+00:00",
+  "engine": "SentrySearch d3efd6a, Gemini Embedding 2; isolated five-clip synthetic evaluation",
+  "indexed_videos": [
+    "cam1_lobby.mp4",
+    "cam2_carpark.mp4",
+    "cam3_entrance.mp4",
+    "cam4_driveway.mp4",
+    "cam5_corridor.mp4"
+  ],
+  "notes": "Fresh approved run; chunk duration 10 s, overlap 2 s, preprocessing 480 px/5 fps; no still-frame skipping; all chunks included; n=10, dedupe disabled. No API retries. Paths sanitized.",
+  "responses": {
+    "a person walking": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.4148,
+        "score_above_median": 0.0665,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.4108,
+        "score_above_median": 0.0625,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4032,
+        "score_above_median": 0.0549,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.3999,
+        "score_above_median": 0.0516,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3996,
+        "score_above_median": 0.0513,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 48.0,
+        "end_sec": 58.0,
+        "score": 0.3982,
+        "score_above_median": 0.0499,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.395,
+        "score_above_median": 0.0467,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.3905,
+        "score_above_median": 0.0422,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.388,
+        "score_above_median": 0.0397,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.3783,
+        "score_above_median": 0.03,
+        "status": "uncertain"
+      }
+    ],
+    "a person lying on the floor": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.4641,
+        "score_above_median": 0.111,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.4622,
+        "score_above_median": 0.1091,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.4511,
+        "score_above_median": 0.098,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 48.0,
+        "end_sec": 58.0,
+        "score": 0.4511,
+        "score_above_median": 0.0979,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 56.0,
+        "end_sec": 60.0,
+        "score": 0.4443,
+        "score_above_median": 0.0912,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4234,
+        "score_above_median": 0.0703,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.3946,
+        "score_above_median": 0.0415,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.3824,
+        "score_above_median": 0.0293,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.3744,
+        "score_above_median": 0.0213,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.366,
+        "score_above_median": 0.0129,
+        "status": "uncertain"
+      }
+    ],
+    "a person entering through a door": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 48.0,
+        "end_sec": 58.0,
+        "score": 0.4536,
+        "score_above_median": 0.0851,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.4534,
+        "score_above_median": 0.0849,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 56.0,
+        "end_sec": 60.0,
+        "score": 0.4387,
+        "score_above_median": 0.0701,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.4372,
+        "score_above_median": 0.0687,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4357,
+        "score_above_median": 0.0672,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.4238,
+        "score_above_median": 0.0552,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.4161,
+        "score_above_median": 0.0476,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.4157,
+        "score_above_median": 0.0472,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4099,
+        "score_above_median": 0.0414,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3935,
+        "score_above_median": 0.025,
+        "status": "uncertain"
+      }
+    ],
+    "a person leaving through a door": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 48.0,
+        "end_sec": 58.0,
+        "score": 0.4559,
+        "score_above_median": 0.0844,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.4504,
+        "score_above_median": 0.0789,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.4414,
+        "score_above_median": 0.0699,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 56.0,
+        "end_sec": 60.0,
+        "score": 0.4325,
+        "score_above_median": 0.061,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4301,
+        "score_above_median": 0.0585,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.425,
+        "score_above_median": 0.0535,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.4137,
+        "score_above_median": 0.0422,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.413,
+        "score_above_median": 0.0414,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.4106,
+        "score_above_median": 0.0391,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.4035,
+        "score_above_median": 0.032,
+        "status": "uncertain"
+      }
+    ],
+    "a person standing still for a long time": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4079,
+        "score_above_median": 0.0227,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.405,
+        "score_above_median": 0.0199,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.4027,
+        "score_above_median": 0.0175,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.4019,
+        "score_above_median": 0.0167,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.3947,
+        "score_above_median": 0.0095,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 48.0,
+        "end_sec": 58.0,
+        "score": 0.3947,
+        "score_above_median": 0.0095,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3938,
+        "score_above_median": 0.0086,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 48.0,
+        "end_sec": 58.0,
+        "score": 0.3919,
+        "score_above_median": 0.0067,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.3914,
+        "score_above_median": 0.0062,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.3911,
+        "score_above_median": 0.0059,
+        "status": "uncertain"
+      }
+    ],
+    "a person falling down": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4327,
+        "score_above_median": 0.0793,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.4202,
+        "score_above_median": 0.0668,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.4153,
+        "score_above_median": 0.0619,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.4138,
+        "score_above_median": 0.0605,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.4087,
+        "score_above_median": 0.0553,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 56.0,
+        "end_sec": 60.0,
+        "score": 0.4058,
+        "score_above_median": 0.0524,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 48.0,
+        "end_sec": 58.0,
+        "score": 0.4051,
+        "score_above_median": 0.0517,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.3934,
+        "score_above_median": 0.04,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.3817,
+        "score_above_median": 0.0283,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 48.0,
+        "end_sec": 58.0,
+        "score": 0.3806,
+        "score_above_median": 0.0273,
+        "status": "uncertain"
+      }
+    ],
+    "a red car": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3657,
+        "score_above_median": 0.1239,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.3601,
+        "score_above_median": 0.1182,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.3545,
+        "score_above_median": 0.1127,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3185,
+        "score_above_median": 0.0767,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.3022,
+        "score_above_median": 0.0603,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.2968,
+        "score_above_median": 0.055,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.2916,
+        "score_above_median": 0.0498,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.291,
+        "score_above_median": 0.0492,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.291,
+        "score_above_median": 0.0492,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.29,
+        "score_above_median": 0.0481,
+        "status": "uncertain"
+      }
+    ],
+    "a car": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3928,
+        "score_above_median": 0.1062,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.3666,
+        "score_above_median": 0.08,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.3615,
+        "score_above_median": 0.0748,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.3584,
+        "score_above_median": 0.0718,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.357,
+        "score_above_median": 0.0704,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.3437,
+        "score_above_median": 0.057,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3385,
+        "score_above_median": 0.0518,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.3382,
+        "score_above_median": 0.0516,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.3371,
+        "score_above_median": 0.0505,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.3348,
+        "score_above_median": 0.0482,
+        "status": "uncertain"
+      }
+    ],
+    "a car arriving and parking": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.4839,
+        "score_above_median": 0.1096,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4831,
+        "score_above_median": 0.1087,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.4815,
+        "score_above_median": 0.1072,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.4759,
+        "score_above_median": 0.1015,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4734,
+        "score_above_median": 0.099,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.47,
+        "score_above_median": 0.0957,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.4652,
+        "score_above_median": 0.0909,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.4637,
+        "score_above_median": 0.0893,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.4542,
+        "score_above_median": 0.0798,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.448,
+        "score_above_median": 0.0736,
+        "status": "uncertain"
+      }
+    ],
+    "a parked car": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4205,
+        "score_above_median": 0.106,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.4192,
+        "score_above_median": 0.1048,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.4189,
+        "score_above_median": 0.1045,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.4182,
+        "score_above_median": 0.1038,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.4169,
+        "score_above_median": 0.1025,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4156,
+        "score_above_median": 0.1012,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.4125,
+        "score_above_median": 0.0981,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.4119,
+        "score_above_median": 0.0975,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.4069,
+        "score_above_median": 0.0924,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.398,
+        "score_above_median": 0.0835,
+        "status": "uncertain"
+      }
+    ],
+    "a car driving away": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.4449,
+        "score_above_median": 0.1025,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.4303,
+        "score_above_median": 0.0879,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.4291,
+        "score_above_median": 0.0867,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.4206,
+        "score_above_median": 0.0782,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.4178,
+        "score_above_median": 0.0754,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.4161,
+        "score_above_median": 0.0737,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.4115,
+        "score_above_median": 0.0691,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.3956,
+        "score_above_median": 0.0532,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.3919,
+        "score_above_median": 0.0495,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3903,
+        "score_above_median": 0.0479,
+        "status": "uncertain"
+      }
+    ],
+    "fire and smoke": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.3346,
+        "score_above_median": 0.0138,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 48.0,
+        "end_sec": 58.0,
+        "score": 0.3342,
+        "score_above_median": 0.0134,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.3338,
+        "score_above_median": 0.013,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.3334,
+        "score_above_median": 0.0125,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.3313,
+        "score_above_median": 0.0104,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.3298,
+        "score_above_median": 0.009,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.3279,
+        "score_above_median": 0.0071,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3261,
+        "score_above_median": 0.0053,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.3251,
+        "score_above_median": 0.0042,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.3249,
+        "score_above_median": 0.0041,
+        "status": "uncertain"
+      }
+    ],
+    "a dog running": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.3616,
+        "score_above_median": 0.0371,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.3589,
+        "score_above_median": 0.0344,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.3547,
+        "score_above_median": 0.0303,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.3526,
+        "score_above_median": 0.0281,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.3525,
+        "score_above_median": 0.028,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3457,
+        "score_above_median": 0.0212,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 56.0,
+        "end_sec": 60.0,
+        "score": 0.3436,
+        "score_above_median": 0.0191,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.3414,
+        "score_above_median": 0.017,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3316,
+        "score_above_median": 0.0071,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.3302,
+        "score_above_median": 0.0057,
+        "status": "uncertain"
+      }
+    ],
+    "a bicycle": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.3015,
+        "score_above_median": 0.0302,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.296,
+        "score_above_median": 0.0247,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.2896,
+        "score_above_median": 0.0182,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.2875,
+        "score_above_median": 0.0162,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.2865,
+        "score_above_median": 0.0151,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.2846,
+        "score_above_median": 0.0132,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.282,
+        "score_above_median": 0.0107,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.282,
+        "score_above_median": 0.0106,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.2813,
+        "score_above_median": 0.0099,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.2806,
+        "score_above_median": 0.0093,
+        "status": "uncertain"
+      }
+    ],
+    "a crowd of people": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.3053,
+        "score_above_median": 0.0229,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.2973,
+        "score_above_median": 0.0149,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 56.0,
+        "end_sec": 60.0,
+        "score": 0.2944,
+        "score_above_median": 0.0121,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.2937,
+        "score_above_median": 0.0114,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.292,
+        "score_above_median": 0.0097,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 32.0,
+        "end_sec": 40.0,
+        "score": 0.2917,
+        "score_above_median": 0.0094,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.291,
+        "score_above_median": 0.0086,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.2902,
+        "score_above_median": 0.0079,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam5_corridor.mp4",
+        "filename": "cam5_corridor.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.2896,
+        "score_above_median": 0.0073,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.2891,
+        "score_above_median": 0.0068,
+        "status": "uncertain"
+      }
+    ],
+    "a person riding a motorcycle": [
+      {
+        "rank": 1,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.3236,
+        "score_above_median": 0.0473,
+        "status": "uncertain"
+      },
+      {
+        "rank": 2,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 32.0,
+        "end_sec": 42.0,
+        "score": 0.3088,
+        "score_above_median": 0.0326,
+        "status": "uncertain"
+      },
+      {
+        "rank": 3,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 8.0,
+        "end_sec": 18.0,
+        "score": 0.3001,
+        "score_above_median": 0.0239,
+        "status": "uncertain"
+      },
+      {
+        "rank": 4,
+        "source_file": "{VIDEO_DIR}/cam4_driveway.mp4",
+        "filename": "cam4_driveway.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.2999,
+        "score_above_median": 0.0237,
+        "status": "uncertain"
+      },
+      {
+        "rank": 5,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 24.0,
+        "end_sec": 34.0,
+        "score": 0.2972,
+        "score_above_median": 0.021,
+        "status": "uncertain"
+      },
+      {
+        "rank": 6,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 40.0,
+        "end_sec": 50.0,
+        "score": 0.2921,
+        "score_above_median": 0.0159,
+        "status": "uncertain"
+      },
+      {
+        "rank": 7,
+        "source_file": "{VIDEO_DIR}/cam1_lobby.mp4",
+        "filename": "cam1_lobby.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.2884,
+        "score_above_median": 0.0122,
+        "status": "uncertain"
+      },
+      {
+        "rank": 8,
+        "source_file": "{VIDEO_DIR}/cam2_carpark.mp4",
+        "filename": "cam2_carpark.mp4",
+        "start_sec": 0.0,
+        "end_sec": 10.0,
+        "score": 0.2877,
+        "score_above_median": 0.0114,
+        "status": "uncertain"
+      },
+      {
+        "rank": 9,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 16.0,
+        "end_sec": 26.0,
+        "score": 0.287,
+        "score_above_median": 0.0108,
+        "status": "uncertain"
+      },
+      {
+        "rank": 10,
+        "source_file": "{VIDEO_DIR}/cam3_entrance.mp4",
+        "filename": "cam3_entrance.mp4",
+        "start_sec": 56.0,
+        "end_sec": 60.0,
+        "score": 0.2861,
+        "score_above_median": 0.0098,
+        "status": "uncertain"
+      }
+    ]
+  },
+  "provenance": {
+    "synthetic_only": true,
+    "video_sha256": {
+      "cam1_lobby.mp4": "a476ba885e03ac4f3a51b143553a57c8e803258d943af00bf66845a32d13d23f",
+      "cam2_carpark.mp4": "be06f98a1552ed33e50bc74cbf1a383ef87ae1ea8017e6a9273647ef46afaae5",
+      "cam3_entrance.mp4": "f2df28425be32affaaf4c8dd6a6ee2215c3dd3af00934699b72fede841a5d3ee",
+      "cam4_driveway.mp4": "9baf05ab3925498d8c4e00b9f4fd17f67561fe51e117e3e5b623aab4a26c9322",
+      "cam5_corridor.mp4": "32be8b4e687a94508103158e7a05d8fd00592ed2091b0c65442d4aeca490b117"
+    },
+    "chunk_duration_sec": 10,
+    "overlap_sec": 2,
+    "target_resolution": 480,
+    "target_fps": 5,
+    "skip_still": false,
+    "requested_n": 10,
+    "video_embedding_requests": 32,
+    "text_embedding_requests": 16,
+    "automatic_retries": false,
+    "estimated_billed_video_frames": 304,
+    "estimated_paid_video_usd": 0.24016,
+    "billing_note": "Estimate from published per-frame rate; actual billing not inspected."
+  }
+}

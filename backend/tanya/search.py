@@ -59,7 +59,15 @@ class SearchResponse:
                  "independently confirms them; a low score does not prove an incident is absent.")
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        result = asdict(self)
+        for hit in result["hits"]:
+            # A navigation aid from existing rankings, never an inferred event boundary.
+            eligible = [c for c in hit["chunks"]
+                        if max(hit["start_sec"], c["start_sec"]) < min(hit["end_sec"], c["end_sec"])]
+            best = max(eligible, key=lambda c: (c["score"], -c["rank"])) if eligible else None
+            hit["review_focus"] = ({"start_sec": max(hit["start_sec"], best["start_sec"]),
+                                    "end_sec": min(hit["end_sec"], best["end_sec"])} if best else None)
+        return result
 
 
 # --------------------------------------------------------------------------- merging

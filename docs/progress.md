@@ -1,5 +1,14 @@
 # Phases 6–9 progress
 
+Latest follow-up: the approved five-clip/16-query synthetic live run completed on 19 October
+2026, with no retries. See `docs/event-support.md` for measured weak rankings and timing,
+and `docs/continue-work.md` for the current checkpoint. Real CCTV remains unvalidated.
+
+Update (19 October 2026): these phases were committed and merged through PRs #3/#4.
+The older "pending commit" notes below describe the pre-merge checkpoint. Follow
+`docs/continue-work.md` and `docs/macos-validation.md` for the subsequent Mac validation
+and offline replay demo; extended live event measurements remain pending.
+
 Branch `feature/investigation-casework`, based on `main` at `d1e51db`. Nothing is committed or pushed
 without the project owner's approval.
 

@@ -1,4 +1,112 @@
+> Latest core-search checkpoint: the normal website now defaults to direct multi-recording
+> scenario scans, with explicit upload plans and evidence timestamps. See
+> [scenario-search.md](scenario-search.md) and [teammate-handoff.md](teammate-handoff.md).
+> Selected live positives/negatives and an action sequence passed; one timeout required a
+> separately approved retry. Arbitrary-video accuracy is not established.
+
+> Latest footage checkpoint: 11 licensed real-camera clips acquired locally (CAVIAR + AAU RainSnow).
+> Day/night, rain/snow, indoor/outdoor, four traffic views. Reproduce and continue from
+> [real-cctv-footage-handoff.md](real-cctv-footage-handoff.md) and [teammate-handoff.md](teammate-handoff.md).
+> Acquisition is complete for the initial collection; AI accuracy/timing evaluation remains.
+
 # Continue TanyaCCTV work from another device
+
+Latest acquisition: five public staged CAVIAR real-camera clips and source labels downloaded,
+normalized/indexed separately, with Google blocked in the local viewer. No real-camera AI
+processing approved or run. See `docs/caviar-research-set.md` and the current handoff for paths,
+provenance, frame-label alignment caveats and next steps.
+
+**Start here:** [current teammate handoff](teammate-handoff.md). It supersedes the historical
+checkpoints below, including their old pending-key/commit notes.
+
+Latest offline addition: stricter timing diagnostics (IoU >= 0.3 and >= 0.5), with same-video
+matching, excluded negatives/unmeasured cases, and unchanged original ranking metrics.
+Merged recall@5 falls from 1.000 with any overlap to 0.455 at IoU >= 0.5. See
+`docs/temporal-validation.md`. No new Google calls, real footage, ranking or model changes.
+
+## Latest: approved targeted image checks (19 October 2026)
+
+Same PR #5 / branch `feature/macos-workflow-validation`. Owner approved 66 synthetic images
+for loitering, parked car and falling, using cached retrieval. All three calls completed with
+no retries; the allowance is consumed. No additional video/text embeddings or real CCTV.
+
+The correct loitering window (raw rank 5) and parked car (rank 2) became the first supported
+candidates. Falling was supported on the corridor's visible transition; the lobby's upright/
+lying samples stayed unclear rather than inventing a fall. Checked totals: 3 supported,
+7 not supported, 1 unclear; one additional candidate was not checked. Broad windows and raw
+ranking are unchanged. Saved recording and detailed limitations:
+`evaluation/recordings/2026-10-19-targeted-visual.json`, `docs/targeted-visual-validation.md`.
+
+Offline verification: **304 passed, 6 skipped**, with the same original trial-index and Windows-only prerequisites.
+SDK visual requests now allow one attempt; further sends require a fresh reviewed approval.
+Pending: authorised real CCTV/labels and separate upload approval, independent validation
+beyond these selected examples, precise timing, and teammate review. Do not claim reliable
+real-world detection or merge the PR automatically.
+
+## Previous: bounded source-chunk review (19 October 2026)
+
+Same branch/PR #5. Compared merge ratios on both recorded datasets, offline: narrower windows
+trade recall for timing, so no default/ranking change was justified. Added `review_focus` to API
+results and **Inspect strongest chunk…** alongside full-window playback, with explicit wording
+that source chunks are not event boundaries. Rankings, scores, full windows, human decisions and
+investigation references are unchanged. Missing chunks omit the control; focus is clamped.
+
+Browser replay verified car focus at 24 s with 24–34 s window and full context still 16–40 s.
+No additional API calls or real CCTV used. Tests: **303 passed, 6 skipped**. See
+`docs/window-review.md` for comparison data and limitations. Loitering/parked-car ranking is
+still not fixed; independent real labels and separate further live-evaluation approval are needed.
+No additional authorised real footage is available. Teammate review/merge remains their decision.
+
+## Earlier: approved synthetic live evaluation (19 October 2026)
+
+PR #5: https://github.com/WongYikShern/TanyaCCTV/pull/5, branch `feature/macos-workflow-validation`.
+User confirmed a new unshared key was saved and both shared keys revoked. The key from `.env`
+successfully completed the approved requests; revocation itself is user-confirmed, not independently
+verified. `.env` mode was 0600 and the credential was not printed or committed.
+
+- Approved: five synthetic clips (250 s; estimated 304 billed frames), 16 text queries, approx US$0.25.
+- Completed: 32 video embeddings and 16 text embeddings, no errors and no automatic retries.
+- Used an isolated temporary index, with all chunks included (no still skipping), 10 s / 2 s overlap,
+  480 px / 5 fps preprocessing, 10 results per query. No change to the real four-video library/index.
+- Saved sanitized recording and synthetic hashes at `evaluation/recordings/2026-10-19-events.json`.
+  Re-score using the command in `docs/event-support.md`. Do not repeat live API calls unnecessarily.
+- Merged: 9/11 hit@1, P@5 0.508, R@5 1.000, IoU 0.453. Recall uses any overlap, including broad windows.
+  Loitering ranked fifth; parked car second; fall localization was poor. All five negatives returned
+  unrelated clips. No detection-accuracy or image-check-validation claim.
+- Offline regression verification after saving this run: **301 passed, 6 skipped** (same trial-index
+  and Windows-only prerequisites as the earlier checkpoint).
+- No threshold/model changes. Pending: independent authorised real CCTV and labels, separate Google
+  approval for it, and teammate review. No additional real footage has been supplied.
+
+## Previous checkpoint: macOS validation (19 October 2026)
+
+Review PR: https://github.com/WongYikShern/TanyaCCTV/pull/5 (open, not merged).
+
+Branch `feature/macos-workflow-validation`, based on merged main `4922b36` (PRs #2–#4 are
+already merged). Earlier checkpoint language about unpushed branches below is historical.
+
+- Setup checker and dependency integrity pass; existing local key presence is not proof of
+  private key rotation, API access, or billing availability. No Google requests were made.
+- Fixed strict media URL rejection (no double-slash redirect), a Windows-specific fake encoder
+  in a Mac test, and the CLI-unconfigured test ignoring an installed auto-discovered environment.
+- Added `run_offline_demo.py`: isolated synthetic clips and four recorded queries, server-blocked
+  image checking and AI preparation, visible replay banner and appropriate example queries.
+- Browser: created an investigation, saved search, added evidence, played at 16 s, sought to 25 s,
+  saved decision/note, downloaded HTML and JSON and checked their contents. No console errors.
+- Phone width 390 px: investigations/search/library had no horizontal overflow. Upload picker
+  automation was blocked by extension file-URL access; no permissions were changed. API tests
+  cover upload/indexing, duplicates, corrupt/missing/unsupported files and error handling.
+- Backend with the configured pinned environment: **300 passed, 6 skipped** (four trial-index
+  cases require exactly the original synthetic index; two junction cases are Windows-only).
+- Bridge offline: **15 passed, 14 skipped, 4 live tests deselected** (original trial index
+  unavailable). Full detail: `docs/macos-validation.md`.
+- Offline recorded baseline reproduced: merged P@5 0.50, R@5 1.00, mean IoU 0.867 over just three
+  positive synthetic queries. Entry/exit/loitering/fall/new vehicle queries remain unmeasured.
+
+Run the offline demo per README; each launch creates a fresh workspace and does not touch the
+real four-video library. Pending: separately approved live evaluation, representative real CCTV
+annotations, private key rotation verification, and teammate PR review. Do not merge automatically.
+
 
 ## Latest checkpoint: branch `feature/investigation-casework` (19 October 2026)
 

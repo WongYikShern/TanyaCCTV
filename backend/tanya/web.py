@@ -5,6 +5,7 @@ import os
 import secrets
 import sqlite3
 import threading
+import time
 import uuid
 import hashlib
 import json
@@ -21,6 +22,7 @@ from .search import search_videos
 from .sentry_client import SearchError, redact
 from . import sentry_client
 from .search_sync import build_plan, load_manifest, apply_plan, sentry_cli_command
+from . import scenario_scan
 from .visual_review import review_results
 from . import feedback
 from . import case_report
@@ -45,13 +47,16 @@ def safe_upload_name(original):
     return name
 
 
-def create_app(settings=None, search_settings=None):
+def create_app(settings=None, search_settings=None, *, offline_search=None):
     settings = settings or load_settings()
     search_settings = search_settings or load_search_settings()
     app = Flask(__name__)
+    # Do not normalize double-slash media paths from invalid absolute DB references.
+    app.url_map.merge_slashes = False
     app.config.update(SECRET_KEY=secrets.token_hex(32), MAX_CONTENT_LENGTH=512 * 1024 * 1024,
                       SESSION_COOKIE_SAMESITE="Strict")
     lock = threading.Lock()
+    scan_jobs = {}
     settings.video_dir.mkdir(parents=True, exist_ok=True)
 
     def rows(sql, params=()):
@@ -98,6 +103,8 @@ def create_app(settings=None, search_settings=None):
 
     @app.before_request
     def local_requests_only():
+        if offline_search is not None and request.path in {"/api/search/plan", "/api/search/sync"}:
+            abort(403, description="AI preparation is disabled in the offline replay demo.")
         # Reject DNS rebinding and cross-site mutation requests, even on localhost.
         if request.host not in {"localhost:5001", "127.0.0.1:5001", "localhost", "127.0.0.1"}:
             abort(403)
@@ -130,7 +137,7 @@ def create_app(settings=None, search_settings=None):
     @app.get("/")
     def home():
         session.setdefault("csrf", secrets.token_hex(32))
-        return render_template("dashboard.html", csrf=session["csrf"])
+        return render_template("dashboard.html", csrf=session["csrf"], offline_demo=offline_search is not None)
 
     @app.get("/api/status")
     def status():
@@ -142,7 +149,10 @@ def create_app(settings=None, search_settings=None):
             except SearchError:
                 engine = False
         key = bool(os.environ.get("GEMINI_API_KEY"))
-        return jsonify(engine_ready=engine, key_ready=key, search_ready=engine and key,
+        return jsonify(offline_demo=offline_search is not None, engine_ready=engine, key_ready=key,
+                       search_ready=(offline_search is not None) or (engine and key),
+                       scan_ready=bool(key and search_settings.sentry_python and search_settings.sentry_python.is_file()
+                                       and offline_search is None),
                        busy=lock.locked(), max_upload_mb=512, coverage=search_coverage())
 
     playback_dir = settings.db_path.with_name("playback")
@@ -307,6 +317,73 @@ def create_app(settings=None, search_settings=None):
         finally:
             lock.release()
 
+    @app.post("/api/search/scan/plan")
+    def scenario_plan():
+        if offline_search is not None:
+            abort(403, description="Direct scanning is disabled in the offline replay demo.")
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            abort(400, description="Send a scene description and recording selection.")
+        if not lock.acquire(blocking=False):
+            abort(409, description="Wait for the current operation to finish.")
+        try:
+            plan = scenario_scan.build_library_plan(settings, data.get('query'), data.get('video_ids'),
+                                                   data.get('start_sec', 0), data.get('end_sec'))
+            now = time.monotonic()
+            for ident in list(scan_jobs):
+                if now-scan_jobs[ident]['created'] > 3600:
+                    del scan_jobs[ident]
+            if len(scan_jobs) >= 8:
+                abort(409, description="Cancel an earlier scan or refresh the server before creating more plans.")
+            ident = uuid.uuid4().hex
+            scan_jobs[ident] = dict(plan=plan, owner=session['csrf'], created=now, stopped=False)
+            return jsonify(scan_id=ident, **scenario_scan.public_plan(plan))
+        except (ValueError, SearchError) as error:
+            return jsonify(error=redact(str(error))), 400
+        finally:
+            lock.release()
+
+    @app.post("/api/search/scan/batch")
+    def scenario_batch():
+        if offline_search is not None:
+            abort(403, description="Direct scanning is disabled in the offline replay demo.")
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict) or data.get('approve_frame_upload') is not True:
+            abort(400, description="Review the scan plan and approve its Google frame uploads first.")
+        if not lock.acquire(blocking=False):
+            abort(409, description="Wait for the current operation to finish.")
+        job = None
+        try:
+            ident = data.get('scan_id')
+            job = scan_jobs.get(ident) if isinstance(ident, str) else None
+            if (not job or job['owner'] != session['csrf'] or job['stopped']
+                    or time.monotonic()-job['created'] > 3600):
+                abort(409, description="This scan is stopped, expired or unavailable. Review a new plan.")
+            result = scenario_scan.run_batch(job['plan'], data.get('batch'), settings, search_settings)
+            for hit in result['hits']+result['unclear_hits']+result['rejected_hits']:
+                hit['video_url'] = url_for('video_file', video_id=hit['video_id'])
+                hit['thumbnail_url'] = url_for('frame_file', rel=hit['thumbnail']) if hit['thumbnail'] else None
+            result['excluded_recordings'] = job['plan']['excluded']
+            if result['done']:
+                scan_jobs.pop(ident, None)
+            return jsonify(result)
+        except (ValueError, SearchError) as error:
+            if job:
+                job['stopped'] = True
+            return jsonify(error=redact(str(error))), 503
+        finally:
+            lock.release()
+
+    @app.post("/api/search/scan/cancel")
+    def scenario_cancel():
+        data = request.get_json(silent=True) or {}
+        ident = data.get('scan_id') if isinstance(data, dict) else None
+        job = scan_jobs.get(ident) if isinstance(ident, str) else None
+        if job and job['owner'] == session['csrf']:
+            job['stopped'] = True
+            del scan_jobs[ident]
+        return jsonify(ok=True)
+
     @app.post("/api/search")
     def search():
         data = request.get_json(silent=True) or {}
@@ -318,6 +395,8 @@ def create_app(settings=None, search_settings=None):
         visual_check = data.get("visual_check", False)
         if type(visual_check) is not bool:
             abort(400, description="visual_check must be true or false.")
+        if visual_check and offline_search is not None:
+            abort(403, description="Image checking is disabled in the offline replay demo; no Google calls are made.")
         if visual_check and data.get("approve_frame_upload") is not True:
             abort(400, description="Approve sending sampled frames to Google before visual checking.")
         investigation_id = data.get("investigation_id")
@@ -326,7 +405,7 @@ def create_app(settings=None, search_settings=None):
         if not lock.acquire(blocking=False):
             abort(409, description="Wait for local indexing to finish before searching.")
         try:
-            result = search_videos(query.strip(), settings, search_settings).to_dict()
+            result = (offline_search or search_videos)(query.strip(), settings, search_settings).to_dict()
             coverage = search_coverage()
             if coverage["needs_preparation"]:
                 result["warnings"].insert(0, "These videos are not prepared for current AI search: "

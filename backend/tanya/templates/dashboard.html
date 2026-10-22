@@ -46,6 +46,8 @@
   </header>
 
   <main>
+    {% if config.get('LOCAL_RESEARCH_SOURCE') %}<div class="banner warn" role="status"><strong>{{ config.get('LOCAL_RESEARCH_TITLE', 'CAVIAR real-camera research set — staged scenes.') }}</strong> Local review only; Google processing disabled. Showing MP4 review copies; publisher originals are kept separately. Attribution: {{ config.get('LOCAL_RESEARCH_ATTRIBUTION', 'EC Funded CAVIAR project/IST 2001 37540. Publisher states CC BY-SA.') }} <a href="{{ config['LOCAL_RESEARCH_SOURCE'] }}" target="_blank" rel="noreferrer">Publisher and usage terms</a></div>{% endif %}
+    {% if offline_demo %}<div class="banner warn" role="status"><strong>OFFLINE REPLAY DEMO — no live AI.</strong> Search replays four recorded queries on synthetic footage. Image checking and AI preparation are disabled. Demo uploads are local and are not added to recorded search results.</div>{% endif %}
     <!-- Dashboard -->
     <section class="page" data-page="dashboard">
       <div class="page-head"><div><p class="eyebrow">OVERVIEW</p><h1>CCTV investigation workspace</h1><p class="muted">Find footage worth checking, review it, and keep a traceable record. Search results are never treated as confirmed incidents.</p></div></div>
@@ -101,13 +103,26 @@
 
     <!-- Search -->
     <section class="page" data-page="search" id="search" hidden>
-      <div class="page-head"><div><p class="eyebrow">NATURAL-LANGUAGE SEARCH</p><h1>What are you looking for?</h1><p class="muted">Describe a moment. Results are the nearest matching clips, ranked by similarity: always check them yourself.</p></div><span class="pill-soft">Human review required</span></div>
+      <div class="page-head"><div><p class="eyebrow">NATURAL-LANGUAGE SEARCH</p><h1>What are you looking for?</h1><p class="muted">Describe the people, objects or sequence you want to find. Scan your uploaded recordings and open matching moments for review.</p></div><span class="pill-soft">Human review required</span></div>
       <form id="search-form" class="card search-card">
         <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="query">Describe a moment</label><input id="query" maxlength="500" required placeholder="e.g. a person walking through the lobby"><button id="search-button">Search ranked clips</button></div>
         <div class="examples" id="examples"><span class="muted">Try:</span><button type="button" class="chip">a person walking through the lobby</button><button type="button" class="chip">a red car entering the car park</button><button type="button" class="chip">a person lying on the floor</button><button type="button" class="chip">someone standing still for a long time</button></div>
         <div class="search-options">
+          <label for="search-mode">Search method <select id="search-mode" class="input"><option value="direct" {% if offline_demo %}disabled{% else %}selected{% endif %}>Scan footage for this scene</option><option value="ranked" {% if offline_demo %}selected{% endif %}>Fast similarity search</option></select></label>
           <label class="save-to" for="save-to">Save searches and clips to <select id="save-to" class="input"><option value="">No investigation</option></select></label>
-          <label class="check"><input id="visual-check" type="checkbox"><span>Also check the actual images (experimental; sends sampled frames to Google)</span></label>
+          <label class="check" id="ranked-visual-option"><input id="visual-check" type="checkbox"><span>Also check the actual images (experimental; sends sampled frames to Google)</span></label>
+        </div>
+        <div id="scenario-options">
+          <label for="scan-video">Search in <select id="scan-video" class="input"><option value="all">All indexed recordings</option></select></label>
+          <div class="search-options"><label for="scan-start">Start (seconds, optional) <input id="scan-start" class="input" type="number" min="0" step="0.1" placeholder="0"></label><label for="scan-end">End (seconds, optional) <input id="scan-end" class="input" type="number" min="0" step="0.1" placeholder="End of recording"></label></div>
+          <p class="muted">Scans samples throughout the selected footage, without relying on the top similarity results or preparing an embedding index. Choose one recording to set a time range. Longer scans take more time and API calls.</p>
+          <div id="scenario-plan" class="banner info" hidden>
+            <p id="scenario-plan-summary"></p><p id="scenario-plan-files"></p><p id="scenario-plan-note"></p>
+            <label class="check"><input id="scenario-consent" type="checkbox"><span>I approve sending this plan's sampled images and description to Google Gemini, using my API account. Charges may apply.</span></label>
+            <button type="button" id="scenario-run" disabled>Scan approved footage</button>
+          </div>
+          <button type="button" id="scenario-stop" class="secondary" hidden>Stop after current batch</button>
+          <p id="scenario-progress" role="status"></p>
         </div>
         <div id="visual-consent-panel" class="banner info" hidden><p><strong>Experimental image check.</strong> Sends up to 6 sampled images from each of the first 5 retrieved windows (up to 30 images) and your query to Google Gemini. It may incur API charges, can miss events or misread clothing, and its verdicts still need your review.</p><label class="check"><input id="visual-consent" type="checkbox"><span>I approve sending these sampled frames to Google and the API charges for this search.</span></label></div>
         <p id="setup" class="muted" aria-live="polite">Checking search setup…</p>

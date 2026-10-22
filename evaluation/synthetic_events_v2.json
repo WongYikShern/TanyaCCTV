@@ -1,5 +1,5 @@
 {
-  "description": "Known events in all five synthetic clips (make_demo_footage.py --set all; cartoon scenes, no real people). Every query is annotated across every clip, so misses and confusions are counted. Times in seconds. Not yet measured with real search: see docs/event-support.md.",
+  "description": "Known events in all five synthetic clips (make_demo_footage.py --set all; cartoon scenes, no real people). Every query is annotated across every clip. Live retrieval measured on 2026-10-19; see docs/event-support.md. This is not real CCTV accuracy.",
   "cases": [
     {
       "query": "a person walking",

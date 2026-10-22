@@ -4,6 +4,7 @@
 const $ = id => document.getElementById(id);
 const token = document.querySelector('meta[name="csrf-token"]').content;
 let connection = null, operationRunning = false, planHasChanges = false;
+let scenarioPlan=null, scenarioStop=false, scenarioActive=false;
 let videosCache = [], waitingFiles = [], unsupportedFiles = [], activeVideo = null, framePage = 0, watchToken = 0, currentMoment = 0, watchWindow = null;
 const time = seconds => `${Math.floor((seconds || 0) / 60)}:${String(Math.floor((seconds || 0) % 60)).padStart(2,"0")}`;
 function element(tag, text, className) { const node=document.createElement(tag); if(text !== undefined) node.textContent=text; if(className) node.className=className; return node; }
@@ -29,12 +30,15 @@ function route() {
   if(page!=="watch"){ $("player").pause(); activeVideo=null; }
   if(page==="watch"){ const params=new URLSearchParams(query); showWatch(Number(arg),Number(params.get("t"))||0,params.has("end")?Number(params.get("end")):null); }
   if(page==="dashboard") library().catch(error=>notice(error.message)).finally(renderDashboard);
+  if(page==="search") library().catch(error=>notice(error.message));
   if(page==="library") library().catch(error=>notice(error.message));
   if(page==="system") Promise.all([library(),status()]).catch(error=>notice(error.message));
   window.scrollTo(0,0);
 }
 window.addEventListener("hashchange",route);
+function playbackEnd(start,end) { return Number.isFinite(end) && end>start ? end : null; }
 function openVideo(id,name,url,start=0,end=null) {
+  end=playbackEnd(start,end);
   const hash=`#watch/${id}?t=${start||0}`+(end!==null&&end!==undefined?`&end=${end}`:"");
   if(location.hash===hash) route(); else location.hash=hash;
 }
@@ -42,16 +46,23 @@ function openVideo(id,name,url,start=0,end=null) {
 // ---------------------------------------------------------------- status
 async function status() {
   const data=await api("/api/status"); connection=data;
+  if(data.offline_demo){$("visual-check").checked=false;$("visual-consent").checked=false;
+    const examples=["a person walking","a red car","a person lying on the floor","fire and smoke"];
+    document.querySelectorAll("#examples .chip").forEach((chip,i)=>{chip.textContent=examples[i];});
+  }
   const prepared=data.coverage.prepared.length, pending=data.coverage.needs_preparation.length;
   $("ai-pill").textContent=data.search_ready ? `AI search: ${prepared} video(s) prepared` : "AI search: setup needed";
   $("ai-pill").classList.toggle("ready",data.search_ready);
+  if(data.offline_demo) $("ai-pill").textContent="Offline replay · no live AI";
   $("setup").textContent=data.search_ready ? (prepared ? `Search covers ${prepared} prepared video(s). New uploads need AI preparation (System & AI setup) before they can be searched.` : "Your AI connection is configured, but no videos are prepared for search yet. Open System & AI setup to review the AI indexing plan.") : "Local indexing and playback work now. AI search needs "+(!data.engine_ready?"the SentrySearch environment":"")+(!data.engine_ready&&!data.key_ready?" and ":"")+(!data.key_ready?"a Gemini API key":"")+" (see System & AI setup).";
   $("coverage").textContent=pending ? `${pending} video(s) still need AI preparation: ${data.coverage.needs_preparation.join(", ")}.` : "";
+  if(data.offline_demo) $("setup").textContent="Offline replay: try a red car, a person walking, a person lying on the floor, or fire and smoke. Only these recorded queries are available; no API key is used.";
   $("setup-details").open=!data.search_ready;
   renderStatusList($("system-status")); updateControls();
 }
 function statusItems() {
   if(!connection) return [["warn","Checking…"]];
+  if(connection.offline_demo) return [["ok","Offline synthetic replay is active; no API key or live AI is used."],["ok","Playback, investigations, decisions and report export work locally."],["warn","Image checking and AI preparation are disabled. New uploads are not in the recorded search."]];
   const c=connection.coverage, items=[];
   items.push(["ok","Local library, frame extraction and playback work offline."]);
   items.push([connection.engine_ready?"ok":"warn",connection.engine_ready?"SentrySearch environment found.":"SentrySearch environment not configured (TANYA_SENTRY_PYTHON)."]);
@@ -65,19 +76,33 @@ function renderStatusList(list) {
   list.replaceChildren(...statusItems().map(([kind,text])=>{const li=element("li",undefined,kind);li.append(icon(kind==="ok"?"check":"alert"),element("span",text));return li;}));
 }
 function updateControls() {
+  const direct=$("search-mode").value==="direct";
   const visual=$("visual-check").checked;
+  $("scenario-options").hidden=!direct;
+  if(direct && connection){
+    $("setup").textContent=connection.scan_ready?"Direct scan is ready. Uploads need local frame extraction, but do not need embedding-index preparation for this method.":"Direct scan needs the search Python environment and a private Gemini API key. You can review a local scan plan before sending any images.";
+    $("coverage").textContent="Direct scan uses the indexed recordings listed in its upload plan. Fast similarity search only covers its separately prepared embedding index.";
+  }
+  $("ranked-visual-option").hidden=direct;
+  $("save-to").parentElement.firstChild.textContent=direct?"Add matching clips to ":"Save searches and clips to ";
+  $("scenario-run").disabled=operationRunning || !scenarioPlan || !$("scenario-consent").checked || !connection?.scan_ready;
+  for(const id of ["search-mode","scan-video","scan-start","scan-end","scenario-consent"]) $(id).disabled=operationRunning;
+  $("scan-start").disabled ||= $("scan-video").value==="all";
+  $("scan-end").disabled ||= $("scan-video").value==="all";
   $("search-button").disabled=operationRunning || !connection?.search_ready || !connection?.coverage.prepared.length || (visual && !$("visual-consent").checked);
-  $("search-button").textContent=visual ? "Search & check matches" : "Search ranked clips";
-  $("visual-consent-panel").hidden=!visual;
+  if(direct) $("search-button").disabled=operationRunning || !videosCache.some(v=>v.status==="done") || connection?.offline_demo;
+  $("search-button").textContent=direct ? "Review footage scan plan" : (visual ? "Search & check matches" : "Search ranked clips");
+  $("visual-consent-panel").hidden=direct || !visual;
   for(const id of ["visual-check","visual-consent","query","index-button","upload-button"]) $(id).disabled=operationRunning;
-  $("plan-button").disabled=operationRunning || !connection?.engine_ready;
+  if(connection?.offline_demo) $("visual-check").disabled=true;
+  $("plan-button").disabled=operationRunning || !connection?.engine_ready || connection?.offline_demo;
   $("sync-button").disabled=operationRunning || !planHasChanges;
   $("busy-pill").hidden=!operationRunning;
 }
 function busy(value) { operationRunning=value; updateControls(); }
 $("visual-check").onchange=()=>{$("visual-consent").checked=false;updateControls();};
 $("visual-consent").onchange=updateControls;
-$("query").addEventListener("input",()=>{$("visual-consent").checked=false;updateControls();});
+$("query").addEventListener("input",()=>{$("visual-consent").checked=false;invalidateScenario();updateControls();});
 
 // ---------------------------------------------------------------- dashboard
 function stat(label,value,sub,href,kind) {
@@ -94,7 +119,7 @@ async function renderDashboard() {
     stat("Videos",videosCache.length,`${time(videosCache.reduce((s,v)=>s+(v.duration_sec||0),0))} of footage`+(waitingFiles.length?` · ${waitingFiles.length} waiting to index`:""),"#library","primary"),
     stat("Frames ready",done,`${videosCache.reduce((s,v)=>s+v.frame_count,0).toLocaleString()} frames extracted`,"#library"),
     stat("Problems",failed,failed?"failed or missing originals":"none","#library",failed?"alert":""),
-    stat("AI-prepared",prepared,`of ${videosCache.length} video(s) searchable`,"#system"),
+    stat(connection?.offline_demo?"Replay clips":"AI-prepared",prepared,`of ${videosCache.length} video(s) searchable`,"#system"),
     stat("Investigations",cases.length,`${open.length} open · ${unreviewed} unreviewed clip(s)`,"#investigations",unreviewed?"attention":""));
   const recent=$("dash-videos"); recent.replaceChildren();
   if(!videosCache.length) recent.append(element("p","No recordings yet. Add footage in the Video Library.","empty"));
@@ -113,7 +138,7 @@ async function renderDashboard() {
 }
 
 // ---------------------------------------------------------------- library
-const searchLabels={prepared:["AI prepared",""],needs_preparation:["Needs AI preparation","pending"],unsupported:["AI search: MP4 / MOV only","neutral"],local_index_needed:["Local indexing needed","pending"]};
+const searchLabels={prepared:["AI prepared",""],needs_preparation:["Fast search not prepared","pending"],unsupported:["Use direct footage scan","neutral"],local_index_needed:["Local indexing needed","pending"]};
 const playLabels={playable:["Plays in browser","info"],copy_ready:["Browser copy ready","info"],needs_copy:["Needs browser copy","pending"],missing:["Original missing","failed"]};
 function thumb(video) {
   const box=element("div",undefined,"thumb");
@@ -126,6 +151,7 @@ function thumb(video) {
 async function library() {
   const data=await api("/api/videos");
   videosCache=data.videos; waitingFiles=data.waiting_files; unsupportedFiles=data.unsupported_files;
+  refreshScanVideos(); updateControls();
   renderLibrary();
 }
 function matchesFilter(v) {
@@ -158,7 +184,7 @@ function renderLibrary() {
     const badges=element("div");
     badges.append(element("span",v.status==="done"?"Frames ready":v.status==="failed"?"Indexing failed":"Processing","badge"+(v.status==="done"?"":v.status==="failed"?" failed":" pending")));
     const [pl,pk]=playLabels[v.playback?.status]||["Playback unknown","neutral"]; badges.append(element("span",pl,"badge "+pk));
-    const [sl,sk]=searchLabels[v.search_state]; badges.append(element("span",sl,"badge "+sk));
+    const [sl,sk]=searchLabels[v.search_state]; badges.append(element("span",connection?.offline_demo && v.search_state==="prepared"?"Recorded replay available":sl,"badge "+sk));
     body.append(badges);
     if(v.error) body.append(element("p",v.error,"error-text"));
     if(v.playback?.status==="missing") body.append(element("p",v.playback.message,"error-text"));
@@ -176,6 +202,7 @@ function overlay(text){ $("player-overlay").hidden=!text; $("player-overlay-text
 function playerError(text){ $("player-error").hidden=!text; $("player-error").textContent=text||""; if(text) overlay(null); }
 function resetPlayer(){ const p=$("player"); p.pause(); p.removeAttribute("src"); p.load(); playerError(null); overlay(null); }
 async function showWatch(id,start,end) {
+  end=playbackEnd(start,end);
   const myToken=++watchToken; activeVideo=id; framePage=0; currentMoment=start; watchWindow=end!==null?[start,end]:null;
   resetPlayer(); $("frames").replaceChildren(); $("more-frames").hidden=true; $("player-window").hidden=true; $("replay-window").hidden=true;
   let video=videosCache.find(v=>v.id===id);
@@ -264,7 +291,7 @@ async function indexVideos() {
   await Promise.all([library(),status()]);
   $("sync-plan").hidden=true;
   const duplicateNote=duplicates.length ? ` ${duplicates.length} file(s) were identical to videos already in the library and were not added again.` : "";
-  notice((failed.length ? `Indexing finished with ${failed.length} failed video(s). Filter the library by “Problems” for details.` : "Frames are ready. To make new videos searchable, review the AI indexing plan under System & AI setup.")+duplicateNote);
+  notice((failed.length ? `Indexing finished with ${failed.length} failed video(s). Filter the library by “Problems” for details.` : "Frames are ready. Open Search to scan your recordings for a scene. Fast similarity search has a separate AI preparation step under System & AI setup.")+duplicateNote);
 }
 $("index-button").onclick=async()=>{ busy(true); notice("Extracting frames… Keep this page open."); try{await indexVideos();}catch(error){notice(error.message);}finally{busy(false);} };
 $("upload-form").onsubmit=async event=>{
@@ -291,10 +318,11 @@ $("quick-find").onsubmit=async event=>{
 };
 
 // ---------------------------------------------------------------- search
-document.querySelectorAll("#examples .chip").forEach(chip=>{ chip.onclick=()=>{ $("query").value=chip.textContent; $("visual-consent").checked=false; updateControls(); $("query").focus(); }; });
+document.querySelectorAll("#examples .chip").forEach(chip=>{ chip.onclick=()=>{ $("query").value=chip.textContent; invalidateScenario(); $("visual-consent").checked=false; updateControls(); $("query").focus(); }; });
 function saveToId(){ const value=$("save-to").value; return value ? Number(value) : null; }
 $("search-form").onsubmit=async event=>{
   event.preventDefault();
+  if($("search-mode").value==="direct"){ await reviewScenarioPlan(); return; }
   const visual=$("visual-check").checked, approved=$("visual-consent").checked;
   if(visual && !approved){ notice("Approve the sampled-frame check, or uncheck image checking to see rankings only."); return; }
   busy(true);
@@ -330,13 +358,20 @@ function resultCard(hit, query, visual, rank){
   const reviewNames={correct:"Correct",wrong:"Wrong",unsure:"Unsure"};
   const humanBadge=element("span",hit.human_review?`Your earlier review: ${reviewNames[hit.human_review.assessment]}`:"Not yet reviewed by a person","badge "+(hit.human_review?"":"pending"));
   info.append(humanBadge);
-  info.append(element("p",`${time(hit.start_sec)} – ${time(hit.end_sec)}`,"when"),element("p",`Ranking score ${hit.best_score.toFixed(3)} — a similarity signal for ordering, not a probability.`,"muted"));
+  info.append(element("p",`${time(hit.start_sec)} – ${time(hit.end_sec)}`,"when"),element("p",Number.isFinite(hit.best_score)?`Ranking score ${hit.best_score.toFixed(3)} — a similarity signal for ordering, not a probability.`:"Direct footage scan · no similarity score", "muted"));
   if(review){
     info.append(element("p",review.reason),element("p","Sampled times: "+(review.sampled_timestamps.map(time).join(", ")||"none"),"muted"));
     for(const t of review.evidence_timestamps){ const b=element("button",`Review evidence at ${time(t)}`,"secondary"); b.type="button"; b.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,t,hit.end_sec); info.append(b); }
   }
   const actions=element("div",undefined,"actions"), watch=element("button",`Play from ${time(hit.start_sec)}`); watch.type="button"; watch.prepend(icon("play"));
   watch.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,hit.start_sec,hit.end_sec); actions.append(watch);
+  const focus=hit.review_focus;
+  if(focus && (focus.start_sec!==hit.start_sec || focus.end_sec!==hit.end_sec)){
+    const inspect=element("button",`Inspect strongest chunk ${time(focus.start_sec)}–${time(focus.end_sec)}`,"secondary");
+    inspect.type="button";inspect.onclick=()=>openVideo(hit.video_id,hit.filename,hit.video_url,focus.start_sec,focus.end_sec);
+    actions.append(inspect);
+    info.append(element("p","This window combines several source chunks. Inspect the strongest-scoring chunk first, then review the full window. Chunk times are not event boundaries.","muted"));
+  }
   if(window.investigationClipButton) actions.append(window.investigationClipButton(hit,query,visual,rank));
   info.append(actions);
   const feedback=element("div",undefined,"review-feedback");
@@ -354,6 +389,65 @@ function resultCard(hit, query, visual, rank){
   }
   feedback.append(saved); info.append(feedback); card.append(info); return card;
 }
+
+// ---------------------------------------------------------------- direct scenario scan
+function refreshScanVideos(){
+  const selected=$("scan-video").value;
+  $("scan-video").replaceChildren(new Option("All indexed recordings","all"));
+  for(const v of videosCache.filter(v=>v.status==="done")) $("scan-video").append(new Option(v.filename,String(v.id)));
+  if([...$("scan-video").options].some(o=>o.value===selected)) $("scan-video").value=selected;
+}
+function invalidateScenario(){
+  const old=scenarioPlan; scenarioPlan=null; $("scenario-consent").checked=false; $("scenario-plan").hidden=true;
+  if(old && !scenarioActive) post("/api/search/scan/cancel",{scan_id:old.scan_id}).catch(()=>{});
+}
+$("search-mode").onchange=()=>{invalidateScenario();updateControls();};
+for(const id of ["scan-video","scan-start","scan-end"]) $(id).onchange=()=>{invalidateScenario();updateControls();};
+$("scenario-consent").onchange=updateControls;
+async function reviewScenarioPlan(){
+  invalidateScenario(); busy(true);
+  $("scenario-progress").textContent="Planning the selected footage locally. No images are being sent.";
+  try{
+    const selected=$("scan-video").value;
+    const plan=await post("/api/search/scan/plan",{query:$("query").value,video_ids:selected==="all"?null:[Number(selected)],
+      ...(selected!=="all"?{start_sec:Number($("scan-start").value)||0,end_sec:$("scan-end").value===""?null:Number($("scan-end").value)}:{})});
+    scenarioPlan=plan;
+    $("scenario-plan-summary").textContent=`${plan.recordings.length} recording(s) · ${plan.windows} overlapping windows · up to ${plan.max_images} images · up to ${plan.max_calls} Google requests. This is the maximum upload for this scan; billed cost depends on your model and API account.`;
+    $("scenario-plan-files").textContent=plan.recordings.map(v=>{const r=plan.ranges.find(r=>r.video_id===v.video_id);return `${v.filename} (${time(r.start_sec)}–${time(r.end_sec)})`;}).join("; ")+(plan.excluded.length?". NOT INCLUDED: "+plan.excluded.map(v=>v.filename+": "+v.reason).join("; "):"");
+    $("scenario-plan-note").textContent=plan.note;
+    $("scenario-plan").hidden=false;
+    $("scenario-progress").textContent=connection?.scan_ready?"Review the filenames and upload budget, then approve to start.":"The local plan is ready. Configure the search Python environment and private Gemini key before starting.";
+  }catch(error){$("scenario-progress").textContent=error.message;}finally{busy(false);}
+}
+$("scenario-stop").onclick=()=>{scenarioStop=true;$("scenario-stop").disabled=true;$("scenario-progress").textContent="Stopping after the current request finishes. No further batches will be sent.";};
+$("scenario-run").onclick=async()=>{
+  if(!scenarioPlan || !$("scenario-consent").checked) return;
+  const plan=scenarioPlan; scenarioStop=false; scenarioActive=true; busy(true);
+  $("scenario-stop").hidden=false;$("scenario-stop").disabled=false;
+  const supported=element("div"),unclear=element("details"),rejected=element("details");
+  const supportedTitle=element("h3","Checking footage…"),unclearTitle=element("summary","Possible matches — details need review"),rejectedTitle=element("summary","Not supported by sampled images");
+  unclear.append(unclearTitle);rejected.append(rejectedTitle);
+  $("results").replaceChildren(element("p","Scanning the approved footage for: “"+plan.query+"”. Results are visual candidates for review, not confirmed detections.","warning"),supportedTitle,supported,unclear,rejected);
+  let matches=0,unknown=0,negative=0,images=0,completed=0;
+  try{
+    for(let batch=0;batch<plan.max_calls && !scenarioStop;batch++){
+      $("scenario-progress").textContent=`Checking batch ${batch+1}/${plan.max_calls}; ${completed}/${plan.windows} windows completed. Keep this page open.`;
+      const result=await post("/api/search/scan/batch",{scan_id:plan.scan_id,batch,approve_frame_upload:true});
+      completed=result.completed_windows;images+=result.visual_review.sampled_frames;
+      for(const [key,target] of [["hits",supported],["unclear_hits",unclear],["rejected_hits",rejected]]) for(const hit of result[key]){
+        target.append(resultCard(hit,plan.query,true,hit.scan_window));
+      }
+      matches+=result.hits.length;unknown+=result.unclear_hits.length;negative+=result.rejected_hits.length;
+      supportedTitle.textContent=`${matches} visually supported window(s)`;
+      unclearTitle.textContent=`Possible matches — details need review (${unknown})`;unclear.open=matches===0 && unknown>0;rejectedTitle.textContent=`Not supported in samples (${negative})`;
+    }
+    $("scenario-progress").textContent=`${scenarioStop?"Stopped early":"Scan finished"}: ${completed}/${plan.windows} windows checked, ${images} images sent. ${matches} supported, ${unknown} unclear. Overlapping windows may show the same event. No supported match does not prove the scene is absent.`;
+  }catch(error){if(!matches) supportedTitle.textContent="Scan incomplete — no supported result";$("scenario-progress").textContent=`Scan stopped at ${completed}/${plan.windows} windows. ${error.message} Partial results remain below. No automatic retry was made.`;}
+  finally{
+    await post("/api/search/scan/cancel",{scan_id:plan.scan_id}).catch(()=>{});
+    scenarioActive=false;scenarioPlan=null;$("scenario-consent").checked=false;$("scenario-plan").hidden=true;$("scenario-stop").hidden=true;busy(false);
+  }
+};
 
 // ---------------------------------------------------------------- AI preparation (paid, explicit)
 $("plan-button").onclick=async()=>{
