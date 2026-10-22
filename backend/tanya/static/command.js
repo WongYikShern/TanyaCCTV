@@ -50,14 +50,17 @@ window.cameraEditor = function (v) {
   const form = element("form", undefined, "cam-edit-form"); form.hidden = true;
   const name = element("input"); name.className = "input"; name.maxLength = 60; name.placeholder = "Camera name, e.g. Front gate"; name.value = v.camera?.name || ""; name.setAttribute("aria-label", "Camera name");
   const place = element("input"); place.className = "input"; place.maxLength = 80; place.placeholder = "Place, e.g. Block A, Level 1"; place.value = v.camera?.place || ""; place.setAttribute("aria-label", "Place");
+  const startLabel = element("label", "Recording started at (camera clock, optional)", "small-note");
+  const started = element("input"); started.className = "input"; started.type = "datetime-local"; started.step = "0.001";
+  started.value = v.camera?.started_at || ""; started.id = `cam-start-${v.id}`; startLabel.htmlFor = started.id;
   const save = element("button", "Save"), cancel = element("button", "Cancel", "secondary"); cancel.type = "button";
   const row = element("div", undefined, "cam-edit-actions"); row.append(save, cancel);
-  form.append(name, place, row);
+  form.append(name, place, startLabel, started, row);
   open.onclick = () => { form.hidden = false; open.hidden = true; name.focus(); };
   cancel.onclick = () => { form.hidden = true; open.hidden = false; };
   form.onsubmit = async event => {
     event.preventDefault(); save.disabled = true;
-    try { await post(`/api/videos/${v.id}/camera`, {name: name.value, place: place.value}); notice("Camera saved."); await library(); }
+    try { await post(`/api/videos/${v.id}/camera`, {name: name.value, place: place.value, started_at: started.value}); notice("Camera saved."); await library(); }
     catch (error) { notice(error.message); } finally { save.disabled = false; }
   };
   const hide = element("button", v.camera?.hidden ? "Show on wall & map" : "Hide", "ghost small"); hide.type = "button";
@@ -147,9 +150,35 @@ $("summary-discard").onclick = () => { summaryDraft = ""; $("summary-text").hidd
 // Uses the AI's own description of the person as the search for the other cameras. The usual plan and
 // approval step follows; matches are "possibly the same person", never an identification.
 window.followCtx = null;
+const FOLLOW_RADIUS_M = 150;   // a person on foot reaches nearby cameras first; also keeps the search small
+function metres(a, b) {
+  const rad = Math.PI / 180, dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
+}
+// Which cameras to follow to: those placed within FOLLOW_RADIUS_M of the first one, or every other
+// visible camera when the first one has no map location.
+window.followTargets = function (follow, visibleIds) {
+  const others = visibleIds.filter(id => id !== follow.source.video_id);
+  const here = videosCache.find(v => v.id === follow.source.video_id)?.camera;
+  if (!Number.isFinite(here?.lat)) return {ids: others, note: "other camera(s)"};
+  const near = others.filter(id => { const c = videosCache.find(v => v.id === id)?.camera; return Number.isFinite(c?.lat) && metres(here, c) <= FOLLOW_RADIUS_M; });
+  return near.length ? {ids: near, note: `nearby camera(s), within ${FOLLOW_RADIUS_M} m on the map`} : {ids: others, note: "other camera(s) (none within " + FOLLOW_RADIUS_M + " m)"};
+};
+// A moment as the camera's own clock showed it, when its recording start time is known.
+function clockAt(videoId, seconds) {
+  const start = videosCache.find(v => v.id === videoId)?.camera?.started_at;
+  if (!start) return null;
+  const at = new Date(new Date(start).getTime() + seconds * 1000);
+  return Number.isNaN(at.getTime()) ? null : at;
+}
+const clockText = at => at.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+window.routeTime = stop => stop.at ? clockText(stop.at) : time(stop.start_sec);
+
 window.followPerson = function (hit) {
   const reason = hit.visual_review?.reason || "";
-  window.followCtx = {source: {video_id: hit.video_id, filename: hit.filename, start_sec: hit.start_sec, end_sec: hit.end_sec}, reason};
+  const span = hit.visual_review?.evidence_span;
+  window.followCtx = {source: {video_id: hit.video_id, filename: hit.filename, start_sec: span?.start_sec ?? hit.start_sec, end_sec: span?.end_sec ?? hit.end_sec}, reason};
   $("query").value = `The same person as described here (match their appearance, any action): ${reason}`.slice(0, 500);
   location.hash = "#search";
   window.scrollTo({top: 0, behavior: "smooth"});
@@ -157,13 +186,18 @@ window.followPerson = function (hit) {
   setTimeout(() => $("search-form").requestSubmit(), 150);   // builds the plan only; nothing is sent until approved
 };
 
+// Stops in time order: by each camera's clock when every stop has a recording start time, otherwise by
+// time within each recording (which assumes the recordings cover the same period).
 function routeStops(follow, byVideo) {
   const stops = [{video_id: follow.source.video_id, start_sec: follow.source.start_sec, end_sec: follow.source.end_sec, likely: true, source: true}];
   for (const [id, e] of Object.entries(byVideo)) {
     const best = [...e.hits].sort((a, b) => (b.likely - a.likely) || (a.start_sec - b.start_sec))[0];
-    if (best) stops.push({video_id: Number(id), start_sec: best.start_sec, end_sec: best.end_sec, likely: best.likely});
+    if (best) stops.push({video_id: Number(id), start_sec: best.span?.start_sec ?? best.start_sec, end_sec: best.span?.end_sec ?? best.end_sec, likely: best.likely});
   }
-  return stops.sort((a, b) => a.start_sec - b.start_sec);
+  stops.forEach(s => { s.at = clockAt(s.video_id, s.start_sec); });
+  const clocked = stops.every(s => s.at);
+  stops.clocked = clocked;
+  return stops.sort((a, b) => clocked ? a.at - b.at : a.start_sec - b.start_sec);
 }
 
 // ---------------------------------------------------------------- scan experience
@@ -272,7 +306,7 @@ window.scanFx = (() => {
     st.inflight.delete(batch); st.done.add(batch);
     for (const [key, field] of [["hits", "likely"], ["unclear_hits", "maybe"]]) for (const hit of result[key]) {
       const entry = st.byVideo[hit.video_id]; if (!entry) continue;
-      entry[field]++; entry.hits.push({start_sec: hit.start_sec, end_sec: hit.end_sec, likely: field === "likely", reason: hit.visual_review?.reason || ""});
+      entry[field]++; entry.hits.push({start_sec: hit.start_sec, end_sec: hit.end_sec, span: hit.visual_review?.evidence_span || null, likely: field === "likely", reason: hit.visual_review?.reason || ""});
       st.hitWindows.push([hit.video_id, hit.start_sec, hit.end_sec]);
       const reason = hit.visual_review?.reason || "";
       log(`${field === "likely" ? "✓" : "?"} ${nameOf(hit.video_id)} ${time(hit.start_sec)}–${time(hit.end_sec)} ${field}${reason ? ": " + reason.slice(0, 70) + (reason.length > 70 ? "…" : "") : ""}`, field === "likely" ? "g" : "a");
@@ -363,14 +397,14 @@ window.scanFx = (() => {
         if (i) chain.append(element("span", "→", "route-arrow"));
         const stop = element("button", undefined, "route-stop" + (s.source ? " source" : s.likely ? " likely" : " maybe")); stop.type = "button";
         stop.style.animationDelay = `${0.15 + i * 0.25}s`;
-        stop.append(element("b", nameOf(s.video_id)), element("span", `${time(s.start_sec)}–${time(s.end_sec)} · ${s.source ? "start" : s.likely ? "likely" : "maybe"}`));
+        stop.append(element("b", nameOf(s.video_id)), element("span", `${window.routeTime(s)} · ${s.source ? "start" : s.likely ? "likely" : "maybe"}`));
         stop.onclick = () => openVideo(s.video_id, "", "", s.start_sec, s.end_sec);
         chain.append(stop);
       });
       box.append(chain);
       if (route.length > 1) {
         const go = element("button", "Show route on map"); go.type = "button"; go.prepend(icon("map")); go.onclick = () => { location.hash = "#map"; };
-        box.append(go, element("p", "Possibly the same person: check each clip. Ordered by time within each recording, which assumes the recordings cover the same period.", "muted small-note"));
+        box.append(go, element("p", "Possibly the same person: check each clip. " + (route.clocked ? "Times are each camera's own clock, from the recording start times you entered." : "Ordered by time within each recording, which assumes the recordings cover the same period. Add each camera's recording start time to use real clock times."), "muted small-note"));
       }
       st.kpis.after(box);
     }

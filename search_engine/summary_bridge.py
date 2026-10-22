@@ -52,6 +52,13 @@ def main():
         code = getattr(error, "code", None)
         label = type(error).__name__ + (f", HTTP {code}" if type(code) is int else "")
         detail = str(getattr(error, "message", ""))
+        if type(code) is int and code == 429 and "quota" in detail.lower():
+            limit = re.search(r"limit: (\d+)", detail)
+            wait = re.search(r"retry in ((?:\d+h)?(?:\d+m)?)", detail)
+            detail = ("Google's usage limit for this API key is used up"
+                      + (f" ({limit.group(1)} requests on the free tier)" if limit else "")
+                      + (f"; it resets in about {wait.group(1)}" if wait and wait.group(1) else "")
+                      + ". Enable billing for the key in Google AI Studio to remove the free-tier limit.")
         key = os.environ.get("GEMINI_API_KEY", "")
         if key:
             detail = detail.replace(key, "[REDACTED]")

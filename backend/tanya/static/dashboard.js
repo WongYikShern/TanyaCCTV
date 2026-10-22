@@ -511,12 +511,13 @@ async function reviewScenarioPlan(){
     const all=visible.length<videosCache.filter(v=>v.status==="done").length ? visible : null;
     // Following a person: check every other visible camera, whatever "Search in" says.
     const follow=window.followCtx;
-    const ids=follow?visible.filter(id=>id!==follow.source.video_id):selected==="all"?all:[Number(selected)];
+    const nearby=follow?window.followTargets(follow,visible):null;
+    const ids=follow?nearby.ids:selected==="all"?all:[Number(selected)];
     if(follow && !ids.length) throw new Error("There are no other cameras to follow this person to.");
     const plan=await post("/api/search/scan/plan",{query:$("query").value,video_ids:ids,
       ...(selected!=="all"&&!follow?{start_sec:Number($("scan-start").value)||0,end_sec:$("scan-end").value===""?null:Number($("scan-end").value)}:{})});
     scenarioPlan=plan;
-    $("scenario-plan-summary").textContent=(follow?`Follow this person from ${displayName(follow.source.filename)}: look for them on ${plan.recordings.length} other camera(s).`:`Look for “${plan.query}” in ${plan.recordings.length} recording(s).`)+` This sends up to ${plan.max_images} images in ${plan.max_calls} request(s) to Google Gemini.`;
+    $("scenario-plan-summary").textContent=(follow?`Follow this person from ${displayName(follow.source.filename)}: look for them on ${plan.recordings.length} ${nearby.note}.`:`Look for “${plan.query}” in ${plan.recordings.length} recording(s).`)+` This sends up to ${plan.max_images} images in ${plan.max_calls} request(s) to Google Gemini.`;
     $("scenario-plan-files").textContent=plan.recordings.map(v=>{const r=plan.ranges.find(r=>r.video_id===v.video_id);return `${displayName(v.filename)} (${time(r.start_sec)}–${time(r.end_sec)})`;}).join(" · ")+(plan.excluded.length?". Not included: "+plan.excluded.map(v=>displayName(v.filename)+" ("+v.reason+")").join("; "):"");
     $("scenario-plan-note").textContent=plan.note;
     $("scenario-plan").hidden=false;

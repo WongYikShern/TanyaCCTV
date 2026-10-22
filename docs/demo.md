@@ -32,9 +32,14 @@ In front of the judges:
    to the frame with the AI's box around the person.
 3. **Results.** Search time, footage searched, likely moments, "% less to watch". Each match shows the
    AI's box and reason; press **Play key moment**.
-4. **Follow this person** on the corridor match. It searches the other cameras for the AI's description
-   of that person. The route card shows Corridor → Shop front; **Show route on map** draws it.
-   "Possibly the same person": the app never identifies anyone.
+4. **Follow this person.** Search "a man in a white jumper walking along the corridor" on the
+   **Corridor** camera, then press **Follow this person** on the match. It searches only the cameras
+   within 150 m on the map (the mall cameras), using the AI's description of him. In this CAVIAR
+   recording the same man is filmed by two cameras: he leaves the shop (**Shop front, 10:35:17** on the
+   camera's burned-in clock) and walks down the corridor (**Corridor, 10:35:20**). With each camera's
+   "Recording started at" time set (Cameras → Rename / place), the route uses those clock times.
+   **Show route on map**: an animated path with time chips. Say "possibly the same person": the app
+   never identifies anyone.
 5. **Investigation.** Add the clips, mark them Relevant, then **AI incident summary → Draft with AI**
    (text only, no images). Read it and **Save as case summary**; it goes into the report.
 6. **Watch mode.** On the dashboard, "Alert me when… a person lying on the floor", approve, **Start
@@ -42,6 +47,13 @@ In front of the judges:
    (a fresh encode of the CAVIAR fall scene; an identical copy would be refused as a duplicate). It is
    added, checked automatically, and an alert pops up with a sound, the AI's box and **Play clip**.
    Uploading it a second time is refused as a duplicate, so re-encode another copy for a rehearsal.
+
+**Map.** Map / Satellite / Hybrid styles, camera view cones (↺ ↻ to turn), a labelled site zone for
+cameras sharing a place prefix ("Mall · …"), hover a pin to play its footage.
+
+**Google quota.** A free-tier Gemini key allows only about 20 AI requests per day; a search across all
+cameras uses about 6. Enable billing on the key before presenting, or searches will stop with a
+"usage limit … used up" message.
 
 Honest points: boxes, reasons and verdicts are AI suggestions; matches are unconfirmed until a person
 marks them. Follow-routes are ordered by time within each recording, which assumes the recordings

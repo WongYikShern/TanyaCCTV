@@ -34,6 +34,17 @@ def test_name_place_and_location_are_saved_and_listed(web):
     assert client.get("/api/videos").json["videos"][0]["camera"]["lat"] == 3.1478
 
 
+def test_recording_start_and_heading(web):
+    client, headers, video, _ = web
+    url = f"/api/videos/{video['id']}/camera"
+    saved = client.post(url, headers=headers, json={"started_at": "2004-01-20T10:35:11.317", "heading": -90}).json["camera"]
+    assert saved == {"started_at": "2004-01-20T10:35:11.317", "heading": 270.0}
+    for bad in [{"started_at": "yesterday"}, {"started_at": "2004-01-20T10:35:11+02:00"}, {"started_at": 5},
+                {"heading": "north"}, {"heading": float("inf")}]:
+        assert client.post(url, headers=headers, json=bad).status_code == 400
+    assert client.post(url, headers=headers, json={"started_at": "", "heading": None}).json["camera"] == {}
+
+
 def test_hidden_flag_is_saved_and_cleared(web):
     client, headers, video, _ = web
     assert client.post(f"/api/videos/{video['id']}/camera", headers=headers, json={"hidden": True}).json["camera"] == {"hidden": True}

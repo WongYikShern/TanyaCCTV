@@ -114,13 +114,26 @@
     </section>
 
     <!-- Map -->
-    <section class="page" data-page="map" hidden>
-      <div class="page-head"><div><h1 class="display">Map</h1><p class="muted">Where each camera is. After a search, cameras with matches light up. Locations are set by you: drag a pin, or pick a camera and click the map.</p></div>
-        <div class="head-actions"><button type="button" class="secondary" id="map-demo">Place demo cameras</button><button type="button" class="secondary" id="map-layer">Satellite view</button></div></div>
-      <p id="map-scan" class="map-scan" hidden></p>
-      <div class="map-layout">
-        <div class="card map-card"><div id="map-canvas" class="map-canvas" role="application" aria-label="Camera map"></div><p id="map-hint" class="map-hint" role="status"></p></div>
-        <aside class="card map-side"><div class="card-head"><h2>Cameras</h2></div><div id="map-list" class="map-list"></div></aside>
+    <section class="page map-page" data-page="map" hidden>
+      <div class="ops-map">
+        <div id="map-canvas" class="map-canvas" role="application" aria-label="Camera map"></div>
+        <div class="ops-hud glass">
+          <p class="hud-title"><span class="live-dot" aria-hidden="true"></span>Site overview</p>
+          <div class="hud-stats"><div><b id="hud-cams">0</b><span>cameras on map</span></div><div><b id="hud-sites">0</b><span>sites</span></div><div><b id="hud-hits">0</b><span>with matches</span></div></div>
+          <p id="map-scan" class="map-scan" hidden></p>
+        </div>
+        <div class="ops-tools">
+          <div id="map-style" class="seg glass" role="group" aria-label="Map style"><button type="button" data-style="street" aria-pressed="true">Map</button><button type="button" data-style="satellite" aria-pressed="false">Satellite</button><button type="button" data-style="hybrid" aria-pressed="false">Hybrid</button></div>
+          <button type="button" id="map-fit" class="glass-btn">Fit all</button>
+          <button type="button" id="map-demo" class="glass-btn">Place demo cameras</button>
+        </div>
+        <p id="map-hint" class="map-hint" role="status"></p>
+        <aside id="map-panel" class="ops-panel glass">
+          <div class="ops-panel-head"><h2>Cameras</h2><button type="button" id="map-panel-toggle" class="glass-btn small" aria-expanded="true" aria-controls="map-list">Hide list</button></div>
+          <p class="muted small-note">Hover a pin to see its footage. Drag pins to move them; ↺ ↻ turn the view cone.</p>
+          <div id="map-list" class="map-list"></div>
+        </aside>
+        <div class="ops-legend glass" aria-label="Legend"><span class="lg hit">Likely match</span><span class="lg maybe">Maybe</span><span class="lg checking">Checking</span><span class="lg clear">No match</span><span class="lg route">Possible route</span></div>
       </div>
     </section>
 

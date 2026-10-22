@@ -8,6 +8,7 @@ import math
 import os
 import re
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 MAX_NAME = 60
@@ -71,6 +72,26 @@ def update(settings, sha256, data):
         if (lat is None) != (lng is None):
             raise CameraError("Set both latitude and longitude, or clear both.")
         entry["lat"], entry["lng"] = lat, lng
+    if "started_at" in data:
+        # The camera's own clock when the recording starts (as burned into the footage), e.g.
+        # "2004-01-20T10:35:11.3". Lets routes across cameras use real times. Typed in by a person.
+        value = data["started_at"]
+        if value in (None, ""):
+            entry["started_at"] = None
+        else:
+            try:
+                parsed = datetime.fromisoformat(value) if isinstance(value, str) and len(value) <= 32 else None
+            except ValueError:
+                parsed = None
+            if parsed is None or parsed.tzinfo is not None:
+                raise CameraError("Recording start must be a local date and time, e.g. 2004-01-20T10:35:11.")
+            entry["started_at"] = parsed.isoformat(timespec="milliseconds")
+    if "heading" in data:
+        # Direction the camera faces on the map, in degrees clockwise from north (for its view cone).
+        value = data["heading"]
+        if value is not None and (type(value) not in (int, float) or not math.isfinite(value)):
+            raise CameraError("Heading must be a number of degrees.")
+        entry["heading"] = None if value is None else round(float(value) % 360, 1)
     if "hidden" in data:
         if type(data["hidden"]) is not bool:
             raise CameraError("hidden must be true or false.")
