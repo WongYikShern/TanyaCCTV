@@ -46,6 +46,9 @@
     if (map && base) { base.remove(); base = tiles(map); }
     if (mini) { mini.base.remove(); mini.base = tiles(mini.map); }
   }
+  // The offline demo promises that nothing goes over the network, so it starts on the plain grid
+  // (map pictures are one click away). Applied once, before any map is drawn.
+  document.addEventListener("tanya:status", () => { if (connection?.offline_demo && !map && !mini && style === "street") setStyle("plain"); });
   // Map pictures come from the internet. If none can load, switch to the plain grid instead of a blank map.
   function useOfflineMap() {
     if (style === "plain") return;
@@ -244,7 +247,7 @@
     if (!map) {
       // Set a view straight away: Leaflet only attaches markers and lines once the map has one.
       map = L.map("map-canvas", {zoomControl: false, worldCopyJump: true, maxZoom: 19}).setView(DEMO_CENTRE, 15);
-      if (navigator.onLine === false) setStyle("plain");
+      if (navigator.onLine === false || connection?.offline_demo) setStyle("plain");
       L.control.zoom({position: "bottomright"}).addTo(map);
       L.control.scale({position: "bottomright", imperial: false}).addTo(map);
       base = tiles(map);
