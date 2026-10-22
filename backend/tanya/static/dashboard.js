@@ -204,6 +204,8 @@ async function renderDashboard() {
   const saved=timeSavedSoFar();
   if(saved.seconds>0){ const tile=stat("Footage skipped",time(saved.seconds),`you didn't have to watch, across ${plural(saved.searches,"search","searches")}`,"#search","saved"); tiles.splice(1,0,tile); }
   $("stats").replaceChildren(...tiles);
+  // Even rows: 4 cards go 2 × 2 on medium screens instead of 3 + 1.
+  $("stats").style.setProperty("--tiles",String(tiles.length)); $("stats").style.setProperty("--tiles-md",String(tiles.length===4?2:Math.min(tiles.length,3)));
   const recent=$("dash-videos"); recent.replaceChildren();
   if(!videosCache.length){ const a=element("a","No recordings yet. Add your first video →","empty"); a.href="#library"; a.onclick=()=>{$("upload-form").hidden=false;}; recent.append(a); }
   if(window.renderCameraWall) window.renderCameraWall(recent, videosCache);
@@ -426,7 +428,7 @@ async function indexVideos() {
   await Promise.all([library(),status()]);
   $("sync-plan").hidden=true;
   const duplicateNote=duplicates.length ? ` ${plural(duplicates.length,"file")} ${duplicates.length===1?"was":"were"} identical to videos already in the library and were not added again.` : "";
-  notice((failed.length ? `${plural(failed.length,"video")} couldn't be added. On the Cameras page, filter by “Problems” to see why.` : (canSearch()?"Done. Your footage is ready to search.":"Done. Your footage is ready to watch. Connect the AI in Settings to search it."))+duplicateNote);
+  notice((failed.length ? `${plural(failed.length,"video")} couldn't be added. On the Cameras page, filter by “Problems” to see why.` : (connection?.offline_demo?"Done. It plays here, but the offline demo only searches its preset events, so new footage won't appear in search results.":canSearch()?"Done. Your footage is ready to search.":"Done. Your footage is ready to watch. Connect the AI in Settings to search it."))+duplicateNote);
 }
 $("index-button").onclick=async()=>{ busy(true); notice("Adding videos from the folder… Keep this page open."); try{await indexVideos();}catch(error){notice(error.message);}finally{busy(false);} };
 $("upload-form").onsubmit=async event=>{
@@ -718,6 +720,9 @@ route();
   let seen = false;
   try { seen = localStorage.getItem("tanya.demoSeen") === "1"; localStorage.setItem("tanya.demoSeen", "1"); } catch (e) { /* storage unavailable */ }
   strip.open = !seen;
+  // After the first visit's full explanation, fold it away on the next page change (unless it was opened by hand).
+  strip.querySelector("summary").addEventListener("click", () => { strip.dataset.byHand = "1"; });
+  window.addEventListener("hashchange", () => { if (!strip.dataset.byHand) strip.open = false; }, {once: true});
 })();
 
 // ---------------------------------------------------------------- getting started and shortcuts
