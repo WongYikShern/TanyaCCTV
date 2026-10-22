@@ -55,3 +55,6 @@ caviar-review-*.csv
 *.pt
 *.onnx
 experiments/yolo/results*/
+
+# Demo video build (recordings, voice-over, renders)
+/demo-video/
