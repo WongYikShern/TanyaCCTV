@@ -51,7 +51,7 @@
     <a class="nav" data-view="library" href="#library"><svg><use href="#i-library"/></svg>Cameras</a>
     <a class="nav" data-view="map" href="#map"><svg><use href="#i-map"/></svg>Map</a>
     <a class="nav" data-view="search" href="#search"><svg><use href="#i-search"/></svg>Search</a>
-    <a class="nav" data-view="investigations" href="#investigations"><svg><use href="#i-case"/></svg>Investigations</a>
+    <a class="nav" data-view="investigations" href="#investigations"><svg><use href="#i-case"/></svg><span class="nav-label" data-short="Cases">Investigations</span></a>
     <a class="nav" data-view="system" href="#system"><svg><use href="#i-system"/></svg>Settings</a>
   </nav>
   <div class="sidebar-foot"><span class="dot"></span>Running on this computer<small>localhost only · no accounts</small></div>
@@ -150,7 +150,7 @@
 
     <!-- Watch -->
     <section class="page" data-page="watch" hidden>
-      <div class="page-head"><div><button type="button" class="ghost" id="watch-back"><svg><use href="#i-back"/></svg>Back to library</button><h1 id="watch-title">Recording</h1><p id="watch-meta" class="muted"></p></div>
+      <div class="page-head"><div><button type="button" class="ghost" id="watch-back"><svg><use href="#i-back"/></svg>Back to cameras</button><h1 id="watch-title">Recording</h1><p id="watch-meta" class="muted"></p></div>
         <div class="head-actions"><a id="download-video" class="button secondary">Download original</a></div></div>
       <div class="watch-grid">
         <div class="card player-card">
@@ -242,7 +242,17 @@
           <div id="case-empty" class="card empty-state"><svg><use href="#i-case"/></svg><h2>No investigation open</h2><p class="muted">Create one, or choose one from the list.</p></div>
           <div id="case" class="card" hidden>
             <div class="case-head"><div><p class="eyebrow" id="case-status">OPEN</p><h2 id="case-title" class="case-title"></h2><p id="case-description" class="muted"></p></div>
-              <div class="case-actions"><button type="button" class="secondary" id="case-rename">Rename</button><button type="button" class="secondary" id="case-close">Close</button><button type="button" id="case-report-html">Export report (HTML)</button><button type="button" class="secondary" id="case-report-json">Export data (JSON)</button><label class="check report-frames" for="case-report-frames"><input id="case-report-frames" type="checkbox"><span>Include frame images (footage) in the HTML report</span></label></div></div>
+              <div class="case-actions">
+                <details id="case-export" class="export-menu"><summary class="button">Export<svg aria-hidden="true"><use href="#i-back"/></svg></summary>
+                  <div class="export-pop">
+                    <div class="export-opt"><button type="button" id="case-report-html">Report (HTML)</button><span>A readable report to share or print.</span>
+                      <label class="check report-frames" for="case-report-frames"><input id="case-report-frames" type="checkbox"><span>Include frame images (footage)</span></label></div>
+                    <div class="export-opt"><button type="button" class="secondary" id="case-report-json">Data (JSON)</button><span>Every clip and decision, for other tools.</span></div>
+                  </div>
+                </details>
+                <button type="button" class="secondary" id="case-rename">Rename</button>
+                <button type="button" class="secondary case-close" id="case-close">Close</button>
+              </div></div>
             <section id="summary-box" class="summary-box" aria-label="AI incident summary">
               <div class="summary-head"><h3>AI incident summary</h3><button type="button" id="summary-open" class="secondary small">Draft with AI</button></div>
               <p id="summary-ai-note" class="ai-note" hidden></p>

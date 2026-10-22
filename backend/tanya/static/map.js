@@ -277,7 +277,7 @@
         await post(`/api/videos/${v.id}/camera`, {lat: centre.lat + 0.0012 * Math.sin(angle), lng: centre.lng + 0.0016 * Math.cos(angle), heading: Math.round(angle * 180 / Math.PI + 180) % 360});
       }
       await library(); render(); if (map) fit(map, cameras());
-      notice(`Placed ${todo.length} camera(s) as a demo layout. Drag each pin to its real location.`);
+      notice(`Placed ${plural(todo.length, "camera")} as a demo layout. Drag each pin to its real location.`);
     } catch (error) { notice(error.message); } finally { $("map-demo").disabled = false; }
   };
   $("map-panel-toggle").onclick = () => {

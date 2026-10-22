@@ -556,3 +556,52 @@ button:is(:not([class]), [class=""]):disabled { background: var(--raised); color
   .brand-name { font-size: 17px; }
   .brand-tagline { display: none; }
 }
+
+/* Investigation header: one Export menu, then Rename; Close set apart so it isn't hit by mistake. */
+.case-actions { align-items: center; }
+.case-close { margin-left: 14px; }
+.export-menu { position: relative; }
+.export-menu > summary { list-style: none; margin: 0; cursor: pointer; }
+.export-menu > summary::-webkit-details-marker { display: none; }
+.export-menu > summary svg { width: 14px; height: 14px; transform: rotate(-90deg); transition: transform .15s; }
+.export-menu[open] > summary svg { transform: rotate(90deg); }
+.export-pop { position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; width: 300px; padding: 8px; border-radius: 12px;
+  background: var(--card); color: var(--text); border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(0,0,0,.28); }
+.export-opt { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 10px; border-radius: 8px; }
+.export-opt + .export-opt { border-top: 1px solid var(--line); }
+.export-opt > span { flex: 1 1 140px; font-size: 12.5px; color: var(--muted); }
+.export-opt .report-frames { flex-basis: 100%; margin-top: 4px; color: var(--text); }
+#case .case-head .export-pop button.secondary { background: var(--card); color: var(--text); border-color: var(--line-strong); }
+#case .case-head .export-pop button.secondary:hover:not(:disabled) { background: var(--orange-soft); color: var(--orange-text); border-color: var(--orange); }
+@media (max-width: 820px) {
+  .case-close { margin-left: 0; }
+  .export-pop { width: min(300px, calc(100vw - 48px)); }
+}
+
+/* Phones: a bottom tab bar instead of a sideways-scrolling top menu, a compact search box,
+   no lone stat card, and a one-line top bar. */
+.nav-label { display: contents; }
+@media (max-width: 820px) {
+  .sidebar { overflow: visible; }
+  .sidebar nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 800; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0;
+    padding: 4px 2px calc(4px + env(safe-area-inset-bottom)); background: var(--ink); border-top: 1px solid var(--ink-line); box-shadow: 0 -4px 16px rgba(0,0,0,.25); }
+  .sidebar nav .nav { flex-direction: column; justify-content: center; gap: 3px; padding: 7px 2px 6px; border-radius: 10px; font-size: 10.5px; font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; }
+  .sidebar nav .nav svg { width: 20px; height: 20px; }
+  .sidebar nav .nav.active::before { left: 25%; right: 25%; top: -4px; bottom: auto; width: auto; height: 3px; border-radius: 0 0 3px 3px; }
+  .nav-label[data-short] { display: block; font-size: 0; line-height: 0; }
+  .nav-label[data-short]::after { content: attr(data-short); display: block; font-size: 10.5px; line-height: 1.5; }
+  .brand { border-right: 0; }
+  .shell { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  #notice { bottom: calc(76px + env(safe-area-inset-bottom)); }
+
+  .crumb > span:first-child, .crumb .sep { display: none; }
+  .crumb { flex: 1; min-width: 0; }
+
+  .search-input { flex-wrap: wrap; }
+  .search-input > svg { flex: none; }
+  .search-input input { flex: 1 1 0; }
+  .search-input button.mic { width: 44px; flex: none; }
+  .search-input button:not(.mic) { flex-basis: 100%; }
+
+  .stat-grid > .stat:first-child:nth-last-child(odd) { grid-column: 1 / -1; }
+}

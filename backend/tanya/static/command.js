@@ -183,9 +183,10 @@ function metres(a, b) {
 window.followTargets = function (follow, visibleIds) {
   const others = visibleIds.filter(id => id !== follow.source.video_id);
   const here = videosCache.find(v => v.id === follow.source.video_id)?.camera;
-  if (!Number.isFinite(here?.lat)) return {ids: others, note: "other camera(s)"};
+  if (!Number.isFinite(here?.lat)) return {ids: others, note: n => plural(n, "other camera")};
   const near = others.filter(id => { const c = videosCache.find(v => v.id === id)?.camera; return Number.isFinite(c?.lat) && metres(here, c) <= FOLLOW_RADIUS_M; });
-  return near.length ? {ids: near, note: `nearby camera(s), within ${FOLLOW_RADIUS_M} m on the map`} : {ids: others, note: "other camera(s) (none within " + FOLLOW_RADIUS_M + " m)"};
+  return near.length ? {ids: near, note: n => `${plural(n, "nearby camera")}, within ${FOLLOW_RADIUS_M} m on the map`}
+                     : {ids: others, note: n => `${plural(n, "other camera")} (none within ${FOLLOW_RADIUS_M} m)`};
 };
 // A moment as the camera's own clock showed it, when its recording start time is known.
 function clockAt(videoId, seconds) {
@@ -290,7 +291,7 @@ window.scanFx = (() => {
       tiles.append(tile); st.tiles.set(r.video_id, tile); st.byVideo[r.video_id] = {likely: 0, maybe: 0, hits: []};
     }
     if (thumbOf(plan.recordings[0]?.video_id)) img.src = thumbOf(plan.recordings[0].video_id);
-    log(`Plan: ${plan.windows} part(s) across ${plan.recordings.length} camera(s), up to ${plan.max_images} images.`);
+    log(`Plan: ${plural(plan.windows, "part")} across ${plural(plan.recordings.length, "camera")}, up to ${plural(plan.max_images, "image")}.`);
     for (const r of plan.recordings) loadFrames(r.video_id).then(f => st?.frames.set(r.video_id, f)).catch(() => {});
     window.mapFx?.scanStart(plan, mini);
   }
@@ -399,7 +400,7 @@ window.scanFx = (() => {
     const k = st.kpis; k.replaceChildren();
     const kpi = (label, cls) => { const d = element("div", undefined, "kpi " + (cls || "")); const b = element("b", "0"); d.append(b, element("span", label)); k.append(d); return b; };
     countUp(kpi("search time", "hot"), Math.max(1, Math.round(seconds)), n => `${n} s`);
-    countUp(kpi(`footage from ${st.plan.recordings.length} camera(s)`), Math.round(footage), n => time(n));
+    countUp(kpi(`footage from ${plural(st.plan.recordings.length, "camera")}`), Math.round(footage), n => time(n));
     countUp(kpi("likely moments", "g"), st.n.likely);
     if (less !== null) countUp(kpi(`less to watch (${time(watch)} of clips)`, "hot"), less, n => `${n}%`);
     else { const d = element("div", undefined, "kpi"); d.append(element("b", "—"), element("span", st.n.maybe ? "check the “maybe” clips" : "no matching moments")); k.append(d); }

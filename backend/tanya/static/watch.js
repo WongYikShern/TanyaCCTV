@@ -94,7 +94,7 @@
         const result = await post("/api/search/scan/batch", {scan_id: plan.scan_id, batch, approve_frame_upload: true});
         for (const hit of [...result.hits, ...result.unclear_hits]) { alertFor(video, hit, rule); found++; }
       }
-      log(found ? `${displayName(video.filename)}: ${found} possible match(es). Alert raised.` : `${displayName(video.filename)}: no match.`, found ? "hit" : "");
+      log(found ? `${displayName(video.filename)}: ${plural(found, "possible match", "possible matches")}. Alert raised.` : `${displayName(video.filename)}: no match.`, found ? "hit" : "");
     } catch (error) {
       log(`${displayName(video.filename)}: check stopped (${error.message}).`, "warn");
     } finally { post("/api/search/scan/cancel", {scan_id: plan.scan_id}).catch(() => {}); }
@@ -107,13 +107,13 @@
     try {
       let data = await api("/api/videos");
       if (data.waiting_files.length) {   // footage copied straight into the folder: add it first
-        log(`${data.waiting_files.length} new file(s) in the video folder. Adding…`);
+        log(`${plural(data.waiting_files.length, "new file")} in the video folder. Adding…`);
         await post("/api/index"); data = await api("/api/videos");
       }
       const fresh = data.videos.filter(v => v.status === "done" && !v.camera?.hidden && !watching.seen.has(v.id));
       if (fresh.length) await library().catch(() => {});
       for (const v of fresh) { if (!watching) break; if (await check(v)) watching.seen.add(v.id); }
-      if (watching) status(`Watching for “${watching.rule}” · ${watching.seen.size} recording(s) known · checked ${fmtClock()}`);
+      if (watching) status(`Watching for “${watching.rule}” · ${plural(watching.seen.size, "recording")} known · checked ${fmtClock()}`);
     } catch (error) { status(`Watching (last check failed: ${error.message})`); }
     finally { if (watching) watching.checking = false; }
   }
