@@ -61,7 +61,7 @@
   <header class="topbar">
     <div class="crumb"><span>TanyaCCTV</span><span class="sep">/</span><strong id="page-title">Dashboard</strong></div>
     <form id="quick-find" class="quick-find" role="search"><svg><use href="#i-search"/></svg><label class="sr-only" for="quick-find-input">Find a video or investigation</label><input id="quick-find-input" placeholder="Find a video or investigation by name" autocomplete="off"></form>
-    <div class="top-status"><span id="busy-pill" class="top-pill busy" hidden>Working…</span><span id="ai-pill" class="top-pill">AI search: checking…</span><button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch between dark and light theme"><svg><use href="#i-sun"/></svg><span>Light</span></button></div>
+    <div class="top-status"><span id="busy-pill" class="top-pill busy" hidden>Working…</span><a id="ai-pill" class="top-pill" href="#system" title="Open Settings to see the AI connection">AI search: checking…</a><button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch between dark and light theme"><svg><use href="#i-sun"/></svg><span>Light</span></button></div>
   </header>
 
   <main>
@@ -73,7 +73,8 @@
       <form id="dash-search" class="card dash-search">
         <h1 class="display">What do you want to find?</h1>
         <p class="muted">Describe it in plain words. The AI looks through your footage and shows you the moments worth watching.</p>
-        <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="dash-query">Describe a moment</label><input id="dash-query" maxlength="500" required placeholder="e.g. a person in a black jacket walking in"><button type="button" class="mic" data-target="dash-query" aria-label="Speak your search" title="Speak your search (Chrome turns speech into text using Google's speech service)" hidden><svg><use href="#i-mic"/></svg></button><button>Search</button></div>
+        <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="dash-query">Describe a moment</label><input id="dash-query" maxlength="500" required placeholder="e.g. a person in a black jacket walking in"><button type="button" class="mic" data-target="dash-query" aria-label="Speak your search" title="Speak your search (Chrome turns speech into text using Google's speech service)" hidden><svg><use href="#i-mic"/></svg></button><button id="dash-search-button">Search</button></div>
+        <div class="ai-callout" data-ai-callout hidden><svg aria-hidden="true"><use href="#i-alert"/></svg><p><strong>AI search isn't connected yet.</strong> You can still add, watch and organise footage. <a href="#system">Connect the AI in Settings →</a></p></div>
         <p class="steps"><span><b>1</b>Add footage</span><span><b>2</b>Describe what you're looking for</span><span><b>3</b>Watch the suggested moments</span></p>
       </form>
       <div class="stat-grid" id="stats" aria-live="polite"></div>
@@ -84,6 +85,7 @@
             <p class="muted small-note">Check every new recording automatically while this page is open, and raise an alert on a match.</p>
             <label class="sr-only" for="watch-rule">Alert me when</label><input id="watch-rule" class="input" maxlength="200" placeholder="Alert me when… e.g. a person lying on the floor">
             <label class="check small-note"><input id="watch-consent" type="checkbox"><span>OK to send sampled images of each new recording to Google Gemini automatically (up to 60 images per recording; longer ones are skipped).</span></label>
+            <p id="watch-ai-note" class="ai-note" hidden></p>
             <button type="button" id="watch-start">Start watching</button>
             <p id="watch-status" class="watch-status" role="status">Not watching.</p>
             <ul id="watch-log" class="watch-log"></ul>
@@ -174,6 +176,7 @@
     <section class="page" data-page="search" id="search" hidden>
       <div class="page-head"><div><h1 class="display">Search footage</h1><p class="muted">Describe what you're looking for. You'll get a short list of moments to watch, so you don't have to watch everything.</p></div></div>
       <form id="search-form" class="card search-card">
+        <div class="ai-callout" data-ai-callout hidden><svg aria-hidden="true"><use href="#i-alert"/></svg><p><strong>AI search isn't connected yet.</strong> You can still add, watch and organise footage. <a href="#system">Connect the AI in Settings →</a></p></div>
         <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="query">Describe a moment</label><input id="query" maxlength="500" required placeholder="e.g. a person walking through the lobby"><button type="button" class="mic" data-target="query" aria-label="Speak your search" title="Speak your search (Chrome turns speech into text using Google's speech service)" hidden><svg><use href="#i-mic"/></svg></button><button id="search-button">Search</button></div>
         <div class="examples" id="examples"><span class="muted">Try:</span><button type="button" class="chip">a person walking through the lobby</button><button type="button" class="chip">a red car entering the car park</button><button type="button" class="chip">a person lying on the floor</button><button type="button" class="chip">someone standing still for a long time</button></div>
         <div class="search-options">
@@ -234,6 +237,7 @@
               <div class="case-actions"><button type="button" class="secondary" id="case-rename">Rename</button><button type="button" class="secondary" id="case-close">Close</button><button type="button" id="case-report-html">Export report (HTML)</button><button type="button" class="secondary" id="case-report-json">Export data (JSON)</button><label class="check report-frames" for="case-report-frames"><input id="case-report-frames" type="checkbox"><span>Include frame images (footage) in the HTML report</span></label></div></div>
             <section id="summary-box" class="summary-box" aria-label="AI incident summary">
               <div class="summary-head"><h3>AI incident summary</h3><button type="button" id="summary-open" class="secondary small">Draft with AI</button></div>
+              <p id="summary-ai-note" class="ai-note" hidden></p>
               <div id="summary-panel" hidden>
                 <label class="check"><input id="summary-consent" type="checkbox"><span>OK to send this case's text (times, camera names, your decisions and notes; no images) to Google Gemini.</span></label>
                 <div class="confirm-actions"><button type="button" id="summary-run" disabled>Write summary</button></div>

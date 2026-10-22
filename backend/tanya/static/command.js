@@ -123,6 +123,17 @@ function typeOut(node, text, done) {
   const t = setInterval(() => { i += 3; node.textContent = text.slice(0, i); if (i >= text.length) { clearInterval(t); node.textContent = text; node.classList.remove("typing"); done?.(); } }, 14);
 }
 $("summary-open").onclick = () => { $("summary-panel").hidden = !$("summary-panel").hidden; };
+// Drafting sends the case text to Gemini, so it needs the live AI connection (off in the offline demo).
+function summaryAvailability() {
+  const ai = window.aiState?.(), off = ai?.known && !ai.live;
+  $("summary-open").disabled = !!off;
+  if (off) $("summary-panel").hidden = true;
+  const note = $("summary-ai-note"); note.hidden = !off; note.replaceChildren();
+  if (off && ai.demo) note.append(element("span", "AI summaries are off in the offline demo."));
+  else if (off) { const link = element("a", "Connect it in Settings →"); link.href = "#system"; note.append(element("span", "Drafting a summary needs the AI connection. "), link); }
+}
+document.addEventListener("tanya:status", summaryAvailability);
+summaryAvailability();
 $("summary-consent").onchange = () => { $("summary-run").disabled = !$("summary-consent").checked; };
 $("summary-run").onclick = async () => {
   if (!activeCase || !$("summary-consent").checked) return;

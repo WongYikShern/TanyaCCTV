@@ -15,14 +15,27 @@
     $("watch-log").prepend(li);
     while ($("watch-log").children.length > 6) $("watch-log").lastChild.remove();
   }
+  // Watch mode sends images to Gemini, so it needs the live AI connection (not available in the demo).
+  function unavailable() {
+    const ai = window.aiState?.();
+    if (!ai?.known || ai.live) return "";
+    return ai.demo ? "Watch mode is off in the offline demo." : "Watch mode needs the AI connection.";
+  }
   function controls() {
-    const on = !!watching;
-    $("watch-rule").disabled = on; $("watch-consent").disabled = on;
+    const on = !!watching, off = !on && unavailable();
+    $("watch-rule").disabled = on || !!off; $("watch-consent").disabled = on || !!off;
     $("watch-start").textContent = on ? "Stop watching" : "Start watching";
     $("watch-start").classList.toggle("secondary", on);
-    $("watch-start").disabled = !on && !($("watch-rule").value.trim() && $("watch-consent").checked);
+    $("watch-start").disabled = !on && (!!off || !($("watch-rule").value.trim() && $("watch-consent").checked));
     $("watch-card").classList.toggle("on", on);
+    $("watch-card").classList.toggle("ai-off", !!off);
+    const note = $("watch-ai-note"); note.hidden = !off; note.replaceChildren();
+    if (off) {
+      note.append(element("span", off + " "));
+      if (!window.aiState().demo) { const link = element("a", "Connect it in Settings →"); link.href = "#system"; note.append(link); }
+    }
   }
+  document.addEventListener("tanya:status", controls);
 
   function beep() {
     try {
