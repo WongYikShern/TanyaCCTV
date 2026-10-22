@@ -48,6 +48,15 @@ In front of the judges:
    added, checked automatically, and an alert pops up with a sound, the AI's box and **Play clip**.
    Uploading it a second time is refused as a duplicate, so re-encode another copy for a rehearsal.
 
+**Follow a target in the player.** Opening a match that has the AI's box (**Play key moment**) tracks
+that person or object on this computer: a green square follows them during playback, turns grey "not
+visible" while they are hidden, and green again when they reappear. Without the AI (for example when
+the Google limit is used up), pause any video, press **Follow someone** and drag a square around a
+person. Rehearsed on the theft clips: *Garage driveway* (box the man at 0:09; he is not visible inside
+the garage 0:12-0:24 and is followed again at 0:28 with the motorbike) and *Parking bay* (box the man in
+the helmet at 0:20; followed to the motorbike). Tracking takes about 10 seconds and covers 4 s before to
+20 s after the boxed moment. It can drift in dark or crowded footage.
+
 **Map.** Map / Satellite / Hybrid styles, camera view cones (↺ ↻ to turn), a labelled site zone for
 cameras sharing a place prefix ("Mall · …"), hover a pin to play its footage.
 

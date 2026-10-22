@@ -30,6 +30,7 @@ from . import feedback
 from . import case_report
 from . import cameras
 from . import incident_summary
+from . import tracking
 from .investigations import (InvestigationError, NotFound, Store, StoreUnavailable, resolve_sources,
                              timeline, verify_sources)
 
@@ -70,6 +71,9 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
     # Up to three batches of an approved scan may be checked at once. While any run, they share the
     # global lock, so uploads, indexing and preparation still wait for the whole scan.
     scan_slots = threading.BoundedSemaphore(3)
+    # Tracking is local CPU work and read-only: one at a time, independent of the global lock.
+    track_slot = threading.Lock()
+    track_cache = {}
     scans_running = [0]
     scans_mutex = threading.Lock()
     # Identifies this website process, so an open page can tell that the server was restarted (possibly with a
@@ -259,6 +263,34 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             return jsonify(camera=cameras.update(settings, video[0]["sha256"], request.get_json(silent=True)))
         except cameras.CameraError as error:
             abort(400, description=str(error))
+
+    @app.post("/api/videos/<int:video_id>/track")
+    def track_target(video_id):
+        """Follow a boxed person or object through this recording, on this computer (nothing is sent)."""
+        video = rows("SELECT sha256, rel_path, duration_sec FROM videos WHERE id=? AND status='done'", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            abort(400, description="Send a moment and a box.")
+        source = source_path(video[0])
+        if source is None:
+            abort(404, description="The original file is no longer in the video folder.")
+        key = (video[0]["sha256"], data.get("timestamp"), str(data.get("box_2d")))
+        if key in track_cache:
+            return jsonify(track_cache[key])
+        if not track_slot.acquire(blocking=False):
+            abort(409, description="Another tracking job is running. Try again in a moment.")
+        try:
+            result = tracking.track(source, data.get("timestamp"), data.get("box_2d"), video[0]["duration_sec"])
+        except tracking.TrackingError as error:
+            abort(400, description=str(error))
+        finally:
+            track_slot.release()
+        if len(track_cache) > 50:
+            track_cache.clear()
+        track_cache[key] = result
+        return jsonify(result)
 
     @app.get("/api/videos/<int:video_id>/playback")
     def video_playback(video_id):

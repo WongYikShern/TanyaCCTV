@@ -281,6 +281,20 @@
 .mic.listening { background: var(--red); color: #fff; border-color: var(--red); animation: recdot 1.2s ease-out infinite; }
 .credits { font-size: 11px; color: var(--faint); }
 
+/* Follow a target in the player */
+.track-layer { position: absolute; z-index: 2; pointer-events: none; }
+.track-layer.drawing { pointer-events: auto; cursor: crosshair; background: rgba(232,116,47,.07); outline: 2px dashed rgba(245,154,95,.8); outline-offset: -2px; }
+.track-box { position: absolute; border: 2.5px solid #3DD68C; border-radius: 4px; box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 0 18px rgba(61,214,140,.55); }
+.track-box::before, .track-box::after { content: ""; position: absolute; width: 10px; height: 10px; border: 3px solid #3DD68C; }
+.track-box::before { left: -6px; top: -6px; border-width: 3px 0 0 3px; } .track-box::after { right: -6px; bottom: -6px; border-width: 0 3px 3px 0; }
+.track-box b { position: absolute; left: -2.5px; bottom: 100%; margin-bottom: 3px; white-space: nowrap; padding: 1px 7px; border-radius: 4px; background: #3DD68C; color: #06200f; font: 700 11px/1.5 var(--font, system-ui); }
+.track-box.lost { border-color: #8A929E; border-style: dashed; box-shadow: none; }
+.track-box.lost::before, .track-box.lost::after { border-color: #8A929E; } .track-box.lost b { background: #8A929E; color: #10141A; }
+.track-draft { position: absolute; border: 2px dashed #F59A5F; background: rgba(232,116,47,.15); }
+.track-status { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.track-status.busy { color: var(--orange-text); } .track-status.on { color: var(--green); } .track-status.warn { color: var(--amber); }
+#track-draw svg { width: 14px; height: 14px; }
+
 /* Results lock on as they arrive */
 .result.lock { animation: lockin .55s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes lockin { from { opacity: 0; transform: translateY(14px) scale(.985); } }

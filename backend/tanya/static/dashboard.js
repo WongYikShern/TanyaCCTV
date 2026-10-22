@@ -46,7 +46,7 @@ function route() {
   document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===(page==="watch"?"library":page)));
   $("page-title").textContent=titles[page];
   if(page!=="watch"){ $("player").pause(); activeVideo=null; }
-  if(page==="watch"){ const params=new URLSearchParams(query); showWatch(Number(arg),Number(params.get("t"))||0,params.has("end")?Number(params.get("end")):null); }
+  if(page==="watch"){ const params=new URLSearchParams(query); showWatch(Number(arg),Number(params.get("t"))||0,params.has("end")?Number(params.get("end")):null); window.followFromRoute?.(params); }
   if(page==="dashboard") library().catch(error=>notice(error.message)).finally(renderDashboard);
   if(page==="search") library().catch(error=>notice(error.message));
   if(page==="library") library().catch(error=>notice(error.message));
@@ -57,9 +57,11 @@ function route() {
 }
 window.addEventListener("hashchange",route);
 function playbackEnd(start,end) { return Number.isFinite(end) && end>start ? end : null; }
-function openVideo(id,name,url,start=0,end=null) {
+// follow: optional {t, box, label} to track a boxed target from moment t (see follow.js).
+function openVideo(id,name,url,start=0,end=null,follow=null) {
   end=playbackEnd(start,end);
-  const hash=`#watch/${id}?t=${start||0}`+(end!==null&&end!==undefined?`&end=${end}`:"");
+  const hash=`#watch/${id}?t=${start||0}`+(end!==null&&end!==undefined?`&end=${end}`:"")
+    +(follow?`&bt=${follow.t}&bx=${follow.box.join(",")}&bl=${encodeURIComponent(follow.label||"")}`:"");
   if(location.hash===hash) route(); else location.hash=hash;
 }
 
@@ -247,7 +249,7 @@ $("toggle-upload").onclick=()=>{ $("upload-form").hidden=!$("upload-form").hidde
 const mediaErrors={1:"Playback was stopped before the video loaded.",2:"A network error stopped the video from loading. Check that the website is still running.",3:"The browser could not decode this video. It may be damaged.",4:"This browser cannot play this video format."};
 function overlay(text){ $("player-overlay").hidden=!text; $("player-overlay-text").textContent=text||""; }
 function playerError(text){ $("player-error").hidden=!text; $("player-error").textContent=text||""; if(text) overlay(null); }
-function resetPlayer(){ const p=$("player"); p.pause(); p.removeAttribute("src"); p.load(); playerError(null); overlay(null); }
+function resetPlayer(){ const p=$("player"); p.pause(); p.removeAttribute("src"); p.load(); playerError(null); overlay(null); window.clearFollow?.(); }
 async function showWatch(id,start,end) {
   end=playbackEnd(start,end);
   const myToken=++watchToken; activeVideo=id; framePage=0; currentMoment=start; watchWindow=end!==null?[start,end]:null;
@@ -431,7 +433,10 @@ const verdictLabels={supported:["Likely match",""],unclear:["Maybe","pending"],n
 const answerNames={correct:"Yes",wrong:"No",unsure:"Not sure"};
 function resultCard(hit, query, visual, rank){
   const card=element("article",undefined,"result"), review=hit.visual_review, focus=hit.review_focus, span=review?.evidence_span;
-  const play=(start,end)=>openVideo(hit.video_id,hit.filename,hit.video_url,start,end);
+  // With the AI's box, the player follows that target from the cited frame (tracked on this computer).
+  const box=review?.evidence_boxes?.[0];
+  const follow=box?{t:box.timestamp,box:box.box_2d,label:box.label}:null;
+  const play=(start,end)=>openVideo(hit.video_id,hit.filename,hit.video_url,start,end,follow);
   // The checker's cited frames give a tighter range than the scanned window (a hint, not a boundary).
   // Event-index results play from a little before the event to a little after it.
   const playBest=()=>span?play(span.start_sec,span.end_sec):ev?play(ev.context_start_sec,ev.context_end_sec):play(hit.start_sec,hit.end_sec);

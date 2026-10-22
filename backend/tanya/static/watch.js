@@ -51,7 +51,9 @@
     const acts = element("div", undefined, "watch-alert-acts");
     const play = element("button", "Play clip"); play.type = "button"; play.prepend(icon("play"));
     const span = review.evidence_span;
-    play.onclick = () => { openVideo(video.id, video.filename, video.video_url, span?.start_sec ?? hit.start_sec, span?.end_sec ?? hit.end_sec); box.remove(); };
+    const first = review.evidence_boxes?.[0];
+    const follow = first ? {t: first.timestamp, box: first.box_2d, label: first.label} : null;
+    play.onclick = () => { openVideo(video.id, video.filename, video.video_url, span?.start_sec ?? hit.start_sec, span?.end_sec ?? hit.end_sec, follow); box.remove(); };
     const map = element("button", "On map", "secondary"); map.type = "button"; map.onclick = () => { location.hash = "#map"; box.remove(); };
     const close = element("button", "Dismiss", "secondary"); close.type = "button"; close.onclick = () => box.remove();
     acts.append(play, map, close); text.append(acts);

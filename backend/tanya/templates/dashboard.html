@@ -19,6 +19,7 @@
   <script defer src="{{ url_for('static', filename='command.js') }}"></script>
   <script defer src="{{ url_for('static', filename='map.js') }}"></script>
   <script defer src="{{ url_for('static', filename='watch.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='follow.js') }}"></script>
 </head>
 <body>
 <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -144,8 +145,9 @@
       <div class="watch-grid">
         <div class="card player-card">
           <div class="player-wrap"><video id="player" controls preload="metadata" playsinline></video>
+            <div id="track-layer" class="track-layer"><div id="track-box" class="track-box" hidden><b id="track-label"></b></div><div id="track-draft" class="track-draft" hidden></div></div>
             <div id="player-overlay" class="player-overlay" hidden><div class="spinner" aria-hidden="true"></div><p id="player-overlay-text">Loading video…</p></div></div>
-          <div class="player-bar"><span id="player-time" class="mono">0:00 / 0:00</span><span id="player-window" class="pill-soft" hidden></span><button type="button" class="ghost small" id="replay-window" hidden>Play from window start</button></div>
+          <div class="player-bar"><span id="player-time" class="mono">0:00 / 0:00</span><span id="player-window" class="pill-soft" hidden></span><button type="button" class="ghost small" id="replay-window" hidden>Play from window start</button><button type="button" class="secondary small" id="track-draw" title="Pause, then drag a square around a person or object to follow them">Follow someone</button><button type="button" class="ghost small" id="track-clear" hidden>Stop following</button><span id="track-status" class="track-status" role="status"></span></div>
           <div id="player-error" class="banner error" hidden></div>
         </div>
         <aside class="card watch-side">
