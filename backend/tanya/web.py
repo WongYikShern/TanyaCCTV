@@ -31,6 +31,7 @@ from . import case_report
 from . import cameras
 from . import incident_summary
 from . import tracking
+from . import footage_notes
 from .investigations import (InvestigationError, NotFound, Store, StoreUnavailable, resolve_sources,
                              timeline, verify_sources)
 
@@ -452,6 +453,33 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             return jsonify(asdict(summary))
         finally:
             lock.release()
+
+    @app.post("/api/search/notes")
+    def search_notes():
+        """Moments described in advance (data/footage_notes.json) that match the words. No AI, no network."""
+        data = request.get_json(silent=True)
+        query = data.get("query") if isinstance(data, dict) else None
+        if not isinstance(query, str) or not 1 <= len(query.strip()) <= 500:
+            abort(400, description="Enter a description between 1 and 500 characters.")
+        library = {v["sha256"]: v for v in rows("SELECT id, sha256, filename, duration_sec FROM videos WHERE status='done'")}
+        hits = []
+        for note, video in footage_notes.search(footage_notes.load(settings.db_path.with_name("footage_notes.json")), query, library):
+            start, end = float(note.get("start_sec", 0)), float(note.get("end_sec", video["duration_sec"] or 0))
+            box = note.get("box") if isinstance(note.get("box"), dict) else None
+            at = box["timestamp"] if box else (start + end) / 2
+            frame = rows("SELECT image_path FROM frames WHERE video_id=? ORDER BY ABS(timestamp_sec-?) LIMIT 1", (video["id"], at))
+            boxes = []
+            if box and footage_notes.valid_box(box.get("box_2d")):
+                boxes = [{"timestamp": at, "box_2d": box["box_2d"], "label": str(box.get("label", ""))[:60],
+                          "frame_url": url_for("frame_file", rel=frame[0]["image_path"]) if frame else None}]
+            hits.append(dict(video_id=video["id"], filename=video["filename"], start_sec=start, end_sec=end,
+                             video_url=url_for("video_file", video_id=video["id"]), preanalysed=True,
+                             thumbnail_url=url_for("frame_file", rel=frame[0]["image_path"]) if frame else None,
+                             best_score=None, review_focus=None, scan_window=None,
+                             visual_review={"verdict": "supported", "reason": note.get("description", ""), "sampled_timestamps": [],
+                                            "evidence_timestamps": [at] if box else [], "evidence_boxes": boxes,
+                                            "evidence_span": {"start_sec": start, "end_sec": end}}))
+        return jsonify(query=query.strip(), hits=hits)
 
     @app.post("/api/search/scan/plan")
     def scenario_plan():

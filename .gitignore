@@ -24,6 +24,7 @@ data/playback/
 *.db
 data/search_index_manifest.json
 data/cameras.json
+data/footage_notes.json
 data/*.html
 *.db-journal
 *.sqlite

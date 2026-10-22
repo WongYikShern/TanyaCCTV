@@ -194,7 +194,8 @@ async function change(request, message) {
 
 // A direct footage scan window (hit.scan_window) is not a similarity ranking: store it as "scan" with no rank.
 window.investigationClipButton = function (hit, query, visual, rank) {
-  const mode = hit.event ? "index" : hit.scan_window ? "scan" : (visual ? "visual" : "ranked");
+  // A pre-analysed note was written by a person, not found by AI: store it as a manual clip with the note.
+  const mode = hit.preanalysed ? "manual" : hit.event ? "index" : hit.scan_window ? "scan" : (visual ? "visual" : "ranked");
   const button = element("button", "Add to investigation", "secondary");
   button.type = "button";
   button.onclick = async () => {
@@ -203,13 +204,14 @@ window.investigationClipButton = function (hit, query, visual, rank) {
     button.disabled = true;
     try {
       activeCase = await post(`/api/investigations/${id}/evidence`, {
-        video_id: hit.video_id, start_sec: hit.start_sec, end_sec: hit.end_sec, query,
+        video_id: hit.video_id, start_sec: hit.start_sec, end_sec: hit.end_sec,
+        query: hit.preanalysed ? `Pre-analysed note: ${hit.visual_review.reason}`.slice(0, 500) : query,
         search_mode: mode, rank: mode === "scan" || mode === "index" ? null : (rank || null),
         best_score: mode === "scan" || mode === "index" ? null : hit.best_score,
         score_above_median: mode === "scan" || mode === "index" ? null : hit.best_score_above_median, thumbnail: hit.thumbnail,
         ...(mode === "index" ? {event_source: hit.event.source} : {}),
-        visual_verdict: hit.visual_review ? hit.visual_review.verdict : null,
-        visual_reason: hit.visual_review ? hit.visual_review.reason : null});
+        visual_verdict: hit.visual_review && !hit.preanalysed ? hit.visual_review.verdict : null,
+        visual_reason: hit.visual_review && !hit.preanalysed ? hit.visual_review.reason : null});
       button.textContent = "Added ✓";
       renderCase();
       await loadInvestigations();

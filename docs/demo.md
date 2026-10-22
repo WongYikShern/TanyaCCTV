@@ -48,6 +48,14 @@ In front of the judges:
    added, checked automatically, and an alert pops up with a sound, the AI's box and **Play clip**.
    Uploading it a second time is refused as a duplicate, so re-encode another copy for a rehearsal.
 
+**Pre-analysed footage (no Google needed).** `data/footage_notes.json` (local, not in Git) holds moments
+described by watching each demo recording, with a box on the person or object. A search first checks
+these notes, instantly and offline; results are labelled **Pre-analysed match** and the player then tracks
+the box. Live AI runs only if no note matches, or via **Also search live with AI**. Try: "a man stealing
+a motorbike" (garage 0:27-0:42, parking bay 0:21-0:48 and 0:48-1:00), "bag left behind" (departure hall),
+"a person falling" (lobby 0:26-0:38), "man in white jumper" (corridor). Say "these recordings were
+analysed in advance"; it is not a live AI result.
+
 **Follow a target in the player.** Opening a match that has the AI's box (**Play key moment**) tracks
 that person or object on this computer: a green square follows them during playback, turns grey "not
 visible" while they are hidden, and green again when they reappear. Without the AI (for example when

@@ -420,7 +420,9 @@ document.querySelectorAll("#examples .chip").forEach(chip=>{ chip.onclick=()=>{ 
 function saveToId(){ const value=$("save-to").value; return value ? Number(value) : null; }
 $("search-form").onsubmit=async event=>{
   event.preventDefault();
-  if($("search-mode").value==="direct"){ await reviewScenarioPlan(); return; }
+  // Thorough search: first the pre-analysed footage notes (instant, no AI); live AI only if nothing matches
+  // there, or when the person asks for it.
+  if($("search-mode").value==="direct"){ if(!(await notesSearch())) await reviewScenarioPlan(); return; }
   const visual=$("visual-check").checked, approved=$("visual-consent").checked;
   if(visual && !approved){ notice("Approve the sampled-frame check, or uncheck image checking to see rankings only."); return; }
   busy(true);
@@ -466,7 +468,7 @@ function resultCard(hit, query, visual, rank){
   const overlay=element("span",undefined,"play"); overlay.append(icon("play")); pic.append(overlay); pic.onclick=playBest;
   const info=element("div",undefined,"result-info");
   const ev=hit.event;
-  const [verdict,kind]=review?verdictLabels[review.verdict]:ev?[ev.source_label,{provisional_review:"info",publisher_annotation:"info",synthetic_script:"neutral",yolo_person:"pending"}[ev.source]]:["Similar clip","info"];
+  const [verdict,kind]=hit.preanalysed?["Pre-analysed match",""]:review?verdictLabels[review.verdict]:ev?[ev.source_label,{provisional_review:"info",publisher_annotation:"info",synthetic_script:"neutral",yolo_person:"pending"}[ev.source]]:["Similar clip","info"];
   const head=element("div",undefined,"result-head");
   head.append(element("span",verdict,"badge "+kind),element("span",`${time(hit.start_sec)} – ${time(hit.end_sec)}`,"when"),element("span",displayName(hit.filename),"muted"));
   info.append(head);
@@ -486,6 +488,7 @@ function resultCard(hit, query, visual, rank){
   // Technical detail stays available, but out of the way.
   const more=element("details",undefined,"tech"); more.append(element("summary","Details"));
   if(ev){ more.append(element("p",ev.provenance,"muted")); more.append(element("p",`Exact label times ${hit.start_sec.toFixed(2)}–${hit.end_sec.toFixed(2)} s. Playback includes ${time(ev.context_start_sec)}–${time(ev.context_end_sec)} for context. No similarity score: matched by keywords.`,"muted")); if(ev.detector?.provenance) more.append(element("p",ev.detector.provenance,"muted")); }
+  else if(hit.preanalysed) more.append(element("p","From footage notes written in advance by watching this recording, not a live AI check. The square is the noted position; the player then tracks it on this computer.","muted"));
   else more.append(element("p",Number.isFinite(hit.best_score)?`Result #${rank}. Ranking score ${hit.best_score.toFixed(3)}: used for ordering only, not a probability.`:`Found by looking through the footage (part ${hit.scan_window}); no similarity score.`,"muted"));
   if(span) more.append(element("p","The key moment comes from the frames the AI pointed to. The event may run longer.","muted"));
   if(hasFocus) more.append(element("p","This clip combines several shorter pieces. “Strongest part” is the best-scoring piece, not the exact start and end of the event.","muted"));
@@ -508,6 +511,22 @@ function resultCard(hit, query, visual, rank){
     }; feedback.append(choice);
   }
   feedback.append(saved); info.append(feedback); card.append(pic,info); return card;
+}
+
+// ---------------------------------------------------------------- pre-analysed footage notes (no AI)
+async function notesSearch(){
+  const query=$("query").value.trim(); if(!query) return false;
+  let data; try{ data=await post("/api/search/notes",{query}); }catch(error){ return false; }
+  if(!data.hits.length){ $("results").replaceChildren(element("p",`Nothing in the pre-analysed footage matches “${data.query}”. You can search live with AI below (uses Google).`,"results-intro")); return false; }
+  invalidateScenario();
+  const intro=element("p",`Found ${data.hits.length} moment(s) for “${data.query}” in pre-analysed footage: described in advance by watching the recordings, so no AI request was needed. Watch each clip to confirm.`,"results-intro");
+  const live=element("button","Also search live with AI (uses Google)","secondary small"); live.type="button";
+  live.onclick=()=>{ live.disabled=true; reviewScenarioPlan(); };
+  const head=element("div",undefined,"notes-head"); head.append(intro,live);
+  $("results").replaceChildren(head,element("h3",`Matches (${data.hits.length})`));
+  for(const [i,hit] of data.hits.entries()){ const card=resultCard(hit,data.query,true,i+1); window.scanFx?.reveal(card); $("results").append(card); }
+  $("scenario-progress").textContent="";
+  return true;
 }
 
 // ---------------------------------------------------------------- direct scenario scan

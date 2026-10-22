@@ -303,6 +303,9 @@
 .track-status.busy { color: var(--orange-text); } .track-status.on { color: var(--green); } .track-status.warn { color: var(--amber); }
 #track-draw svg { width: 14px; height: 14px; }
 
+.notes-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+.notes-head .results-intro { flex: 1 1 420px; margin: 0; }
+
 /* Results lock on as they arrive */
 .result.lock { animation: lockin .55s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes lockin { from { opacity: 0; transform: translateY(14px) scale(.985); } }
