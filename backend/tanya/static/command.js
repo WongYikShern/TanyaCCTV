@@ -77,10 +77,14 @@ window.cameraEditor = function (v) {
 // ---------------------------------------------------------------- camera wall
 window.renderCameraWall = function (box, videos) {
   box.replaceChildren();
-  const ready = videos.filter(v => v.status === "done" && !v.camera?.hidden).slice(0, 7);
+  // Equal tiles in a tidy grid: 1, 2 (also for 3–4) or 3 columns. Up to 6 tiles, then a "+N more" tile.
+  const all = videos.filter(v => v.status === "done" && !v.camera?.hidden);
+  const MAX = 6, extra = all.length > MAX ? all.length - (MAX - 1) : 0;
+  const ready = all.slice(0, extra ? MAX - 1 : MAX), count = ready.length + (extra ? 1 : 0);
+  box.style.setProperty("--wall-cols", String(count <= 1 ? 1 : count <= 4 ? 2 : 3));
   if (videos.length && !ready.length) box.append(element("p", "Your recordings are still being prepared.", "empty"));
-  ready.forEach((v, i) => {
-    const tile = element("button", undefined, "cam-tile" + (i === 0 ? " big" : "")); tile.type = "button";
+  ready.forEach(v => {
+    const tile = element("button", undefined, "cam-tile"); tile.type = "button";
     tile.setAttribute("aria-label", `Open ${displayName(v.filename)}`);
     const url = ["playable", "copy_ready"].includes(v.playback?.status) ? v.playback.url : null;
     let media;
@@ -89,13 +93,20 @@ window.renderCameraWall = function (box, videos) {
       media.setAttribute("muted", ""); media.src = url; media.play().catch(() => {});
     } else { media = element("img"); media.alt = ""; if (v.thumbnail_url) media.src = v.thumbnail_url; }
     const clock = element("span", time(v.duration_sec), "cam-time");
-    tile.append(media, element("span", displayName(v.filename), "cam-name"), element("span", "RECORDED", "cam-tag"), clock);
-    if (v.camera?.place) tile.append(element("span", v.camera.place, "cam-place"));
+    const head = element("span", undefined, "cam-head");
+    head.append(element("span", displayName(v.filename), "cam-name"));
+    if (v.camera?.place) head.append(element("span", v.camera.place, "cam-place"));
+    tile.append(media, head, clock, element("span", "RECORDED", "cam-tag"));
     // Position in the recording, not a wall clock: these are recordings, not live feeds.
     if (url) media.addEventListener("timeupdate", () => { clock.textContent = `${time(media.currentTime)} / ${time(media.duration || v.duration_sec)}`; });
     tile.onclick = () => openVideo(v.id);
     box.append(tile);
   });
+  if (extra) {
+    const more = element("a", undefined, "cam-tile cam-more"); more.href = "#library";
+    more.append(element("strong", `+${extra}`), element("span", `more camera${extra === 1 ? "" : "s"}`));
+    box.append(more);
+  }
 };
 
 // ---------------------------------------------------------------- evidence boxes

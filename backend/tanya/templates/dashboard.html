@@ -45,7 +45,7 @@
 </svg>
 
 <aside class="sidebar" aria-label="Main navigation">
-  <a class="brand" href="#dashboard" aria-label="TanyaCCTV dashboard"><img src="{{ url_for('static', filename='brand/tanyacctv-logo.png') }}" alt="TanyaCCTV — Your township's cameras, now listening." width="624" height="153"></a>
+  <a class="brand" href="#dashboard" aria-label="TanyaCCTV dashboard"><img class="brand-mark" src="{{ url_for('static', filename='brand/tanyacctv-mark.png') }}" alt="" width="40" height="40"><span class="brand-text" aria-hidden="true"><span class="brand-name">Tanya<span>CCTV</span></span><span class="brand-tagline">Your township's cameras, now listening.</span></span></a>
   <nav>
     <a class="nav" data-view="dashboard" href="#dashboard"><svg><use href="#i-dashboard"/></svg>Dashboard</a>
     <a class="nav" data-view="library" href="#library"><svg><use href="#i-library"/></svg>Cameras</a>
@@ -255,8 +255,8 @@
               </div>
             </section>
             <form id="rename-form" class="inline-form" hidden><label class="sr-only" for="rename-title">New title</label><input id="rename-title" class="input" maxlength="200" required><button>Save title</button><button type="button" class="secondary" id="rename-cancel">Cancel</button></form>
-            <h3 class="section-title"><svg aria-hidden="true"><use href="#i-arrow"/></svg>Saved searches</h3><div id="case-queries"></div>
-            <h3 class="section-title"><svg aria-hidden="true"><use href="#i-arrow"/></svg>Evidence timeline</h3><p id="case-basis" class="muted"></p><div id="case-clocks"></div><div id="case-evidence" class="timeline" aria-live="polite"></div>
+            <h3 class="section-title">Saved searches</h3><div id="case-queries"></div>
+            <h3 class="section-title">Evidence timeline</h3><p id="case-basis" class="muted"></p><div id="case-clocks"></div><div id="case-evidence" class="timeline" aria-live="polite"></div>
             <details id="case-history"><summary>Change history</summary><div id="case-history-items"></div></details>
           </div>
         </div>
