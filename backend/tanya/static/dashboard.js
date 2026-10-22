@@ -572,7 +572,12 @@ $("scenario-run").onclick=async()=>{
     if(!matches) supportedTitle.textContent=unknown?"No likely matches. Check the “maybe” clips below.":"No likely matches";
     $("scenario-progress").textContent=`${scenarioStop?"Stopped early":"Done"}: ${matches} likely, ${unknown} maybe (${images} images checked${scenarioStop?`, ${completed} of ${plan.windows} parts`:""}). The same event can show up in two neighbouring clips. Not finding something doesn't prove it didn't happen.`;
     window.scanFx?.finish({seconds:(performance.now()-startedAt)/1000,images,completed,stopped:scenarioStop});
-  }catch(error){if(!matches) supportedTitle.textContent="Search didn't finish";$("scenario-progress").textContent=`Search stopped after ${completed} of ${plan.windows} parts: ${error.message} Results so far are shown below. Only “Google is busy” replies are retried (up to 3 tries); nothing else was resent.`;
+  }catch(error){if(!matches) supportedTitle.textContent="Search didn't finish";
+    // Make a refused request unmistakable: nothing was checked, so "no match" would be misleading.
+    const refused=/usage limit|quota|HTTP 429|HTTP 503|could not finish|did not finish/i.test(error.message);
+    if(refused){ const b=element("div",undefined,"banner error search-refused"); b.append(icon("alert"),element("span",/usage limit|quota|429/i.test(error.message)
+      ?"Google refused this search: your API key's daily limit is used up, so the AI did not look at the footage. Enable billing for the key in Google AI Studio (aistudio.google.com → API keys), or try again after the limit resets."
+      :"Google did not answer, so the AI did not look at the footage. Check the internet connection and try again.")); $("results").prepend(b); }$("scenario-progress").textContent=`Search stopped after ${completed} of ${plan.windows} parts: ${error.message} Results so far are shown below. Only “Google is busy” replies are retried (up to 3 tries); nothing else was resent.`;
     window.scanFx?.finish({seconds:(performance.now()-startedAt)/1000,images,completed,error:error.message});}
   finally{
     await post("/api/search/scan/cancel",{scan_id:plan.scan_id}).catch(()=>{});
