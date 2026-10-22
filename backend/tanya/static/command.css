@@ -322,3 +322,28 @@
   .ops-tools { max-width: 70%; }
   .ops-hud { max-width: calc(100% - 32px); top: 64px; }
 }
+
+/* Plain map style (and the automatic fallback without internet): a grid drawn in the browser. */
+.leaflet-container.plain { background: #0d1117; }
+.grid-tile { border-right: 1px solid rgba(255,255,255,.08); border-bottom: 1px solid rgba(255,255,255,.08);
+  background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 64px 64px; }
+:root[data-theme="light"] .leaflet-container.plain { background: #EEF1F5; }
+:root[data-theme="light"] .grid-tile { border-color: rgba(16,24,40,.1);
+  background-image: linear-gradient(rgba(16,24,40,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(16,24,40,.045) 1px, transparent 1px); }
+
+/* Empty map: a getting-started card, centred in the space left of the camera list. */
+.map-empty-wrap { position: absolute; inset: 72px 362px 72px 16px; z-index: 650; display: grid; place-items: center; pointer-events: none; }
+.map-empty { pointer-events: auto; width: min(440px, 100%); padding: 26px 26px 22px; text-align: center; }
+.map-empty-icon { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--orange-strong); color: #fff; margin-bottom: 10px; }
+.map-empty-icon svg { width: 24px; height: 24px; }
+.map-empty h2 { margin: 0 0 6px; font-size: 18px; }
+.map-empty p { margin: 0 0 16px; opacity: .8; }
+.map-empty-acts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+@media (max-width: 820px) {
+  .map-empty-wrap { inset: 112px 12px auto 12px; }
+  .map-empty { padding: 14px 16px; }
+  .map-empty-icon { display: none; }
+  .map-empty h2 { font-size: 16px; }
+  .map-empty p { font-size: 13px; margin-bottom: 12px; }
+}

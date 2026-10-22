@@ -126,17 +126,25 @@
           <p id="map-scan" class="map-scan" hidden></p>
         </div>
         <div class="ops-tools">
-          <div id="map-style" class="seg glass" role="group" aria-label="Map style"><button type="button" data-style="street" aria-pressed="true">Map</button><button type="button" data-style="satellite" aria-pressed="false">Satellite</button><button type="button" data-style="hybrid" aria-pressed="false">Hybrid</button></div>
+          <div id="map-style" class="seg glass" role="group" aria-label="Map style"><button type="button" data-style="street" aria-pressed="true">Map</button><button type="button" data-style="satellite" aria-pressed="false">Satellite</button><button type="button" data-style="hybrid" aria-pressed="false">Hybrid</button><button type="button" data-style="plain" aria-pressed="false" title="A simple grid that works without internet">Plain</button></div>
           <button type="button" id="map-fit" class="glass-btn">Fit all</button>
           <button type="button" id="map-demo" class="glass-btn">Place demo cameras</button>
         </div>
         <p id="map-hint" class="map-hint" role="status"></p>
+        <div id="map-empty" class="map-empty-wrap" hidden>
+          <div class="map-empty glass" role="region" aria-labelledby="map-empty-title">
+            <span class="map-empty-icon" aria-hidden="true"><svg><use href="#i-pin"/></svg></span>
+            <h2 id="map-empty-title"></h2>
+            <p id="map-empty-text"></p>
+            <div id="map-empty-acts" class="map-empty-acts"></div>
+          </div>
+        </div>
         <aside id="map-panel" class="ops-panel glass">
           <div class="ops-panel-head"><h2>Cameras</h2><button type="button" id="map-panel-toggle" class="glass-btn small" aria-expanded="true" aria-controls="map-list">Hide list</button></div>
           <p class="muted small-note">Hover a pin to see its footage. Drag pins to move them; ↺ ↻ turn the view cone.</p>
           <div id="map-list" class="map-list"></div>
         </aside>
-        <div class="ops-legend glass" aria-label="Legend"><span class="lg hit">Likely match</span><span class="lg maybe">Maybe</span><span class="lg checking">Checking</span><span class="lg clear">No match</span><span class="lg route">Possible route</span></div>
+        <div id="map-legend" class="ops-legend glass" aria-label="Legend"><span class="lg hit">Likely match</span><span class="lg maybe">Maybe</span><span class="lg checking">Checking</span><span class="lg clear">No match</span><span class="lg route">Possible route</span></div>
       </div>
     </section>
 

@@ -2,8 +2,9 @@
 // Camera map ("global view"): an operations map with camera view cones, site zones, live previews on
 // hover, scan status and an animated route for "Follow this person". Locations, headings and sites are
 // set by people (drag a pin, rotate, or type a place); nothing is inferred from footage. Map pictures
-// come from Esri's public tile service (no key); only tile requests go to it. Uses helpers from
-// dashboard.js; all names are set with textContent.
+// come from Esri's public tile service (no key); only tile requests go to it. Without internet the map
+// falls back to a plain grid drawn in the browser, so pins, cones and routes still work offline. Uses
+// helpers from dashboard.js; all names are set with textContent.
 (() => {
   const DEMO_CENTRE = [3.1478, 101.7130], FOV = 70;   // demo placement centre (Kuala Lumpur); cone width in degrees
   const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
@@ -16,17 +17,40 @@
     hybrid: [[tile("World_Imagery"), 19], [tile("Reference/World_Transportation"), 19], [tile("Reference/World_Boundaries_and_Places"), 19]],
   };
   const ATTRIBUTION = 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> and its data providers';
+  // "plain": no map pictures, just a grid drawn in the browser. Needs no network.
+  const gridLayer = () => new (L.GridLayer.extend({createTile: () => element("div", undefined, "grid-tile")}))({maxZoom: 19});
   const STATE_TEXT = {hit: "Match found", maybe: "Maybe", clear: "No match", checking: "Checking…", skipped: "Not checked"};
   let map = null, base = null, style = "street", placing = null, mini = null, zones = null, routeLayer = null, traveller = null;
   const markers = new Map(), miniMarkers = new Map(), scanState = new Map();
   let lastScan = null;
+  let tilesLoaded = false, savingPlace = false;   // tilesLoaded: at least one map picture arrived this session
 
   const located = v => Number.isFinite(v.camera?.lat) && Number.isFinite(v.camera?.lng);
   const cameras = () => videosCache.filter(v => v.status === "done" && !v.camera?.hidden);
   const site = v => (v.camera?.place || "").split(" · ")[0].trim();
   const styleKey = () => style === "street" ? (document.documentElement.dataset.theme === "light" ? "light" : "dark") : style;
   function tiles(target) {
-    return L.layerGroup(STYLES[styleKey()].map(([url, native]) => L.tileLayer(url, {attribution: ATTRIBUTION, maxZoom: 19, maxNativeZoom: native}))).addTo(target);
+    const plain = style === "plain";
+    target.getContainer().classList.toggle("plain", plain);
+    if (plain) return L.layerGroup([gridLayer()]).addTo(target);
+    return L.layerGroup(STYLES[styleKey()].map(([url, native]) => {
+      const layer = L.tileLayer(url, {attribution: ATTRIBUTION, maxZoom: 19, maxNativeZoom: native});
+      layer.on("tileload", () => { tilesLoaded = true; });
+      layer.on("tileerror", () => { if (!tilesLoaded) useOfflineMap(); });
+      return layer;
+    })).addTo(target);
+  }
+  function setStyle(next) {
+    style = next;
+    document.querySelectorAll("#map-style button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.style === next)));
+    if (map && base) { base.remove(); base = tiles(map); }
+    if (mini) { mini.base.remove(); mini.base = tiles(mini.map); }
+  }
+  // Map pictures come from the internet. If none can load, switch to the plain grid instead of a blank map.
+  function useOfflineMap() {
+    if (style === "plain") return;
+    setStyle("plain");
+    notice("Map pictures need an internet connection, so the map is showing a plain grid. Camera pins, routes and search results still work.");
   }
 
   // ---- pins: camera glyph, status ring, view cone, label
@@ -69,7 +93,34 @@
     try { await post(`/api/videos/${id}/camera`, data); await library(); render(); }
     catch (error) { notice(error.message); }
   }
-  function hint(text) { $("map-hint").textContent = text || ""; $("map-canvas").classList.toggle("placing", !!placing); }
+  function hint(text) { $("map-hint").textContent = text || ""; $("map-canvas").classList.toggle("placing", !!placing); renderEmpty(); }
+  function startPlacing(v) {
+    placing = v.id;
+    hint(`Click on the map where “${displayName(v.filename)}” is.`);
+    renderList();
+  }
+
+  // ---- getting started: shown until at least one camera has a place on the map
+  function renderEmpty() {
+    const all = cameras(), placed = all.some(located);
+    $("map-legend").hidden = !placed;
+    const show = !placed && !placing && !savingPlace;
+    $("map-empty").hidden = !show;
+    document.querySelector(".ops-hud").hidden = show && !lastScan;   // all zeros until a camera is placed
+    if (!show) return;
+    const acts = $("map-empty-acts"); acts.replaceChildren();
+    const action = (label, fn, cls) => { const b = element("button", label, cls); b.type = "button"; b.onclick = fn; acts.append(b); return b; };
+    if (!all.length) {
+      $("map-empty-title").textContent = "Add footage first";
+      $("map-empty-text").textContent = "Each recording becomes a camera you can place on this map. Add a video, then come back here.";
+      action("Add footage", () => { location.hash = "#library"; $("upload-form").hidden = false; });
+      return;
+    }
+    $("map-empty-title").textContent = "Put your cameras on the map";
+    $("map-empty-text").textContent = `You have ${all.length} camera${all.length === 1 ? "" : "s"}. Give each one its real location so search matches and possible routes appear in the right place.`;
+    action("Place demo cameras", () => $("map-demo").click());
+    action("Place them one by one", () => startPlacing(all.find(v => !located(v))), "secondary");
+  }
 
   // ---- site zones: cameras sharing the first part of their place ("Mall · Lobby") form a labelled area
   function drawZones() {
@@ -131,7 +182,7 @@
       m.addTo(map); markers.set(v.id, m);
     }
     drawZones(); drawRoute();
-    renderList(); renderHud();
+    renderList(); renderHud(); renderEmpty();
   }
   function renderHud() {
     const list = cameras();
@@ -160,7 +211,7 @@
       const state = scanState.get(v.id); if (state) text.append(element("span", STATE_TEXT[state] || "", "map-state " + state));
       const acts = element("div", undefined, "map-row-acts");
       const btn = (label, title, fn, cls = "secondary small") => { const b = element("button", label, cls); b.type = "button"; b.title = title; b.setAttribute("aria-label", title); b.onclick = fn; acts.append(b); return b; };
-      btn(located(v) ? "Move" : "Place", "Choose this camera, then click the map", () => { placing = placing === v.id ? null : v.id; hint(placing ? `Click on the map where “${displayName(v.filename)}” is.` : ""); renderList(); });
+      btn(located(v) ? "Move" : "Place", "Choose this camera, then click the map", () => { if (placing === v.id) { placing = null; hint(""); renderList(); } else startPlacing(v); });
       if (located(v)) {
         btn("Show", "Fly to this camera", () => { map.flyTo([v.camera.lat, v.camera.lng], 18, {duration: .8}); setTimeout(() => markers.get(v.id)?.openPopup(), 850); });
         btn("↺", "Turn the view cone 30° left", () => save(v.id, {heading: ((v.camera.heading ?? 0) - 30 + 360) % 360}));
@@ -174,7 +225,10 @@
   }
   function fit(target, list, animate = true) {
     const points = list.filter(located).map(v => [v.camera.lat, v.camera.lng]);
-    if (points.length > 1) target.fitBounds(points, {padding: [70, 70], maxZoom: 18, animate});
+    // Keep pins out from under the camera list on the right of the main map (it sits below the map on phones).
+    const listOpen = target === map && !$("map-panel").classList.contains("collapsed") && window.innerWidth > 820;
+    const pad = {paddingTopLeft: [70, 110], paddingBottomRight: [listOpen ? 500 : 150, 90]};
+    if (points.length > 1) target.fitBounds(points, {...pad, maxZoom: 18, animate});
     else if (points.length) target.setView(points[0], 17, {animate});
     else target.setView(DEMO_CENTRE, 15, {animate});
   }
@@ -190,10 +244,15 @@
     if (!map) {
       // Set a view straight away: Leaflet only attaches markers and lines once the map has one.
       map = L.map("map-canvas", {zoomControl: false, worldCopyJump: true, maxZoom: 19}).setView(DEMO_CENTRE, 15);
+      if (navigator.onLine === false) setStyle("plain");
       L.control.zoom({position: "bottomright"}).addTo(map);
       L.control.scale({position: "bottomright", imperial: false}).addTo(map);
       base = tiles(map);
-      map.on("click", event => { if (placing) { const id = placing; placing = null; hint(""); save(id, {lat: event.latlng.lat, lng: event.latlng.lng}); } });
+      map.on("click", async event => {
+        if (!placing) return;
+        const id = placing; placing = null; savingPlace = true; hint("");
+        try { await save(id, {lat: event.latlng.lat, lng: event.latlng.lng}); } finally { savingPlace = false; renderEmpty(); }
+      });
       render(); if (!pendingRoute()) fit(map, cameras(), false);
     } else render();
     setTimeout(() => {
@@ -203,11 +262,7 @@
     }, 60);
   };
   document.querySelectorAll("#map-style button").forEach(b => {
-    b.onclick = () => {
-      style = b.dataset.style;
-      document.querySelectorAll("#map-style button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-      if (map) { base.remove(); base = tiles(map); }
-    };
+    b.onclick = () => setStyle(b.dataset.style);
   });
   $("map-fit").onclick = () => map && fit(map, cameras());
   $("map-demo").onclick = async () => {
