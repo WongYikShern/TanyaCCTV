@@ -9,6 +9,33 @@ folder. On macOS/Linux, use `.venv/bin/python` instead.
 > are ranked by similarity, not detected incidents. Every result stays unverified until a person
 > reviews it, and a low or missing result does not prove that something did not happen.
 
+## Command-centre walkthrough (about 3 minutes, live AI)
+
+The dark command-centre view: camera wall, named cameras on a map, and a search you can watch.
+Uses the normal website (`run_web.py`) with a Gemini key; one search sends a few dozen images to
+Google, so run it once beforehand to be sure Google is not busy. If it is, use the offline demo below.
+
+Once, before presenting:
+
+1. **Cameras**: press **Name this camera** on each recording and give it a name and place.
+2. **Map**: press **Place demo cameras**, then drag each pin to where that camera would be. Names and
+   locations are typed in by you and kept in `data/cameras.json` on this computer (not in Git).
+
+In front of the judges:
+
+1. **Dashboard.** The camera wall plays each recording on loop, labelled RECORDED with its position in
+   the recording. Say: "These are recordings; the same pipeline would take a camera feed."
+2. Type a description in **What do you want to find?** and press **Search**, then tick the approval
+   and **Start search**. The scan view shows the frames from the part being checked, a per-camera
+   sweep (orange while checked, then green / yellow / grey) and the cameras pulsing on a mini map.
+3. When it finishes: search time, footage searched, likely moments and "less to watch" (share of the
+   footage you can skip, from the real result windows). Results lock on; press **Play key moment**.
+4. **Map.** The camera with a match is green. Click it for the frame and **Play**. **Satellite view**
+   switches the map style.
+
+Honest points: the AI picks frames, not positions inside a frame, so nothing is boxed; locations
+are set by a person, never detected; the map needs internet (map pictures only, from Esri).
+
 ## Hackathon demo: preset event index, fully offline (default launcher mode)
 
 No Gemini key, no network and no paid call. Searches match your words (explicit synonym rules,

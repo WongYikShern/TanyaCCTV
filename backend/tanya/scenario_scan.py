@@ -107,6 +107,9 @@ def public_plan(plan):
                 ranges=[dict(video_id=v['id'], start_sec=min(h['start_sec'] for h in plan['hits'] if h['video_id']==v['id']),
                              end_sec=max(h['end_sec'] for h in plan['hits'] if h['video_id']==v['id'])) for v in plan['videos']],
                 max_images=plan['max_images'], max_calls=plan['max_calls'],
+                # In checking order, so the page can show which part each batch is looking at.
+                parts=[dict(video_id=h['video_id'], start_sec=h['start_sec'], end_sec=h['end_sec'])
+                       for h in plan['hits']],
                 note='Checks up to six sampled images per overlapping 12-second window, across the '
                      'selected recordings. No embedding index is needed. Short events can fall between '
                      'samples; long sequences may need manual review. Sends frames and your query '

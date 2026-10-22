@@ -1,5 +1,5 @@
 "use strict";
-// Hash-routed pages: #dashboard, #library, #watch/<id>?t=&end=, #search, #investigations, #system.
+// Hash-routed pages: #dashboard, #library, #map, #watch/<id>?t=&end=, #search, #investigations, #system.
 // All server and user text is inserted with textContent; nothing is inserted as HTML.
 const $ = id => document.getElementById(id);
 const token = document.querySelector('meta[name="csrf-token"]').content;
@@ -7,8 +7,9 @@ let connection = null, operationRunning = false, planHasChanges = false;
 let scenarioPlan=null, scenarioStop=false, scenarioActive=false;
 let videosCache = [], waitingFiles = [], unsupportedFiles = [], activeVideo = null, framePage = 0, watchToken = 0, currentMoment = 0, watchWindow = null;
 const time = seconds => `${Math.floor((seconds || 0) / 60)}:${String(Math.floor((seconds || 0) % 60)).padStart(2,"0")}`;
-// Uploads are stored as "<12-hex id>_<original name>"; show the original name.
-const displayName = filename => String(filename||"").replace(/^[0-9a-f]{12}_/,"");
+// A camera name the user gave the recording, else the original upload name ("<12-hex id>_<name>" on disk).
+const cameraNames = new Map();
+const displayName = filename => cameraNames.get(filename) || String(filename||"").replace(/^[0-9a-f]{12}_/,"");
 function element(tag, text, className) { const node=document.createElement(tag); if(text !== undefined) node.textContent=text; if(className) node.className=className; return node; }
 function icon(name) { const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg"), use=document.createElementNS(ns,"use"); use.setAttribute("href","#i-"+name); svg.append(use); return svg; }
 let noticeTimer=null;
@@ -37,7 +38,7 @@ async function api(path, options={}) {
 function post(path, payload) { return api(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload||{})}); }
 
 // ---------------------------------------------------------------- routing
-const titles={dashboard:"Dashboard",library:"Video Library",watch:"Video player",search:"Search",investigations:"Investigations",system:"Settings"};
+const titles={dashboard:"Dashboard",library:"Cameras",map:"Map",watch:"Video player",search:"Search",investigations:"Investigations",system:"Settings"};
 function route() {
   const hash=location.hash.slice(1)||"dashboard", [path,query=""]=hash.split("?"), [view,arg]=path.split("/");
   const page=titles[view] ? view : "dashboard";
@@ -49,6 +50,7 @@ function route() {
   if(page==="dashboard") library().catch(error=>notice(error.message)).finally(renderDashboard);
   if(page==="search") library().catch(error=>notice(error.message));
   if(page==="library") library().catch(error=>notice(error.message));
+  if(page==="map") library().then(()=>window.showMap?.()).catch(error=>notice(error.message));
   if(page==="investigations" && window.refreshInvestigation) window.refreshInvestigation().catch(error=>notice(error.message)); // never show stale source status
   if(page==="system") Promise.all([library(),status()]).catch(error=>notice(error.message));
   window.scrollTo(0,0);
@@ -149,7 +151,8 @@ async function renderDashboard() {
   $("stats").replaceChildren(...tiles);
   const recent=$("dash-videos"); recent.replaceChildren();
   if(!videosCache.length){ const a=element("a","No recordings yet. Add your first video →","empty"); a.href="#library"; a.onclick=()=>{$("upload-form").hidden=false;}; recent.append(a); }
-  for(const v of videosCache.slice(0,6)){
+  if(window.renderCameraWall) window.renderCameraWall(recent, videosCache);
+  else for(const v of videosCache.slice(0,6)){
     const b=element("button",undefined,"mini"); b.type="button"; b.title=v.filename; b.append(thumb(v)); b.append(element("strong",displayName(v.filename)),element("span",`${time(v.duration_sec)} · ${v.status==="done"?"ready":v.status}`,"muted"));
     b.onclick=()=>openVideo(v.id); recent.append(b);
   }
@@ -194,12 +197,13 @@ function thumb(video) {
 async function library() {
   const data=await api("/api/videos");
   videosCache=data.videos; waitingFiles=data.waiting_files; unsupportedFiles=data.unsupported_files;
+  cameraNames.clear(); for(const v of videosCache) if(v.camera?.name) cameraNames.set(v.filename,v.camera.name);
   refreshScanVideos(); updateControls();
   renderLibrary();
 }
 function matchesFilter(v) {
   const text=$("library-filter").value.trim().toLowerCase(), f=$("library-status").value;
-  if(text && !v.filename.toLowerCase().includes(text)) return false;
+  if(text && !v.filename.toLowerCase().includes(text) && !displayName(v.filename).toLowerCase().includes(text)) return false;
   if(f==="done") return v.status==="done";
   if(f==="failed") return v.status==="failed" || v.playback?.status==="missing" || v.playback?.changed;
   if(f==="needs_preparation") return v.search_state===f;
@@ -223,12 +227,14 @@ function renderLibrary() {
     const open=element("button",undefined,"thumb-button"); open.type="button"; open.setAttribute("aria-label",`Play ${name}`); open.append(thumb(v)); open.onclick=()=>openVideo(v.id);
     const body=element("div",undefined,"video-body");
     const title=element("h3",name); title.title=v.filename;
-    body.append(title,element("p",`${time(v.duration_sec)} · ${v.width||"—"} × ${v.height||"—"}`,"meta"));
+    body.append(title,element("p",[v.camera?.place,`${time(v.duration_sec)} · ${v.width||"—"} × ${v.height||"—"}`].filter(Boolean).join(" · "),"meta"));
+    if(v.camera?.name) body.append(element("p",String(v.filename).replace(/^[0-9a-f]{12}_/,""),"file-name"));
     const [label,kind]=videoStatus(v);
     body.append(element("span",label,"badge "+kind));
     if(v.error) body.append(element("p",v.error,"error-text"));
     if(v.playback?.status==="missing") body.append(element("p",v.playback.message,"error-text"));
     if(v.playback?.changed) body.append(element("p",v.playback.changed_message,"error-text"));
+    if(window.cameraEditor) body.append(window.cameraEditor(v));
     card.append(open,body); grid.append(card);
   }
 }
@@ -519,13 +525,19 @@ $("scenario-run").onclick=async()=>{
   unclear.append(unclearTitle);rejected.append(rejectedTitle);unclear.hidden=rejected.hidden=true;
   $("results").replaceChildren(element("p",`Results for “${plan.query}”. These are AI suggestions: always watch the clip before deciding.`,"results-intro"),supportedTitle,supported,unclear,rejected);
   let matches=0,unknown=0,negative=0,images=0,completed=0;
+  const startedAt=performance.now();
+  window.scanFx?.start(plan,$("results"));   // visual progress only; it never sends anything
   try{
     for(let batch=0;batch<plan.max_calls && !scenarioStop;batch++){
       $("scenario-progress").textContent=`Searching… ${Math.round(100*completed/Math.max(plan.windows,1))}% done. Keep this page open.`;
+      window.scanFx?.batchStart(batch);
       const result=await post("/api/search/scan/batch",{scan_id:plan.scan_id,batch,approve_frame_upload:true});
       completed=result.completed_windows;images+=result.visual_review.sampled_frames;
+      window.scanFx?.batchDone(batch,result);
       for(const [key,target] of [["hits",supported],["unclear_hits",unclear],["rejected_hits",rejected]]) for(const hit of result[key]){
-        target.append(resultCard(hit,plan.query,true,hit.scan_window));
+        const card=resultCard(hit,plan.query,true,hit.scan_window);
+        if(key!=="rejected_hits") window.scanFx?.reveal(card);
+        target.append(card);
       }
       matches+=result.hits.length;unknown+=result.unclear_hits.length;negative+=result.rejected_hits.length;
       supportedTitle.textContent=matches?`Likely matches (${matches})`:"Searching… no likely match yet";
@@ -534,7 +546,9 @@ $("scenario-run").onclick=async()=>{
     }
     if(!matches) supportedTitle.textContent=unknown?"No likely matches. Check the “maybe” clips below.":"No likely matches";
     $("scenario-progress").textContent=`${scenarioStop?"Stopped early":"Done"}: ${matches} likely, ${unknown} maybe (${images} images checked${scenarioStop?`, ${completed} of ${plan.windows} parts`:""}). The same event can show up in two neighbouring clips. Not finding something doesn't prove it didn't happen.`;
-  }catch(error){if(!matches) supportedTitle.textContent="Search didn't finish";$("scenario-progress").textContent=`Search stopped after ${completed} of ${plan.windows} parts: ${error.message} Results so far are shown below. Nothing was retried automatically.`;}
+    window.scanFx?.finish({seconds:(performance.now()-startedAt)/1000,images,completed,stopped:scenarioStop});
+  }catch(error){if(!matches) supportedTitle.textContent="Search didn't finish";$("scenario-progress").textContent=`Search stopped after ${completed} of ${plan.windows} parts: ${error.message} Results so far are shown below. Nothing was retried automatically.`;
+    window.scanFx?.finish({seconds:(performance.now()-startedAt)/1000,images,completed,error:error.message});}
   finally{
     await post("/api/search/scan/cancel",{scan_id:plan.scan_id}).catch(()=>{});
     scenarioActive=false;scenarioPlan=null;$("scenario-consent").checked=false;$("scenario-plan").hidden=true;$("scenario-stop").hidden=true;busy(false);

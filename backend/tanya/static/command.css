@@ -1,0 +1,176 @@
+/* TanyaCCTV command-centre layer, loaded after dashboard.css.
+   1. Dark theme (default): redefines the colour tokens dashboard.css already uses, plus the few fixed colours.
+   2. New pieces: theme switch, camera wall, camera names, map page and pins, the scan stage, result lock-on. */
+
+/* ------------------------------------------------------------------ 1. dark theme */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0B0E13; --side: #0A0C10; --header: #0F1318; --card: #151A21; --raised: #1B212A; --field: #10141A;
+  --surface-2: rgba(232,116,47,.08);
+  --line: #262D37; --line-strong: #4A5361;
+  --text: #E8ECF2; --muted: #9AA4B2; --faint: #6F7987;
+  --orange-soft: rgba(232,116,47,.14); --orange-line: rgba(232,116,47,.45); --orange-text: #F59A5F; --orange-hover: #FFB27A;
+  --green: #3DD68C; --green-soft: rgba(61,214,140,.12);
+  --amber: #F2B53A; --amber-soft: rgba(242,181,58,.12);
+  --red-text: #FF7A73; --red-soft: rgba(227,52,47,.14);
+  --slate: #8FB0D6; --slate-soft: rgba(143,176,214,.12);
+  --focus: #FFB27A;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+}
+:root[data-theme="dark"] body { background: var(--bg); }
+:root[data-theme="dark"] .topbar { box-shadow: 0 1px 0 var(--line); }
+:root[data-theme="dark"] .badge { border-color: transparent; }
+:root[data-theme="dark"] .top-pill.ready { border-color: rgba(61,214,140,.35); }
+:root[data-theme="dark"] .top-pill.busy { border-color: rgba(242,181,58,.35); }
+:root[data-theme="dark"] .banner.warn { border-color: rgba(242,181,58,.3); border-left-color: var(--amber); }
+:root[data-theme="dark"] .banner.error { border-color: rgba(227,52,47,.35); border-left-color: var(--red); }
+:root[data-theme="dark"] .evt-bar.ev-yolo:hover:not(:disabled) { background: rgba(242,181,58,.3); }
+:root[data-theme="dark"] .stat.primary { background: linear-gradient(180deg, rgba(232,116,47,.12), rgba(232,116,47,0)), var(--card); }
+:root[data-theme="dark"] .mono, :root[data-theme="dark"] .when { font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------------ 2. pieces */
+.theme-toggle { padding: 5px 11px; border-radius: 999px; font-size: 12px; background: var(--raised); color: var(--muted); border: 1px solid var(--line); }
+.theme-toggle svg { width: 14px; height: 14px; }
+.theme-toggle:hover:not(:disabled) { background: var(--orange-soft); color: var(--orange-text); border-color: var(--orange-line); }
+.top-status { align-items: center; }
+.small { font-size: 12px; }
+
+/* Camera wall */
+.wall-card .card-head { gap: 12px; }
+.wall-card .card-head .small-note { margin-right: auto; }
+.cam-wall { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.cam-tile { position: relative; display: block; padding: 0; aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; background: #000; border: 1px solid #222832; font-weight: 400; }
+.cam-tile.big { grid-column: span 2; grid-row: span 2; }
+.cam-tile:hover:not(:disabled) { background: #000; border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); }
+.cam-tile video, .cam-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.cam-tile::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 3px), linear-gradient(180deg, rgba(0,0,0,.45), transparent 26%, transparent 70%, rgba(0,0,0,.55)); }
+.cam-tile span { position: absolute; z-index: 1; color: #fff; text-shadow: 0 1px 2px #000; }
+.cam-name { left: 9px; top: 7px; font: 700 11px var(--mono, Consolas, monospace); letter-spacing: .05em; text-transform: uppercase; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cam-tag { right: 8px; top: 7px; font-size: 10px; font-weight: 700; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.22); }
+.cam-time { left: 9px; bottom: 6px; font: 12px Consolas, "SF Mono", monospace; }
+.cam-place { right: 9px; bottom: 6px; font-size: 11.5px; font-weight: 600; }
+.cam-tile.big .cam-name { font-size: 13px; }
+
+/* Camera names */
+.file-name { font: 11.5px Consolas, "SF Mono", monospace; color: var(--faint); margin: 0; overflow-wrap: anywhere; }
+.cam-edit { margin-top: 4px; }
+.cam-edit-form { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.cam-edit-form .input { width: 100%; padding: 7px 10px; }
+.cam-edit-actions { display: flex; gap: 6px; }
+.cam-edit-actions button { padding: 6px 12px; font-size: 13px; }
+
+/* Map page */
+.map-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+.map-card { padding: 0; overflow: hidden; position: relative; }
+.map-canvas { height: min(68vh, 620px); background: #0d1117; }
+.map-canvas.placing, .map-canvas.placing .leaflet-interactive { cursor: crosshair; }
+.map-hint { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 500; margin: 0; padding: 6px 14px; border-radius: 999px; background: var(--orange-strong); color: #fff; font-weight: 600; font-size: 13px; box-shadow: var(--shadow); }
+.map-hint:empty { display: none; }
+.map-scan { margin: 0 0 14px; padding: 10px 14px; border-radius: 10px; background: var(--green-soft); border: 1px solid rgba(61,214,140,.35); color: var(--text); font-weight: 600; }
+.map-side .card-head { margin-bottom: 8px; }
+.map-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow: auto; }
+.map-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 4px 10px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--raised); }
+.map-row.active { border-color: var(--orange); box-shadow: inset 3px 0 0 var(--orange); }
+.map-row img { width: 64px; aspect-ratio: 16/10; object-fit: cover; border-radius: 6px; background: #000; grid-row: span 2; }
+.map-row div:not(.map-row-acts) { display: flex; flex-direction: column; min-width: 0; }
+.map-row strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-row .muted { font-size: 12px; }
+.map-row-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.map-row-acts button { padding: 3px 9px; }
+.map-state { font-size: 11.5px; font-weight: 700; }
+.map-state.hit { color: var(--green); } .map-state.maybe { color: var(--amber); } .map-state.checking { color: var(--orange-text); }
+
+/* Map pins */
+.cam-pin-wrap { background: none; border: 0; }
+.cam-pin { position: relative; width: 22px; height: 22px; }
+.cam-pin-dot { position: absolute; inset: 3px; border-radius: 50%; background: #6F7987; border: 2px solid #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.5); }
+.cam-pin-label { position: absolute; left: 26px; top: 1px; white-space: nowrap; font: 700 11.5px var(--font, system-ui); color: #fff; background: rgba(12,15,20,.82); padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(255,255,255,.15); pointer-events: none; }
+.cam-pin.checking .cam-pin-dot { background: var(--orange); }
+.cam-pin.hit .cam-pin-dot { background: #3DD68C; }
+.cam-pin.maybe .cam-pin-dot { background: #F2B53A; }
+.cam-pin.clear .cam-pin-dot, .cam-pin.skipped .cam-pin-dot { background: #4A5361; }
+.cam-pin.checking::before, .cam-pin.hit::before, .cam-pin.maybe::before { content: ""; position: absolute; inset: -8px; border-radius: 50%; border: 2px solid currentColor; animation: pinpulse 1.4s ease-out infinite; }
+.cam-pin.checking { color: var(--orange); } .cam-pin.hit { color: #3DD68C; } .cam-pin.maybe { color: #F2B53A; }
+@keyframes pinpulse { from { transform: scale(.5); opacity: .9; } to { transform: scale(1.6); opacity: 0; } }
+.cam-popup .leaflet-popup-content-wrapper, .cam-popup .leaflet-popup-tip { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+.cam-popup .leaflet-popup-content { margin: 10px; }
+.cam-pop { display: flex; flex-direction: column; gap: 4px; }
+.cam-pop img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; margin-bottom: 4px; }
+.cam-pop strong { font-size: 14px; }
+.cam-pop-hit { color: var(--green); font-weight: 650; font-size: 12.5px; }
+.cam-pop button { margin-top: 6px; padding: 6px 10px; font-size: 13px; }
+.leaflet-container { font-family: inherit; }
+:root[data-theme="dark"] .leaflet-bar a { background: var(--card); color: var(--text); border-color: var(--line); }
+:root[data-theme="dark"] .leaflet-control-attribution { background: rgba(11,14,19,.75); color: var(--muted); }
+:root[data-theme="dark"] .leaflet-control-attribution a { color: var(--orange-text); }
+
+/* Scan stage: frames being checked, progress, per-camera sweep, mini map */
+.scan-stage { margin: 12px 0 18px; padding: 16px; border-radius: var(--radius); background: #0E1116; border: 1px solid #262D37; color: #E8ECF2; box-shadow: var(--shadow); }
+.scan-main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; }
+.scan-viewer { position: relative; aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; background: #000; border: 1px solid #262D37; }
+.scan-viewer img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scan-beam { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--orange), transparent); box-shadow: 0 0 18px 4px rgba(232,116,47,.55); animation: scanbeam 1.4s linear infinite; }
+.scan-grid { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(232,116,47,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(232,116,47,.07) 1px, transparent 1px); background-size: 40px 40px; }
+@keyframes scanbeam { from { top: 0; } to { top: calc(100% - 3px); } }
+.scan-stamp { position: absolute; left: 10px; bottom: 8px; font: 12px Consolas, "SF Mono", monospace; color: #fff; background: rgba(0,0,0,.65); padding: 2px 8px; border-radius: 5px; }
+.scan-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.scan-label { margin: 0; color: #9AA4B2; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.scan-query { margin: 0; font-size: 19px; font-weight: 750; line-height: 1.3; }
+.scan-bar { height: 7px; border-radius: 9px; background: #232934; overflow: hidden; }
+.scan-bar i { display: block; height: 100%; width: 0; border-radius: 9px; background: linear-gradient(90deg, var(--orange), var(--red)); transition: width .6s ease; }
+.scan-bar i.working { background-size: 200% 100%; background-image: linear-gradient(90deg, var(--orange), #FFB27A, var(--red), var(--orange)); animation: barflow 1.2s linear infinite; }
+@keyframes barflow { to { background-position: -200% 0; } }
+.scan-counts { display: flex; gap: 22px; }
+.scan-counts div { display: flex; flex-direction: column; }
+.scan-counts b { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.scan-counts span { font-size: 12px; color: #9AA4B2; }
+.scan-counts .g b { color: #3DD68C; } .scan-counts .a b { color: #F2B53A; }
+.scan-log { font: 12px/1.65 Consolas, "SF Mono", monospace; color: #9AA4B2; min-height: 60px; max-height: 120px; overflow: hidden; }
+.scan-log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: logline .3s ease; }
+.scan-log .g { color: #3DD68C; } .scan-log .a { color: #F2B53A; }
+@keyframes logline { from { opacity: 0; transform: translateY(-4px); } }
+.scan-mini { height: 170px; border-radius: 10px; overflow: hidden; border: 1px solid #262D37; }
+.sweep-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+.sweep-tile { position: relative; aspect-ratio: 16/10; border-radius: 8px; overflow: hidden; background: #000; border: 2px solid #232934; transition: border-color .3s, box-shadow .3s; }
+.sweep-tile img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(.6) brightness(.6); transition: filter .3s; }
+.sweep-tile .scan-beam { display: none; }
+.sweep-name, .sweep-state { position: absolute; left: 7px; font-size: 11px; color: #fff; text-shadow: 0 1px 2px #000; }
+.sweep-name { top: 5px; font-weight: 700; right: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sweep-state { bottom: 6px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: rgba(0,0,0,.6); text-shadow: none; }
+.sweep-tile.checking { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(232,116,47,.18), 0 0 24px rgba(232,116,47,.3); }
+.sweep-tile.checking img { filter: none; }
+.sweep-tile.checking .scan-beam { display: block; animation-duration: 1s; }
+.sweep-tile.hit { border-color: #3DD68C; } .sweep-tile.hit img { filter: none; } .sweep-tile.hit .sweep-state { background: #3DD68C; color: #06200f; }
+.sweep-tile.maybe { border-color: #F2B53A; } .sweep-tile.maybe img { filter: none; } .sweep-tile.maybe .sweep-state { background: #F2B53A; color: #2a1d00; }
+.scan-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; animation: logline .4s ease; }
+.scan-kpis .kpi { background: #151A21; border: 1px solid #262D37; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; }
+.scan-kpis b { font-size: 30px; font-weight: 850; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.scan-kpis span { font-size: 12px; color: #9AA4B2; }
+.scan-kpis .hot b { color: #F59A5F; } .scan-kpis .g b { color: #3DD68C; }
+.scan-stage.done .scan-main, .scan-stage.failed .scan-main { display: none; }
+.scan-stage.done .scan-mini, .scan-stage.failed .scan-mini { display: none; }
+
+/* Results lock on as they arrive */
+.result.lock { animation: lockin .55s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes lockin { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+.brackets { position: absolute; inset: 0; pointer-events: none; }
+.brackets i { position: absolute; width: 20px; height: 20px; border: 0 solid #3DD68C; animation: bracket .45s .25s cubic-bezier(.2,.8,.2,1) both; }
+.brackets .tl { left: 8px; top: 8px; border-width: 3px 0 0 3px; --dx: 40%; --dy: 40%; }
+.brackets .tr { right: 8px; top: 8px; border-width: 3px 3px 0 0; --dx: -40%; --dy: 40%; }
+.brackets .bl { left: 8px; bottom: 8px; border-width: 0 0 3px 3px; --dx: 40%; --dy: -40%; }
+.brackets .br { right: 8px; bottom: 8px; border-width: 0 3px 3px 0; --dx: -40%; --dy: -40%; }
+@keyframes bracket { from { opacity: 0; transform: translate(calc(var(--dx) * 6), calc(var(--dy) * 4)); } }
+.result-group .brackets i { border-color: #F2B53A; }
+.reason.typing::after { content: "▍"; color: var(--orange-text); animation: caret 1s steps(1) infinite; }
+@keyframes caret { 50% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-beam, .cam-pin::before, .scan-bar i.working, .result.lock, .brackets i { animation: none !important; }
+}
+@media (max-width: 1180px) { .map-layout { grid-template-columns: 1fr; } }
+@media (max-width: 820px) {
+  .cam-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .scan-main { grid-template-columns: 1fr; }
+  .scan-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .map-canvas { height: 56vh; }
+}

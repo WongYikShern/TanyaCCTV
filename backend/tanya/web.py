@@ -28,6 +28,7 @@ from . import scenario_scan
 from .visual_review import review_results
 from . import feedback
 from . import case_report
+from . import cameras
 from .investigations import (InvestigationError, NotFound, Store, StoreUnavailable, resolve_sources,
                              timeline, verify_sources)
 
@@ -47,6 +48,12 @@ def safe_upload_name(original):
     if Path(name).suffix.lower() != extension or not Path(name).stem:
         name = "video" + extension
     return name
+
+
+# Map pictures for the camera map. Only tile images are fetched from this host; no footage, frames or
+# camera details are sent to it (a tile request reveals only which map area is being viewed). data: covers
+# the blank placeholder the map library swaps in for tiles that scroll out of view.
+MAP_TILE_SOURCES = "data: https://server.arcgisonline.com"
 
 
 def create_app(settings=None, search_settings=None, *, offline_search=None):
@@ -131,7 +138,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         response.headers["Referrer-Policy"] = "same-origin"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self'; style-src 'self'; "
-            "img-src 'self'; media-src 'self'; connect-src 'self'; frame-ancestors 'none'")
+            f"img-src 'self' {MAP_TILE_SOURCES}; media-src 'self'; connect-src 'self'; frame-ancestors 'none'")
         return response
 
     @app.errorhandler(HTTPException)
@@ -207,8 +214,10 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
     def videos():
         result = rows("SELECT * FROM videos ORDER BY id DESC")
         manifest = load_manifest(settings)
+        camera_details = cameras.load(settings)
         for video in result:
             video["search_state"] = search_state(video, manifest)
+            video["camera"] = camera_details.get(video["sha256"], {})
             frame = rows("SELECT image_path FROM frames WHERE video_id=? ORDER BY timestamp_sec LIMIT 1",
                          (video["id"],))
             video["thumbnail_url"] = url_for("frame_file", rel=frame[0]["image_path"]) if frame else None
@@ -225,6 +234,17 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         except (OSError, ValueError):
             pass
         return jsonify(videos=result, waiting_files=waiting, unsupported_files=unsupported)
+
+    @app.post("/api/videos/<int:video_id>/camera")
+    def set_camera(video_id):
+        """Save a person-entered camera name, place and map location for this recording."""
+        video = rows("SELECT sha256 FROM videos WHERE id=?", (video_id,))
+        if not video:
+            abort(404, description="This video is no longer in the library.")
+        try:
+            return jsonify(camera=cameras.update(settings, video[0]["sha256"], request.get_json(silent=True)))
+        except cameras.CameraError as error:
+            abort(400, description=str(error))
 
     @app.get("/api/videos/<int:video_id>/playback")
     def video_playback(video_id):
