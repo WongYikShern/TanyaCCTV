@@ -689,3 +689,37 @@ button.ghost.danger-link:hover:not(:disabled) { color: var(--red-text); text-dec
   .results-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .steps.all-done::after { margin-left: 0; flex-basis: 100%; }
 }
+
+/* Incident timeline: one lane per camera, numbered clips coloured by the reviewer's decision. */
+.case-story { margin: 14px 0 6px; padding: 14px 16px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--raised); --d-correct: var(--green); --d-unsure: #E0A21B; --d-wrong: #7A8491; --d-none: var(--orange); }
+.story-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.story-head h3 { margin: 0; font-size: 15px; }
+.story-lanes { display: flex; flex-direction: column; gap: 8px; }
+.story-lane { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; }
+.story-name { font-size: 12.5px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.story-track { position: relative; height: 30px; border-radius: 8px; background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), var(--line) calc(25% - 1px) 25%), var(--card); border: 1px solid var(--line); }
+.story-clip { position: absolute; top: 3px; bottom: 3px; min-width: 22px; padding: 0 6px; display: grid; place-items: center; border-radius: 6px; font-size: 12px; font-weight: 800; line-height: 1; color: #fff; border: 0; background: var(--d-none); box-shadow: 0 1px 3px rgba(0,0,0,.25); transform: translateX(0); transition: transform .12s, box-shadow .12s; }
+.story-clip:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0 0 3px var(--orange-soft), 0 2px 6px rgba(0,0,0,.3); background: var(--d-none); }
+.story-clip.d-correct, .story-clip.d-correct:hover:not(:disabled) { background: var(--d-correct); color: #08130D; }
+.story-clip.d-unsure, .story-clip.d-unsure:hover:not(:disabled) { background: var(--d-unsure); color: #1E1500; }
+.story-clip.d-wrong, .story-clip.d-wrong:hover:not(:disabled) { background: var(--d-wrong); }
+.story-axis { position: relative; height: 18px; margin: 4px 0 0 162px; font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.story-axis > span { position: absolute; top: 2px; transform: translateX(-50%); white-space: nowrap; }
+.story-axis > span:first-child { transform: none; }
+.story-axis > span:last-child { transform: translateX(-100%); }
+.story-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 6px; }
+.story-foot p { margin: 0; }
+.story-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
+.story-key::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--d-none); }
+.story-key.d-correct::before { background: var(--d-correct); } .story-key.d-unsure::before { background: var(--d-unsure); } .story-key.d-wrong::before { background: var(--d-wrong); }
+/* Matching number on each clip card below. */
+.clip-num { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; margin-right: 8px; border-radius: 6px; font-size: 12px; font-weight: 800; color: #fff; background: var(--orange); vertical-align: 1px; }
+.clip-num.d-correct { background: var(--green); color: #08130D; } .clip-num.d-unsure { background: #E0A21B; color: #1E1500; } .clip-num.d-wrong { background: #7A8491; }
+/* Dashboard: time-saved tile. */
+.stat.saved .value { color: var(--green); }
+@media (max-width: 820px) {
+  .story-lane { grid-template-columns: 1fr; gap: 4px; }
+  .story-axis { margin-left: 0; }
+}
+:root[data-theme="light"] .story-clip.d-correct, :root[data-theme="light"] .clip-num.d-correct { color: #fff; }
+@media (max-width: 820px) { .story-axis > span:nth-child(2), .story-axis > span:nth-child(4) { display: none; } }

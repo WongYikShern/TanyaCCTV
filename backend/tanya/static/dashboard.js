@@ -28,6 +28,16 @@ function coveredSeconds(ranges) {
   }
   return total + (cur ? cur[1] - cur[0] : 0);
 }
+// Running total of footage people didn't have to watch, across searches in this browser (for the dashboard).
+function recordTimeSaved(seconds) {
+  if (!(seconds > 0)) return;
+  try {
+    localStorage.setItem("tanya.savedSeconds", String(Math.round(Number(localStorage.getItem("tanya.savedSeconds") || 0) + seconds)));
+    localStorage.setItem("tanya.searchCount", String(Number(localStorage.getItem("tanya.searchCount") || 0) + 1));
+  } catch (e) { /* storage unavailable: the total just isn't kept */ }
+}
+window.recordTimeSaved = recordTimeSaved;
+function timeSavedSoFar() { try { return {seconds: Number(localStorage.getItem("tanya.savedSeconds") || 0), searches: Number(localStorage.getItem("tanya.searchCount") || 0)}; } catch (e) { return {seconds: 0, searches: 0}; } }
 // Small per-browser memory for the getting-started steps (works without storage, it just forgets).
 function flag(name, set) { try { if (set) localStorage.setItem("tanya." + name, "1"); return localStorage.getItem("tanya." + name) === "1"; } catch (e) { return !!set; } }
 function element(tag, text, className) { const node=document.createElement(tag); if(text !== undefined) node.textContent=text; if(className) node.className=className; return node; }
@@ -71,7 +81,8 @@ function route() {
   if(page==="search") library().catch(error=>notice(error.message));
   if(page==="library") library().catch(error=>notice(error.message));
   if(page==="map") library().then(()=>window.showMap?.()).catch(error=>notice(error.message));
-  if(page==="investigations" && window.refreshInvestigation) window.refreshInvestigation().catch(error=>notice(error.message)); // never show stale source status
+  // Videos first (the incident timeline needs recording lengths), then the case; never show stale source status.
+  if(page==="investigations" && window.refreshInvestigation) library().catch(()=>{}).finally(()=>window.refreshInvestigation().catch(error=>notice(error.message)));
   if(page==="system") Promise.all([library(),status()]).catch(error=>notice(error.message));
   window.scrollTo(0,0);
 }
@@ -190,6 +201,8 @@ async function renderDashboard() {
       : stat("AI search","Off","Connect it in Settings to search footage","#system","attention"),
     stat("Investigations",cases.length,unreviewed?`${plural(unreviewed,"clip")} to review`:`${open.length} open`,"#investigations",unreviewed?"attention":"")];
   if(failed) tiles.push(stat("Problems",failed,failed===1?"recording needs attention":"recordings need attention","#library","alert"));
+  const saved=timeSavedSoFar();
+  if(saved.seconds>0){ const tile=stat("Footage skipped",time(saved.seconds),`you didn't have to watch, across ${plural(saved.searches,"search","searches")}`,"#search","saved"); tiles.splice(1,0,tile); }
   $("stats").replaceChildren(...tiles);
   const recent=$("dash-videos"); recent.replaceChildren();
   if(!videosCache.length){ const a=element("a","No recordings yet. Add your first video →","empty"); a.href="#library"; a.onclick=()=>{$("upload-form").hidden=false;}; recent.append(a); }
@@ -497,6 +510,7 @@ function resultKpis(data, filters, seconds) {
   const footage = searched.reduce((sum, v) => { const d = v.duration_sec || 0, a = Math.max(0, filters?.start_sec ?? 0), b = Math.min(d, filters?.end_sec ?? d); return sum + Math.max(0, b - a); }, 0);
   const byVideo = {}; for (const h of data.hits) (byVideo[h.video_id] ||= []).push([h.start_sec, h.end_sec]);
   const watch = Object.values(byVideo).reduce((sum, r) => sum + coveredSeconds(r), 0);
+  recordTimeSaved(footage - watch);
   const box = element("div", undefined, "results-kpis");
   const kpi = (label, cls) => { const d = element("div", undefined, "kpi " + (cls || "")); const b = element("b", "0"); d.append(b, element("span", label)); box.append(d); return b; };
   animateNumber(kpi("search time"), Math.max(1, Math.round(seconds * 10)), n => `${(n / 10).toFixed(1)} s`);
