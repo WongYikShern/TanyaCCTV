@@ -17,15 +17,23 @@
     const at = new Date(new Date(start).getTime() + t * 1000);
     return Number.isNaN(at.getTime()) ? time(t) : at.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"});
   }
-  function beep(level) {
-    if (!sound || level === "notice") return;
+  // One shared audio context. Browsers keep it silent until the person clicks something on the page,
+  // so it is resumed on the first click anywhere (or by "Test sound").
+  let audio = null;
+  function audioContext() {
+    if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+    if (audio.state === "suspended") audio.resume().catch(() => {});
+    return audio;
+  }
+  document.addEventListener("pointerdown", () => { if (audio?.state === "suspended") audio.resume().catch(() => {}); }, {once: false, passive: true});
+  function beep(level, force) {
+    if ((!sound && !force) || level === "notice") return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = audioContext(); if (!ctx) return;
       const notes = level === "alarm" ? [0, .18, .36, .54] : [0, .22];
       notes.forEach((at, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "square";
         o.frequency.value = level === "alarm" ? (i % 2 ? 660 : 990) : 880; g.gain.value = .05; o.connect(g).connect(ctx.destination);
         o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + .14); });
-      setTimeout(() => ctx.close(), 1200);
     } catch (e) { /* sound is optional */ }
   }
 
@@ -125,6 +133,11 @@
   };
   $("mon-restart").onclick = () => feeds.forEach(f => { if (f.media.pause) { f.media.currentTime = 0; f.fired.clear(); f.media.play().catch(() => {}); } });
   $("mon-clear").onclick = () => { $("mon-alerts").replaceChildren(element("li", "No alerts yet. Feeds with rules are being watched.", "empty")); recent = []; updateThreat(); };
+  $("mon-test-sound").onclick = () => {
+    const ctx = audioContext();
+    beep("alarm", true);
+    notice(ctx && ctx.state !== "suspended" ? "Playing the alarm sound. If you heard nothing, check the Mac's volume." : "Sound is blocked by the browser. Click on the page and try again.");
+  };
   $("mon-sound").onclick = () => { sound = !sound; $("mon-sound").textContent = sound ? "Sound on" : "Sound off"; $("mon-sound").setAttribute("aria-pressed", String(sound)); };
 
   // ---- rule editor
