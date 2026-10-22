@@ -131,7 +131,7 @@ function updateControls() {
 function busy(value) { operationRunning=value; updateControls(); }
 $("visual-check").onchange=()=>{$("visual-consent").checked=false;updateControls();};
 $("visual-consent").onchange=updateControls;
-$("query").addEventListener("input",()=>{$("visual-consent").checked=false;invalidateScenario();updateControls();});
+$("query").addEventListener("input",()=>{$("visual-consent").checked=false;window.followCtx=null;invalidateScenario();updateControls();});
 
 // ---------------------------------------------------------------- dashboard
 function stat(label,value,sub,href,kind) {
@@ -231,6 +231,7 @@ function renderLibrary() {
     if(v.camera?.name) body.append(element("p",String(v.filename).replace(/^[0-9a-f]{12}_/,""),"file-name"));
     const [label,kind]=videoStatus(v);
     body.append(element("span",label,"badge "+kind));
+    if(v.camera?.hidden){ card.classList.add("is-hidden"); body.append(element("span","Hidden from wall, map and “All recordings”","badge neutral")); }
     if(v.error) body.append(element("p",v.error,"error-text"));
     if(v.playback?.status==="missing") body.append(element("p",v.playback.message,"error-text"));
     if(v.playback?.changed) body.append(element("p",v.playback.changed_message,"error-text"));
@@ -437,6 +438,7 @@ function resultCard(hit, query, visual, rank){
   const pic=element("button",undefined,"thumb-button result-thumb"); pic.type="button"; pic.setAttribute("aria-label",`Play ${displayName(hit.filename)}`);
   if(hit.thumbnail_url){ const img=element("img"); img.src=hit.thumbnail_url; img.alt=`Frame from ${displayName(hit.filename)}`; pic.append(img); }
   else pic.append(element("div","No frame","video-placeholder"));
+  if(review?.evidence_boxes?.length) window.drawEvidenceBoxes?.(pic,review);
   const overlay=element("span",undefined,"play"); overlay.append(icon("play")); pic.append(overlay); pic.onclick=playBest;
   const info=element("div",undefined,"result-info");
   const ev=hit.event;
@@ -455,6 +457,7 @@ function resultCard(hit, query, visual, rank){
   const hasFocus=focus && (focus.start_sec!==hit.start_sec || focus.end_sec!==hit.end_sec);
   if(hasFocus){ const inspect=element("button",`Play strongest part ${time(focus.start_sec)}–${time(focus.end_sec)}`,"secondary"); inspect.type="button"; inspect.onclick=()=>play(focus.start_sec,focus.end_sec); actions.append(inspect); }
   if(window.investigationClipButton) actions.append(window.investigationClipButton(hit,query,visual,rank));
+  if(review?.reason && review.verdict!=="not_supported" && window.followPerson){ const follow=element("button","Follow this person","secondary follow-btn"); follow.type="button"; follow.prepend(icon("pin")); follow.onclick=()=>window.followPerson(hit); actions.append(follow); }
   info.append(actions);
   // Technical detail stays available, but out of the way.
   const more=element("details",undefined,"tech"); more.append(element("summary","Details"));
@@ -487,7 +490,7 @@ function resultCard(hit, query, visual, rank){
 function refreshScanVideos(){
   const selected=$("scan-video").value;
   $("scan-video").replaceChildren(new Option("All recordings","all"));
-  for(const v of videosCache.filter(v=>v.status==="done")) $("scan-video").append(new Option(displayName(v.filename),String(v.id)));
+  for(const v of videosCache.filter(v=>v.status==="done" && !v.camera?.hidden)) $("scan-video").append(new Option(displayName(v.filename),String(v.id)));
   if([...$("scan-video").options].some(o=>o.value===selected)) $("scan-video").value=selected;
 }
 function invalidateScenario(){
@@ -503,10 +506,17 @@ async function reviewScenarioPlan(){
   $("scenario-progress").textContent="Getting ready… (nothing has been sent yet)";
   try{
     const selected=$("scan-video").value;
-    const plan=await post("/api/search/scan/plan",{query:$("query").value,video_ids:selected==="all"?null:[Number(selected)],
-      ...(selected!=="all"?{start_sec:Number($("scan-start").value)||0,end_sec:$("scan-end").value===""?null:Number($("scan-end").value)}:{})});
+    // "All recordings" means every camera that isn't hidden; null lets the server include everything.
+    const visible=videosCache.filter(v=>v.status==="done" && !v.camera?.hidden).map(v=>v.id);
+    const all=visible.length<videosCache.filter(v=>v.status==="done").length ? visible : null;
+    // Following a person: check every other visible camera, whatever "Search in" says.
+    const follow=window.followCtx;
+    const ids=follow?visible.filter(id=>id!==follow.source.video_id):selected==="all"?all:[Number(selected)];
+    if(follow && !ids.length) throw new Error("There are no other cameras to follow this person to.");
+    const plan=await post("/api/search/scan/plan",{query:$("query").value,video_ids:ids,
+      ...(selected!=="all"&&!follow?{start_sec:Number($("scan-start").value)||0,end_sec:$("scan-end").value===""?null:Number($("scan-end").value)}:{})});
     scenarioPlan=plan;
-    $("scenario-plan-summary").textContent=`Look for “${plan.query}” in ${plan.recordings.length} recording(s). This sends up to ${plan.max_images} images in ${plan.max_calls} request(s) to Google Gemini.`;
+    $("scenario-plan-summary").textContent=(follow?`Follow this person from ${displayName(follow.source.filename)}: look for them on ${plan.recordings.length} other camera(s).`:`Look for “${plan.query}” in ${plan.recordings.length} recording(s).`)+` This sends up to ${plan.max_images} images in ${plan.max_calls} request(s) to Google Gemini.`;
     $("scenario-plan-files").textContent=plan.recordings.map(v=>{const r=plan.ranges.find(r=>r.video_id===v.video_id);return `${displayName(v.filename)} (${time(r.start_sec)}–${time(r.end_sec)})`;}).join(" · ")+(plan.excluded.length?". Not included: "+plan.excluded.map(v=>displayName(v.filename)+" ("+v.reason+")").join("; "):"");
     $("scenario-plan-note").textContent=plan.note;
     $("scenario-plan").hidden=false;
@@ -526,14 +536,19 @@ $("scenario-run").onclick=async()=>{
   $("results").replaceChildren(element("p",`Results for “${plan.query}”. These are AI suggestions: always watch the clip before deciding.`,"results-intro"),supportedTitle,supported,unclear,rejected);
   let matches=0,unknown=0,negative=0,images=0,completed=0;
   const startedAt=performance.now();
-  window.scanFx?.start(plan,$("results"));   // visual progress only; it never sends anything
-  try{
-    for(let batch=0;batch<plan.max_calls && !scenarioStop;batch++){
-      $("scenario-progress").textContent=`Searching… ${Math.round(100*completed/Math.max(plan.windows,1))}% done. Keep this page open.`;
-      window.scanFx?.batchStart(batch);
-      const result=await post("/api/search/scan/batch",{scan_id:plan.scan_id,batch,approve_frame_upload:true});
-      completed=result.completed_windows;images+=result.visual_review.sampled_frames;
-      window.scanFx?.batchDone(batch,result);
+  window.scanFx?.start(plan,$("results"),window.followCtx);   // visual progress only; it never sends anything
+  // Up to three approved batches are checked at once; each is sent once, and a failure stops new ones.
+  let nextBatch=0, failure=null;
+  const progress=()=>{ $("scenario-progress").textContent=`Searching… ${Math.round(100*completed/Math.max(plan.windows,1))}% done. Keep this page open.`; };
+  async function worker(){
+    while(!scenarioStop && !failure && nextBatch<plan.max_calls){
+      const batch=nextBatch++;
+      progress(); window.scanFx?.batchStart(batch);
+      let result;
+      try{ result=await post("/api/search/scan/batch",{scan_id:plan.scan_id,batch,approve_frame_upload:true}); }
+      catch(error){ failure=failure||error; return; }
+      completed=Math.max(completed,result.completed_windows);images+=result.visual_review.sampled_frames;
+      window.scanFx?.batchDone(batch,result); progress();
       for(const [key,target] of [["hits",supported],["unclear_hits",unclear],["rejected_hits",rejected]]) for(const hit of result[key]){
         const card=resultCard(hit,plan.query,true,hit.scan_window);
         if(key!=="rejected_hits") window.scanFx?.reveal(card);
@@ -544,14 +559,18 @@ $("scenario-run").onclick=async()=>{
       unclearTitle.textContent=`Maybe: worth a look (${unknown})`;unclear.hidden=!unknown;unclear.open=matches===0 && unknown>0;
       rejectedTitle.textContent=`Checked: no match (${negative})`;rejected.hidden=!negative;
     }
+  }
+  try{
+    await Promise.all(Array.from({length:Math.min(3,plan.max_calls)},worker));
+    if(failure) throw failure;
     if(!matches) supportedTitle.textContent=unknown?"No likely matches. Check the “maybe” clips below.":"No likely matches";
     $("scenario-progress").textContent=`${scenarioStop?"Stopped early":"Done"}: ${matches} likely, ${unknown} maybe (${images} images checked${scenarioStop?`, ${completed} of ${plan.windows} parts`:""}). The same event can show up in two neighbouring clips. Not finding something doesn't prove it didn't happen.`;
     window.scanFx?.finish({seconds:(performance.now()-startedAt)/1000,images,completed,stopped:scenarioStop});
-  }catch(error){if(!matches) supportedTitle.textContent="Search didn't finish";$("scenario-progress").textContent=`Search stopped after ${completed} of ${plan.windows} parts: ${error.message} Results so far are shown below. Nothing was retried automatically.`;
+  }catch(error){if(!matches) supportedTitle.textContent="Search didn't finish";$("scenario-progress").textContent=`Search stopped after ${completed} of ${plan.windows} parts: ${error.message} Results so far are shown below. Only “Google is busy” replies are retried (up to 3 tries); nothing else was resent.`;
     window.scanFx?.finish({seconds:(performance.now()-startedAt)/1000,images,completed,error:error.message});}
   finally{
     await post("/api/search/scan/cancel",{scan_id:plan.scan_id}).catch(()=>{});
-    scenarioActive=false;scenarioPlan=null;$("scenario-consent").checked=false;$("scenario-plan").hidden=true;$("scenario-stop").hidden=true;busy(false);
+    scenarioActive=false;scenarioPlan=null;window.followCtx=null;$("scenario-consent").checked=false;$("scenario-plan").hidden=true;$("scenario-stop").hidden=true;busy(false);
   }
 };
 

@@ -57,7 +57,7 @@ def run_review(payload, search_settings):
     try:
         proc = subprocess.run([str(search_settings.sentry_python), str(script)],
                               input=json.dumps(payload), capture_output=True, text=True,
-                              encoding="utf-8", timeout=180, env=dict(os.environ))
+                              encoding="utf-8", timeout=200, env=dict(os.environ))
     except (OSError, subprocess.TimeoutExpired):
         raise SearchError("Visual checking could not finish. No candidate was marked as a match.") from None
     try:
@@ -87,6 +87,23 @@ def evidence_span(window_start, window_end, sampled, evidence):
     if end <= start:
         return None
     return {"start_sec": round(start, 2), "end_sec": round(end, 2)}
+
+
+def evidence_boxes(boxes, evidence):
+    """Boxes the checker drew on its cited frames, kept only if well formed: [ymin, xmin, ymax, xmax] in
+    0-1000 on a cited timestamp. Malformed boxes are dropped (the decision itself still stands)."""
+    kept = []
+    for box in boxes if isinstance(boxes, list) else []:
+        if not isinstance(box, dict):
+            continue
+        coords, t, label = box.get("box_2d"), box.get("timestamp"), box.get("label")
+        if (type(t) not in (int, float) or t not in evidence or not isinstance(label, str)
+                or not isinstance(coords, list) or len(coords) != 4
+                or any(type(c) not in (int, float) or not 0 <= c <= 1000 for c in coords)
+                or coords[0] >= coords[2] or coords[1] >= coords[3]):
+            continue
+        kept.append({"timestamp": t, "box_2d": [round(c) for c in coords], "label": redact(label.strip()[:60])})
+    return kept[:6]
 
 
 def review_results(result, settings, search_settings, reviewer=None):
@@ -123,7 +140,9 @@ def review_results(result, settings, search_settings, reviewer=None):
             if decision["verdict"] == "supported" and not evidence:
                 raise SearchError("Visual checker marked a match without frame evidence.")
             decisions[ident] = {"verdict": decision["verdict"], "reason": redact(reason[:1000]),
-                                "evidence_timestamps": evidence}
+                                "evidence_timestamps": evidence,
+                                "evidence_boxes": evidence_boxes(decision.get("evidence_boxes"), evidence)
+                                if decision["verdict"] != "not_supported" else []}
         if set(decisions) != expected:
             raise SearchError("Visual checker did not assess every sampled candidate.")
     groups = {"supported": [], "not_supported": [], "unclear": []}
@@ -131,7 +150,7 @@ def review_results(result, settings, search_settings, reviewer=None):
         ident = str(i)
         decision = decisions.get(ident, {"verdict": "unclear", "reason":
             f"Outside the first {MAX_CANDIDATES} candidates; not visually checked." if i >= MAX_CANDIDATES else
-            "No readable extracted frames in this time window.", "evidence_timestamps": []})
+            "No readable extracted frames in this time window.", "evidence_timestamps": [], "evidence_boxes": []})
         sampled = [f["timestamp_sec"] for f in samples.get(ident, [])]
         hit["visual_review"] = dict(decision, sampled_timestamps=sampled,
                                     evidence_span=evidence_span(hit["start_sec"], hit["end_sec"], sampled,

@@ -69,7 +69,7 @@ def test_timeout_consumes_attempt_and_needs_new_plan(scans):
         raise SearchError('Timeout')
     with pytest.raises(SearchError):
         scenario_scan.run_batch(p, 0, scans.settings(), None, failed)
-    assert p['next_batch'] == 1
+    assert p['attempted'] == {0}
     with pytest.raises(ValueError):
         scenario_scan.run_batch(p, 0, scans.settings(), None, failed)
 
@@ -148,3 +148,26 @@ def test_far_too_large_range_requires_explicit_smaller_scope(scans):
         conn.execute('UPDATE videos SET duration_sec=10000')
     with pytest.raises(ValueError,match='No selected recording'):
         scenario_scan.build_library_plan(scans.settings(),'scene')
+
+
+def test_batches_may_run_out_of_order_and_in_parallel_but_each_only_once(scans):
+    import threading, time
+    p = scenario_scan.build_library_plan(scans.settings(), 'person')
+    assert p['max_calls'] == 2
+    sent, gate = [], threading.Barrier(2)
+    def reviewer(payload, settings):
+        gate.wait(timeout=5)           # both batches are inside the request at the same time
+        sent.append(sorted(c['id'] for c in payload['candidates']))
+        time.sleep(0.05)
+        return decisions(payload, settings)
+    results = {}
+    threads = [threading.Thread(target=lambda b=b: results.setdefault(b, scenario_scan.run_batch(
+        p, b, scans.settings(), None, reviewer))) for b in (1, 0)]
+    for t in threads: t.start()
+    for t in threads: t.join(timeout=10)
+    assert set(results) == {0, 1} and len(sent) == 2
+    assert sum(r['done'] for r in results.values()) == 1
+    assert max(r['completed_windows'] for r in results.values()) == p['window_count']
+    for b in (0, 1, 2, -1):
+        with pytest.raises(ValueError):
+            scenario_scan.run_batch(p, b, scans.settings(), None, reviewer)

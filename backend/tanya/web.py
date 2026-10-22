@@ -29,6 +29,7 @@ from .visual_review import review_results
 from . import feedback
 from . import case_report
 from . import cameras
+from . import incident_summary
 from .investigations import (InvestigationError, NotFound, Store, StoreUnavailable, resolve_sources,
                              timeline, verify_sources)
 
@@ -66,6 +67,11 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
                       SESSION_COOKIE_SAMESITE="Strict")
     lock = threading.Lock()
     scan_jobs = {}
+    # Up to three batches of an approved scan may be checked at once. While any run, they share the
+    # global lock, so uploads, indexing and preparation still wait for the whole scan.
+    scan_slots = threading.BoundedSemaphore(3)
+    scans_running = [0]
+    scans_mutex = threading.Lock()
     # Identifies this website process, so an open page can tell that the server was restarted (possibly with a
     # different library, where the same video id names other footage) instead of mixing old and new state.
     instance = secrets.token_hex(8)
@@ -94,6 +100,14 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         return settings.db_path.with_name("search_feedback.db")
 
     store = Store(settings.db_path.with_name("investigations.db"))
+
+    def box_frames(hit):
+        """URLs of the extracted frames the checker drew boxes on, so the page can draw them."""
+        review = hit.get("visual_review") or {}
+        for box in review.get("evidence_boxes", []):
+            frame = rows("SELECT image_path FROM frames WHERE video_id=? AND timestamp_sec=?",
+                         (hit["video_id"], box["timestamp"]))
+            box["frame_url"] = url_for("frame_file", rel=frame[0]["image_path"]) if frame else None
 
     def search_run_settings(visual_check, filters=None):
         if demo_mode == "event_index":
@@ -440,8 +454,13 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         data = request.get_json(silent=True)
         if not isinstance(data, dict) or data.get('approve_frame_upload') is not True:
             abort(400, description="Review the scan plan and approve its Google frame uploads first.")
-        if not lock.acquire(blocking=False):
+        if not scan_slots.acquire(blocking=False):
             abort(409, description="Wait for the current operation to finish.")
+        with scans_mutex:
+            if scans_running[0] == 0 and not lock.acquire(blocking=False):
+                scan_slots.release()
+                abort(409, description="Wait for the current operation to finish.")
+            scans_running[0] += 1
         job = None
         try:
             ident = data.get('scan_id')
@@ -453,6 +472,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             for hit in result['hits']+result['unclear_hits']+result['rejected_hits']:
                 hit['video_url'] = url_for('video_file', video_id=hit['video_id'])
                 hit['thumbnail_url'] = url_for('frame_file', rel=hit['thumbnail']) if hit['thumbnail'] else None
+                box_frames(hit)
             result['excluded_recordings'] = job['plan']['excluded']
             if result['done']:
                 scan_jobs.pop(ident, None)
@@ -462,7 +482,11 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
                 job['stopped'] = True
             return jsonify(error=redact(str(error))), 503
         finally:
-            lock.release()
+            with scans_mutex:
+                scans_running[0] -= 1
+                if scans_running[0] == 0:
+                    lock.release()
+            scan_slots.release()
 
     @app.post("/api/search/scan/cancel")
     def scenario_cancel():
@@ -529,6 +553,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         for hit in all_hits:
             hit["video_url"] = url_for("video_file", video_id=hit["video_id"])
             hit["thumbnail_url"] = url_for("frame_file", rel=hit["thumbnail"]) if hit["thumbnail"] else None
+            box_frames(hit)
             hit["human_review"] = earlier.get((hit["video_id"], hit["start_sec"], hit["end_sec"]))
         if investigation_id is not None:
             # Save the query and the settings it ran with, so the investigation can re-run it.
@@ -664,6 +689,25 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         data = body()
         store.update(inv_id, title=data.get("title"), description=data.get("description"))
         return jsonify(investigation_view(inv_id))
+
+    @app.post("/api/investigations/<int:inv_id>/summary")
+    def draft_summary(inv_id):
+        """An AI-drafted incident summary from the investigation's text facts. Returned for a person to read;
+        it is saved only if they choose to (as the case description)."""
+        if offline_search is not None:
+            abort(403, description="AI summaries are off in the offline demo; no Google calls are made.")
+        if body().get("approve_text_upload") is not True:
+            abort(400, description="Approve sending this investigation's text (times, camera names, decisions and "
+                                   "notes; no images) to Google first.")
+        inv = investigation_view(inv_id)
+        items = incident_summary.facts(inv, cameras.load(settings))
+        if not items:
+            abort(400, description="Add at least one clip to this investigation first.")
+        try:
+            text = incident_summary.run_summary({"title": inv["title"], "facts": items[:60]}, search_settings)
+        except SearchError as error:
+            return jsonify(error=redact(str(error))), 503
+        return jsonify(summary=text, facts=len(items))
 
     @app.post("/api/investigations/<int:inv_id>/status")
     def investigation_status(inv_id):

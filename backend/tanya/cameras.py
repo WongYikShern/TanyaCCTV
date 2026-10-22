@@ -52,7 +52,9 @@ def _clean_coord(value, low, high, label):
 
 
 def update(settings, sha256, data):
-    """Validate and save one camera's name, place and/or location. Missing keys keep their saved value."""
+    """Validate and save one camera's name, place, location and/or hidden flag. Missing keys keep their value.
+
+    A hidden camera stays in the library but is left off the camera wall, the map and "All recordings" scans."""
     if not isinstance(sha256, str) or not SHA256.match(sha256):
         raise CameraError("Unknown recording.")
     if not isinstance(data, dict):
@@ -69,6 +71,10 @@ def update(settings, sha256, data):
         if (lat is None) != (lng is None):
             raise CameraError("Set both latitude and longitude, or clear both.")
         entry["lat"], entry["lng"] = lat, lng
+    if "hidden" in data:
+        if type(data["hidden"]) is not bool:
+            raise CameraError("hidden must be true or false.")
+        entry["hidden"] = data["hidden"] or None
     entry = {k: v for k, v in entry.items() if v not in ("", None)}
     if entry:
         cameras[sha256] = entry

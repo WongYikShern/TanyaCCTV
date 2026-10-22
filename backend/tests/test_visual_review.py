@@ -167,3 +167,28 @@ def test_recorded_targeted_visual_checks_keep_temporal_ambiguity_explicit():
     lobby = next(c for c in fall['candidates'] if c['filename'] == 'cam1_lobby.mp4')
     assert lobby['visual_review']['verdict'] == 'unclear'
     assert lobby['visual_review']['evidence_timestamps'] == []
+
+
+def test_well_formed_boxes_on_cited_frames_are_kept_and_others_dropped(sample):
+    def reviewer(payload, settings):
+        out = decision(payload)
+        t = out[0]["evidence_timestamps"][0]
+        out[0]["evidence_boxes"] = [
+            {"timestamp": t, "box_2d": [100, 200, 900, 400], "label": " person in dark jacket "},
+            {"timestamp": 999, "box_2d": [100, 200, 900, 400], "label": "uncited frame"},
+            {"timestamp": t, "box_2d": [900, 200, 100, 400], "label": "upside down"},
+            {"timestamp": t, "box_2d": [0, 0, 1001, 10], "label": "out of range"},
+            {"timestamp": t, "box_2d": [1, 2, 3], "label": "short"},
+            {"timestamp": t, "box_2d": [1, 2, 3, 4]},
+            "not a box"]
+        return out
+    review = run(sample, reviewer)["hits"][0]["visual_review"]
+    assert review["evidence_boxes"] == [{"timestamp": 0, "box_2d": [100, 200, 900, 400], "label": "person in dark jacket"}]
+
+
+def test_rejected_windows_never_carry_boxes(sample):
+    def reviewer(payload, settings):
+        out = decision(payload, "not_supported")
+        out[0]["evidence_boxes"] = [{"timestamp": 0, "box_2d": [1, 2, 3, 4], "label": "x"}]
+        return out
+    assert run(sample, reviewer)["rejected_hits"][0]["visual_review"]["evidence_boxes"] == []

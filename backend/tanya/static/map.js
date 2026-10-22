@@ -15,10 +15,10 @@
   const ATTRIBUTION = 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> and its data providers';
   let map = null, base = null, satellite = false, placing = null, mini = null;
   const markers = new Map(), miniMarkers = new Map(), scanState = new Map();
-  let lastScan = null;
+  let lastScan = null, routeLine = null;
 
   const located = v => Number.isFinite(v.camera?.lat) && Number.isFinite(v.camera?.lng);
-  const cameras = () => videosCache.filter(v => v.status === "done");
+  const cameras = () => videosCache.filter(v => v.status === "done" && !v.camera?.hidden);
   function tiles(target) {
     const layers = TILES[satellite ? "satellite" : (document.documentElement.dataset.theme === "light" ? "light" : "dark")];
     return L.layerGroup(layers.map(([url, native]) => L.tileLayer(url, {attribution: ATTRIBUTION, maxZoom: 19, maxNativeZoom: native}))).addTo(target);
@@ -79,11 +79,22 @@
       }
       row.append(t, text, acts); list.append(row);
     }
+    routeLine?.remove(); routeLine = null;
+    const routePoints = (lastScan?.route || []).map(s => videosCache.find(v => v.id === s.video_id)).filter(v => v && located(v) && !v.camera?.hidden);
+    if (routePoints.length > 1) {
+      routeLine = L.layerGroup([
+        L.polyline(routePoints.map(v => [v.camera.lat, v.camera.lng]), {className: "route-glow", weight: 10, opacity: .25, color: "#3DD68C", interactive: false}),
+        L.polyline(routePoints.map(v => [v.camera.lat, v.camera.lng]), {className: "route-line", weight: 4, color: "#3DD68C", interactive: false}),
+      ]).addTo(map);
+      routePoints.forEach((v, i) => markers.get(v.id)?.getElement()?.querySelector(".cam-pin")?.setAttribute("data-step", String(i + 1)));
+    }
     const banner = $("map-scan");
     banner.hidden = !lastScan;
     if (lastScan) {
       const found = Object.entries(lastScan.byVideo).filter(([, e]) => e.likely || e.maybe);
-      banner.textContent = `Latest search “${lastScan.query}”: ` + (found.length
+      banner.textContent = lastScan.route?.length > 1
+        ? "Possible route: " + lastScan.route.map(s => `${displayName(videosCache.find(v => v.id === s.video_id)?.filename)} ${time(s.start_sec)}`).join(" → ") + " (possibly the same person; check each clip)"
+        : `Latest search “${lastScan.query}”: ` + (found.length
         ? found.map(([id, e]) => `${displayName(videosCache.find(v => v.id === Number(id))?.filename)} (${e.likely ? e.likely + " likely" : e.maybe + " maybe"})`).join(", ")
         : "no matching moments") + (lastScan.error ? " · search did not finish" : "");
     }
@@ -95,15 +106,26 @@
     else target.setView(DEMO_CENTRE, 15);
   }
 
+  // Points of a route not yet shown, so the map can zoom to it (nearby cameras otherwise overlap).
+  function pendingRoute() {
+    if (!(lastScan?.route?.length > 1) || lastScan.routeShown) return null;
+    const pts = lastScan.route.map(r => videosCache.find(v => v.id === r.video_id)).filter(v => v && located(v)).map(v => [v.camera.lat, v.camera.lng]);
+    return pts.length > 1 ? pts : null;
+  }
   window.showMap = function () {
     if (!window.L) { hint("The map library didn't load. Reload the page."); return; }
     if (!map) {
-      map = L.map("map-canvas", {zoomControl: true, worldCopyJump: true, maxZoom: 19});
+      // Set a view straight away: Leaflet only attaches markers and lines once the map has one.
+      map = L.map("map-canvas", {zoomControl: true, worldCopyJump: true, maxZoom: 19}).setView(DEMO_CENTRE, 15);
       base = tiles(map);
       map.on("click", event => { if (placing) { const id = placing; placing = null; hint(""); save(id, event.latlng); } });
-      render(); fit(map, cameras());
+      render(); if (!pendingRoute()) fit(map, cameras());
     } else render();
-    setTimeout(() => map.invalidateSize(), 60);
+    setTimeout(() => {
+      map.invalidateSize();
+      const pts = pendingRoute();
+      if (pts) { map.fitBounds(pts, {padding: [140, 140], maxZoom: 18, animate: false}); lastScan.routeShown = true; }
+    }, 60);
   };
   $("map-layer").onclick = () => {
     satellite = !satellite; $("map-layer").textContent = satellite ? "Street map" : "Satellite view";
@@ -138,7 +160,7 @@
       const list = plan.recordings.map(r => videosCache.find(v => v.id === r.video_id)).filter(v => v && located(v));
       if (!window.L || !list.length) return;
       holder.hidden = false;
-      const m = L.map(holder, {zoomControl: false, attributionControl: true, dragging: true, scrollWheelZoom: false});
+      const m = L.map(holder, {zoomControl: false, attributionControl: true, dragging: true, scrollWheelZoom: false}).setView(DEMO_CENTRE, 15);
       mini = {map: m, base: tiles(m)};
       for (const v of list) miniMarkers.set(v.id, L.marker([v.camera.lat, v.camera.lng], {icon: pin(v), keyboard: false}).addTo(m));
       fit(m, list); setTimeout(() => { m.invalidateSize(); fit(m, list); }, 80);
@@ -148,6 +170,10 @@
       const v = videosCache.find(x => x.id === id); if (!v) return;
       miniMarkers.get(id)?.setIcon(pin(v)); markers.get(id)?.setIcon(pin(v));
     },
-    scanFinish(summary) { lastScan = summary; render(); },
+    scanFinish(summary) {
+      lastScan = summary;
+      if (summary.route) for (const s of summary.route) if (s.source) scanState.set(s.video_id, "hit");
+      render();
+    },
   };
 })();

@@ -18,6 +18,7 @@
   <script defer src="{{ url_for('static', filename='timeline.js') }}"></script>
   <script defer src="{{ url_for('static', filename='command.js') }}"></script>
   <script defer src="{{ url_for('static', filename='map.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='watch.js') }}"></script>
 </head>
 <body>
 <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -37,6 +38,8 @@
   <symbol id="i-map" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></symbol>
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
   <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
 </svg>
 
@@ -69,13 +72,21 @@
       <form id="dash-search" class="card dash-search">
         <h1 class="display">What do you want to find?</h1>
         <p class="muted">Describe it in plain words. The AI looks through your footage and shows you the moments worth watching.</p>
-        <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="dash-query">Describe a moment</label><input id="dash-query" maxlength="500" required placeholder="e.g. a person in a black jacket walking in"><button>Search</button></div>
+        <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="dash-query">Describe a moment</label><input id="dash-query" maxlength="500" required placeholder="e.g. a person in a black jacket walking in"><button type="button" class="mic" data-target="dash-query" aria-label="Speak your search" title="Speak your search (Chrome turns speech into text using Google's speech service)" hidden><svg><use href="#i-mic"/></svg></button><button>Search</button></div>
         <p class="steps"><span><b>1</b>Add footage</span><span><b>2</b>Describe what you're looking for</span><span><b>3</b>Watch the suggested moments</span></p>
       </form>
       <div class="stat-grid" id="stats" aria-live="polite"></div>
       <div class="dash-grid">
         <article class="card wall-card"><div class="card-head"><h2>Camera wall</h2><span class="muted small-note">Recorded footage, playing on loop</span><a href="#map" class="link">Map view →</a></div><div id="dash-videos" class="cam-wall"></div></article>
         <div>
+          <article class="card watch-card" id="watch-card"><div class="card-head"><h2><svg><use href="#i-eye"/></svg>Watch mode</h2><span class="watch-dot" aria-hidden="true"></span></div>
+            <p class="muted small-note">Check every new recording automatically while this page is open, and raise an alert on a match.</p>
+            <label class="sr-only" for="watch-rule">Alert me when</label><input id="watch-rule" class="input" maxlength="200" placeholder="Alert me when… e.g. a person lying on the floor">
+            <label class="check small-note"><input id="watch-consent" type="checkbox"><span>OK to send sampled images of each new recording to Google Gemini automatically (up to 60 images per recording; longer ones are skipped).</span></label>
+            <button type="button" id="watch-start">Start watching</button>
+            <p id="watch-status" class="watch-status" role="status">Not watching.</p>
+            <ul id="watch-log" class="watch-log"></ul>
+          </article>
           <article class="card"><div class="card-head"><h2>Investigations</h2><a href="#investigations" class="link">View all →</a></div><div id="dash-cases"></div></article>
           <article class="card"><div class="card-head"><h2>Status</h2><a href="#system" class="link">Settings →</a></div><ul id="dash-status" class="status-list"></ul></article>
         </div>
@@ -148,7 +159,7 @@
     <section class="page" data-page="search" id="search" hidden>
       <div class="page-head"><div><h1 class="display">Search footage</h1><p class="muted">Describe what you're looking for. You'll get a short list of moments to watch, so you don't have to watch everything.</p></div></div>
       <form id="search-form" class="card search-card">
-        <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="query">Describe a moment</label><input id="query" maxlength="500" required placeholder="e.g. a person walking through the lobby"><button id="search-button">Search</button></div>
+        <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="query">Describe a moment</label><input id="query" maxlength="500" required placeholder="e.g. a person walking through the lobby"><button type="button" class="mic" data-target="query" aria-label="Speak your search" title="Speak your search (Chrome turns speech into text using Google's speech service)" hidden><svg><use href="#i-mic"/></svg></button><button id="search-button">Search</button></div>
         <div class="examples" id="examples"><span class="muted">Try:</span><button type="button" class="chip">a person walking through the lobby</button><button type="button" class="chip">a red car entering the car park</button><button type="button" class="chip">a person lying on the floor</button><button type="button" class="chip">someone standing still for a long time</button></div>
         <div class="search-options">
           <label for="scan-video" id="scan-video-label">Search in <select id="scan-video" class="input"><option value="all">All recordings</option></select></label>
@@ -206,6 +217,16 @@
           <div id="case" class="card" hidden>
             <div class="case-head"><div><p class="eyebrow" id="case-status">OPEN</p><h2 id="case-title" class="case-title"></h2><p id="case-description" class="muted"></p></div>
               <div class="case-actions"><button type="button" class="secondary" id="case-rename">Rename</button><button type="button" class="secondary" id="case-close">Close</button><button type="button" id="case-report-html">Export report (HTML)</button><button type="button" class="secondary" id="case-report-json">Export data (JSON)</button><label class="check report-frames" for="case-report-frames"><input id="case-report-frames" type="checkbox"><span>Include frame images (footage) in the HTML report</span></label></div></div>
+            <section id="summary-box" class="summary-box" aria-label="AI incident summary">
+              <div class="summary-head"><h3>AI incident summary</h3><button type="button" id="summary-open" class="secondary small">Draft with AI</button></div>
+              <div id="summary-panel" hidden>
+                <label class="check"><input id="summary-consent" type="checkbox"><span>OK to send this case's text (times, camera names, your decisions and notes; no images) to Google Gemini.</span></label>
+                <div class="confirm-actions"><button type="button" id="summary-run" disabled>Write summary</button></div>
+                <div id="summary-text" class="summary-text" hidden></div>
+                <div class="confirm-actions" id="summary-actions" hidden><button type="button" id="summary-save">Save as case summary</button><button type="button" id="summary-discard" class="secondary">Discard</button></div>
+                <p class="muted small-note">A draft written by AI from your clips and decisions. Read it before saving: it is kept only if you press Save, and it appears in the report.</p>
+              </div>
+            </section>
             <form id="rename-form" class="inline-form" hidden><label class="sr-only" for="rename-title">New title</label><input id="rename-title" class="input" maxlength="200" required><button>Save title</button><button type="button" class="secondary" id="rename-cancel">Cancel</button></form>
             <h3 class="section-title"><svg aria-hidden="true"><use href="#i-arrow"/></svg>Saved searches</h3><div id="case-queries"></div>
             <h3 class="section-title"><svg aria-hidden="true"><use href="#i-arrow"/></svg>Evidence timeline</h3><p id="case-basis" class="muted"></p><div id="case-clocks"></div><div id="case-evidence" class="timeline" aria-live="polite"></div>
@@ -230,7 +251,8 @@
       </div>
     </section>
   </main>
+  <div id="watch-alerts" class="watch-alerts" aria-live="assertive"></div>
   <p id="notice" role="status" aria-live="polite" title="Click to dismiss"></p>
-  <footer>TanyaCCTV is a local prototype. AI results are suggestions, not proof: always watch the clip before deciding. Accuracy on real CCTV hasn't been measured yet.</footer>
+  <footer>TanyaCCTV is a local prototype. AI results are suggestions, not proof: always watch the clip before deciding. Accuracy on real CCTV hasn't been measured yet.<br><span class="credits">Demo footage: CAVIAR, EC Funded CAVIAR project/IST 2001 37540 (CC BY-SA) · AAU RainSnow, C. H. Bahnsen &amp; T. B. Moeslund (CC BY 4.0). Map tiles © Esri.</span></footer>
 </div>
 </body></html>

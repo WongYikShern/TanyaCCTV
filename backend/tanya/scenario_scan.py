@@ -1,6 +1,7 @@
 """Bounded visual search across chosen recordings, independent of retrieval rankings."""
 import math
 import sqlite3
+import threading
 
 from .indexer import sha256_file
 from .sentry_client import SearchError
@@ -9,6 +10,9 @@ from .visual_review import MAX_CANDIDATES, MAX_FRAMES, review_results
 WINDOW_SEC = 12.0
 STRIDE_SEC = 6.0
 MAX_WINDOWS = 500
+# Batches of one approved plan may run at the same time (the page sends up to three at once);
+# this guards the plan's bookkeeping, never the Google request itself.
+_bookkeeping = threading.Lock()
 
 
 def source_path(settings, video):
@@ -65,7 +69,7 @@ def build_plan(settings, query, video_id, start=0, end=None):
                              thumbnail_timestamp_sec=thumb['timestamp_sec'], scan_window=i+1))
     return dict(query=query.strip(), video=video, hits=hits, start_sec=start, end_sec=end,
                 max_images=len(hits)*MAX_FRAMES, max_calls=math.ceil(len(hits)/MAX_CANDIDATES),
-                window_count=len(hits), next_batch=0)
+                window_count=len(hits), attempted=set(), finished_batches=0, finished_windows=0)
 
 
 def build_library_plan(settings, query, video_ids=None, start=0, end=None):
@@ -98,7 +102,7 @@ def build_library_plan(settings, query, video_ids=None, start=0, end=None):
         hit['scan_window'] = i+1
     return dict(query=query.strip(), videos=videos, hits=hits, excluded=excluded,
                 max_images=len(hits)*MAX_FRAMES, max_calls=math.ceil(len(hits)/MAX_CANDIDATES),
-                window_count=len(hits), next_batch=0)
+                window_count=len(hits), attempted=set(), finished_batches=0, finished_windows=0)
 
 
 def public_plan(plan):
@@ -117,14 +121,15 @@ def public_plan(plan):
 
 
 def run_batch(plan, batch, settings, search_settings, reviewer=None):
-    if type(batch) is not int or batch != plan['next_batch'] or batch >= plan['max_calls']:
-        raise ValueError('This batch is out of order or already attempted. Review a new plan to retry.')
-    selected_ids = {h['video_id'] for h in plan['hits'][batch*MAX_CANDIDATES:(batch+1)*MAX_CANDIDATES]}
-    for video in plan['videos']:
-        if video['id'] in selected_ids:
-            source_path(settings, video)
-    # Consume before sending. A timeout must not silently allow the same approved send again.
-    plan['next_batch'] += 1
+    with _bookkeeping:
+        if type(batch) is not int or not 0 <= batch < plan['max_calls'] or batch in plan['attempted']:
+            raise ValueError('This batch is out of range or already attempted. Review a new plan to retry.')
+        selected_ids = {h['video_id'] for h in plan['hits'][batch*MAX_CANDIDATES:(batch+1)*MAX_CANDIDATES]}
+        for video in plan['videos']:
+            if video['id'] in selected_ids:
+                source_path(settings, video)
+        # Consume before sending. A timeout must not silently allow the same approved send again.
+        plan['attempted'].add(batch)
     hits = [dict(h) for h in plan['hits'][batch*MAX_CANDIDATES:(batch+1)*MAX_CANDIDATES]]
     result = dict(query=plan['query'], hits=hits, warnings=[], search_method='direct_visual_scan',
                   note='Visual matches from sampled footage, independent of embedding rankings. '
@@ -132,8 +137,11 @@ def run_batch(plan, batch, settings, search_settings, reviewer=None):
     result = review_results(result, settings, search_settings, reviewer=reviewer)
     result['warnings'] = ['This scan checks samples throughout the approved range. Missing matches '
                           'do not establish absence. Review evidence images and full context.']
+    with _bookkeeping:
+        plan['finished_batches'] += 1
+        plan['finished_windows'] += len(hits)
+        result['completed_windows'] = plan['finished_windows']
+        result['done'] = plan['finished_batches'] == plan['max_calls']
     result['batch'] = batch
-    result['completed_windows'] = min((batch+1)*MAX_CANDIDATES, plan['window_count'])
     result['total_windows'] = plan['window_count']
-    result['done'] = plan['next_batch'] == plan['max_calls']
     return result

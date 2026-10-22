@@ -52,6 +52,9 @@
 .cam-tile.big .cam-name { font-size: 13px; }
 
 /* Camera names */
+.video-card.is-hidden { opacity: .6; }
+.cam-edit { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.cam-edit-form { flex-basis: 100%; }
 .file-name { font: 11.5px Consolas, "SF Mono", monospace; color: var(--faint); margin: 0; overflow-wrap: anywhere; }
 .cam-edit { margin-top: 4px; }
 .cam-edit-form { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
@@ -100,6 +103,8 @@
 .cam-pop-hit { color: var(--green); font-weight: 650; font-size: 12.5px; }
 .cam-pop button { margin-top: 6px; padding: 6px 10px; font-size: 13px; }
 .leaflet-container { font-family: inherit; }
+/* dashboard.css sizes every svg as an 18 px icon; the map's drawing layer sets its own size. */
+.leaflet-container svg { width: auto; height: auto; }
 :root[data-theme="dark"] .leaflet-bar a { background: var(--card); color: var(--text); border-color: var(--line); }
 :root[data-theme="dark"] .leaflet-control-attribution { background: rgba(11,14,19,.75); color: var(--muted); }
 :root[data-theme="dark"] .leaflet-control-attribution a { color: var(--orange-text); }
@@ -149,6 +154,74 @@
 .scan-kpis .hot b { color: #F59A5F; } .scan-kpis .g b { color: #3DD68C; }
 .scan-stage.done .scan-main, .scan-stage.failed .scan-main { display: none; }
 .scan-stage.done .scan-mini, .scan-stage.failed .scan-mini { display: none; }
+
+/* Evidence boxes (from the AI's answer) */
+.box-frame { position: relative; display: block; width: 100%; line-height: 0; background: #000; }
+.box-frame img, .result-thumb .box-frame img { width: 100%; height: auto; aspect-ratio: auto; object-fit: fill; display: block; }
+.ev-box { position: absolute; border: 2px solid #3DD68C; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.5), 0 0 14px rgba(61,214,140,.45); animation: boxin .5s .35s cubic-bezier(.2,.8,.2,1) both; }
+.ev-box b { position: absolute; left: -2px; bottom: 100%; margin-bottom: 2px; padding: 1px 6px; border-radius: 4px; background: #3DD68C; color: #06200f; font: 700 10.5px/1.4 var(--font, system-ui); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.result-group .ev-box { border-color: #F2B53A; box-shadow: 0 0 0 1px rgba(0,0,0,.5); } .result-group .ev-box b { background: #F2B53A; color: #2a1d00; }
+@keyframes boxin { from { opacity: 0; transform: scale(1.25); } }
+.scan-viewer img { object-fit: contain; }
+.scan-boxes { position: absolute; pointer-events: none; opacity: 0; transition: opacity .2s; }
+.scan-boxes.on { opacity: 1; }
+
+/* AI incident summary */
+.summary-box { margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--orange-line); border-radius: 12px; background: var(--surface-2); }
+.summary-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.summary-head h3 { margin: 0; font-size: 14px; }
+#summary-panel { margin-top: 10px; }
+.summary-text { white-space: pre-wrap; margin: 10px 0; padding: 12px 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); font-size: 14px; line-height: 1.6; }
+.summary-text.typing::after { content: "▍"; color: var(--orange-text); animation: caret 1s steps(1) infinite; }
+#case-description { white-space: pre-wrap; }
+
+/* Follow this person: route */
+.route-card { margin: 0 0 14px; padding: 14px 16px; border-radius: 12px; background: #151A21; border: 1px solid rgba(61,214,140,.4); }
+.route-title { margin: 0 0 10px; font-weight: 800; font-size: 15px; color: #3DD68C; }
+.route-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.route-stop { display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 8px 12px; border-radius: 10px; background: #1D222B; border: 2px solid #3DD68C; color: #E8ECF2; font-weight: 400; animation: lockin .45s cubic-bezier(.2,.8,.2,1) both; }
+.route-stop:hover:not(:disabled) { background: #232A34; border-color: #6CF0AE; color: #fff; }
+.route-stop b { font-size: 13.5px; } .route-stop span { font: 12px Consolas, "SF Mono", monospace; color: #9AA4B2; }
+.route-stop.source { border-color: var(--orange); } .route-stop.maybe { border-color: #F2B53A; }
+.route-arrow { color: #3DD68C; font-size: 20px; font-weight: 800; }
+.route-line { stroke-dasharray: 12 10; animation: routeflow 1s linear infinite; }
+@keyframes routeflow { to { stroke-dashoffset: -22; } }
+.cam-pin[data-step]::after { content: attr(data-step); position: absolute; left: -9px; top: -11px; width: 18px; height: 18px; border-radius: 50%; background: #3DD68C; color: #06200f; font: 800 11px/18px var(--font, system-ui); text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.scan-stage.following { border-color: rgba(61,214,140,.45); }
+.follow-btn svg { color: #3DD68C; }
+
+/* Watch mode */
+.watch-card h2 { display: flex; align-items: center; gap: 8px; }
+.watch-card h2 svg { color: var(--orange-text); }
+.watch-card .input { width: 100%; margin: 6px 0 8px; }
+.watch-card .check { margin-bottom: 10px; }
+.watch-card #watch-start { width: 100%; }
+.watch-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--faint); }
+.watch-card.on { border-color: rgba(227,52,47,.5); box-shadow: var(--shadow), 0 0 0 1px rgba(227,52,47,.25); }
+.watch-card.on .watch-dot { background: var(--red); box-shadow: 0 0 0 0 rgba(227,52,47,.6); animation: recdot 1.4s ease-out infinite; }
+@keyframes recdot { to { box-shadow: 0 0 0 10px rgba(227,52,47,0); } }
+.watch-status { font-size: 12.5px; color: var(--muted); margin: 8px 0 4px; }
+.watch-log { list-style: none; padding: 0; margin: 0; font: 11.5px/1.6 Consolas, "SF Mono", monospace; color: var(--muted); }
+.watch-log .hit { color: var(--green); } .watch-log .warn { color: var(--amber); }
+.watch-alerts { position: fixed; top: 74px; right: 20px; z-index: 900; display: flex; flex-direction: column; gap: 10px; width: min(440px, calc(100vw - 32px)); }
+.watch-alert { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; padding: 12px; border-radius: 14px; background: #151A21; color: #E8ECF2; border: 2px solid var(--red); box-shadow: 0 18px 50px rgba(0,0,0,.5), 0 0 0 4px rgba(227,52,47,.18); animation: alertin .5s cubic-bezier(.2,.8,.2,1) both, alertpulse 1.6s ease-in-out .5s 3; }
+.watch-alert.maybe { border-color: #F2B53A; }
+@keyframes alertin { from { opacity: 0; transform: translateX(40px); } }
+@keyframes alertpulse { 50% { box-shadow: 0 18px 50px rgba(0,0,0,.5), 0 0 0 10px rgba(227,52,47,.28); } }
+.watch-alert-pic { border-radius: 8px; overflow: hidden; background: #000; align-self: start; }
+.watch-alert-pic img { width: 100%; display: block; }
+.watch-alert strong { display: block; font-size: 14px; color: #FF7A73; }
+.watch-alert.maybe strong { color: #F2B53A; }
+.watch-alert span { display: block; font-size: 12.5px; margin-top: 2px; }
+.watch-alert p { font-size: 12px; margin: 4px 0 0; color: #9AA4B2; }
+.watch-alert-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.watch-alert-acts button { padding: 5px 10px; font-size: 12.5px; }
+
+/* Voice search */
+.mic { flex: none; width: 44px; height: 44px; padding: 0; border-radius: 50%; background: var(--raised); color: var(--muted); border: 1px solid var(--line); }
+.mic:hover:not(:disabled) { background: var(--orange-soft); color: var(--orange-text); border-color: var(--orange-line); }
+.mic.listening { background: var(--red); color: #fff; border-color: var(--red); animation: recdot 1.2s ease-out infinite; }
+.credits { font-size: 11px; color: var(--faint); }
 
 /* Results lock on as they arrive */
 .result.lock { animation: lockin .55s cubic-bezier(.2,.8,.2,1) both; }

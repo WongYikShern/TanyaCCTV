@@ -34,6 +34,15 @@ def test_name_place_and_location_are_saved_and_listed(web):
     assert client.get("/api/videos").json["videos"][0]["camera"]["lat"] == 3.1478
 
 
+def test_hidden_flag_is_saved_and_cleared(web):
+    client, headers, video, _ = web
+    assert client.post(f"/api/videos/{video['id']}/camera", headers=headers, json={"hidden": True}).json["camera"] == {"hidden": True}
+    assert client.get("/api/videos").json["videos"][0]["camera"] == {"hidden": True}
+    client.post(f"/api/videos/{video['id']}/camera", headers=headers, json={"hidden": False})
+    assert client.get("/api/videos").json["videos"][0]["camera"] == {}
+    assert client.post(f"/api/videos/{video['id']}/camera", headers=headers, json={"hidden": "yes"}).status_code == 400
+
+
 def test_clearing_every_field_removes_the_entry(web):
     client, headers, video, ws = web
     client.post(f"/api/videos/{video['id']}/camera", headers=headers, json={"name": "Lobby", "lat": 1, "lng": 2})

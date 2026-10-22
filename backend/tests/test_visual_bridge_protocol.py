@@ -54,7 +54,9 @@ def test_default_model_and_structured_request(bridge, capsys):
     assert module.main() == 0
     assert json.loads(capsys.readouterr().out) == {"ok": True, "results": []}
     assert calls[0]["model"] == "gemini-3.8-flash"
-    assert module.client_options["http_options"]["retry_options"] == {"attempts": 1}
+    # Only "busy" replies are retried, a bounded number of times.
+    assert module.client_options["http_options"]["retry_options"] == {
+        "attempts": 3, "initial_delay": 2.0, "max_delay": 8.0, "http_status_codes": [429, 503]}
     assert calls[0]["config"]["response_json_schema"] == module.SCHEMA
     # LOW is documented for 3.8 Flash; MINIMAL is not supported for that model.
     assert calls[0]["config"]["thinking_config"] == {"thinking_level": "low"}

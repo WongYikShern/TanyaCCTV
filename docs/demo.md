@@ -9,32 +9,44 @@ folder. On macOS/Linux, use `.venv/bin/python` instead.
 > are ranked by similarity, not detected incidents. Every result stays unverified until a person
 > reviews it, and a low or missing result does not prove that something did not happen.
 
-## Command-centre walkthrough (about 3 minutes, live AI)
+## Command-centre walkthrough (about 4 minutes, live AI)
 
-The dark command-centre view: camera wall, named cameras on a map, and a search you can watch.
-Uses the normal website (`run_web.py`) with a Gemini key; one search sends a few dozen images to
-Google, so run it once beforehand to be sure Google is not busy. If it is, use the offline demo below.
+The dark command-centre view on real public CCTV footage: camera wall, camera map, a search you can
+watch, boxes from the AI, following a person across cameras, watch-mode alerts and an AI case summary.
+Uses the normal website (`run_web.py`) with a Gemini key. Run each step once beforehand; if Google is
+busy the app retries "busy" replies up to 3 times, and the offline demo below needs no internet.
 
-Once, before presenting:
-
-1. **Cameras**: press **Name this camera** on each recording and give it a name and place.
-2. **Map**: press **Place demo cameras**, then drag each pin to where that camera would be. Names and
-   locations are typed in by you and kept in `data/cameras.json` on this computer (not in Git).
+**Footage.** The library holds 4 CAVIAR mall clips (lobby, atrium, corridor, shop front; the corridor
+and shop front are the same moment from two cameras) and three 30-second RainSnow traffic cuts (rain,
+night, snow). Older test clips are *hidden* (Cameras → Hide), so they stay out of the wall, map and
+"All recordings". Names, places and map positions are a demo layout typed in by hand and kept in
+`data/cameras.json` (not in Git). The footer credits CAVIAR (CC BY-SA) and AAU RainSnow (CC BY 4.0).
 
 In front of the judges:
 
-1. **Dashboard.** The camera wall plays each recording on loop, labelled RECORDED with its position in
-   the recording. Say: "These are recordings; the same pipeline would take a camera feed."
-2. Type a description in **What do you want to find?** and press **Search**, then tick the approval
-   and **Start search**. The scan view shows the frames from the part being checked, a per-camera
-   sweep (orange while checked, then green / yellow / grey) and the cameras pulsing on a mini map.
-3. When it finishes: search time, footage searched, likely moments and "less to watch" (share of the
-   footage you can skip, from the real result windows). Results lock on; press **Play key moment**.
-4. **Map.** The camera with a match is green. Click it for the frame and **Play**. **Satellite view**
-   switches the map style.
+1. **Dashboard.** The camera wall loops each recording, labelled RECORDED with its position in the
+   recording. "These are recordings; the same pipeline takes footage as it arrives (step 6)."
+2. **Search.** Type, or press the mic and say, "a person walking along the corridor". Approve the plan
+   (it shows how many images are sent). Up to three requests run at once: frames flip in the viewer,
+   cameras light up in the sweep row and on the mini map, and when the AI finds something it locks on
+   to the frame with the AI's box around the person.
+3. **Results.** Search time, footage searched, likely moments, "% less to watch". Each match shows the
+   AI's box and reason; press **Play key moment**.
+4. **Follow this person** on the corridor match. It searches the other cameras for the AI's description
+   of that person. The route card shows Corridor → Shop front; **Show route on map** draws it.
+   "Possibly the same person": the app never identifies anyone.
+5. **Investigation.** Add the clips, mark them Relevant, then **AI incident summary → Draft with AI**
+   (text only, no images). Read it and **Save as case summary**; it goes into the report.
+6. **Watch mode.** On the dashboard, "Alert me when… a person lying on the floor", approve, **Start
+   watching**. Then **Cameras → Add footage** and upload `data/demo-upload/new_lobby_recording.mp4`
+   (a fresh encode of the CAVIAR fall scene; an identical copy would be refused as a duplicate). It is
+   added, checked automatically, and an alert pops up with a sound, the AI's box and **Play clip**.
+   Uploading it a second time is refused as a duplicate, so re-encode another copy for a rehearsal.
 
-Honest points: the AI picks frames, not positions inside a frame, so nothing is boxed; locations
-are set by a person, never detected; the map needs internet (map pictures only, from Esri).
+Honest points: boxes, reasons and verdicts are AI suggestions; matches are unconfirmed until a person
+marks them. Follow-routes are ordered by time within each recording, which assumes the recordings
+cover the same period. Watch mode works while the page is open and skips recordings needing more than
+60 images. Camera locations are set by a person. The map and voice search need internet.
 
 ## Hackathon demo: preset event index, fully offline (default launcher mode)
 
