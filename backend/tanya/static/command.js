@@ -397,6 +397,7 @@ window.scanFx = (() => {
     const footage = st.plan.ranges.reduce((s, r) => s + (r.end_sec - r.start_sec), 0);
     const watch = st.hitWindows.length ? Math.min(footage, covered(st.hitWindows)) : 0;
     const less = footage && watch ? Math.max(0, Math.round(100 * (1 - watch / footage))) : null;
+    if (!error && watch) window.recordTimeSaved?.(footage - watch);
     const k = st.kpis; k.replaceChildren();
     const kpi = (label, cls) => { const d = element("div", undefined, "kpi " + (cls || "")); const b = element("b", "0"); d.append(b, element("span", label)); k.append(d); return b; };
     countUp(kpi("search time", "hot"), Math.max(1, Math.round(seconds)), n => `${n} s`);

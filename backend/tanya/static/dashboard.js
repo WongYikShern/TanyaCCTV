@@ -12,6 +12,34 @@ const cameraNames = new Map();
 const displayName = filename => cameraNames.get(filename) || String(filename||"").replace(/^[0-9a-f]{12}_/,"");
 // "1 clip" / "3 clips": a count with the right word, instead of "clip(s)".
 function plural(n, one, many) { return `${n} ${n === 1 ? one : (many || one + "s")}`; }
+const reducedMotion = () => !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+// Count a number up from 0 (shown straight away when the person prefers less motion).
+function animateNumber(node, to, format = n => String(n)) {
+  if (reducedMotion()) { node.textContent = format(to); return; }
+  const start = performance.now(), duration = 650;
+  const step = now => { const f = Math.min(1, (now - start) / duration); node.textContent = format(Math.round(to * (1 - (1 - f) ** 3))); if (f < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+// Seconds covered by a list of [start, end] ranges, counting overlaps once.
+function coveredSeconds(ranges) {
+  let total = 0, cur = null;
+  for (const [a, b] of ranges.filter(r => r[1] > r[0]).sort((x, y) => x[0] - y[0])) {
+    if (!cur || a > cur[1]) { if (cur) total += cur[1] - cur[0]; cur = [a, b]; } else cur[1] = Math.max(cur[1], b);
+  }
+  return total + (cur ? cur[1] - cur[0] : 0);
+}
+// Running total of footage people didn't have to watch, across searches in this browser (for the dashboard).
+function recordTimeSaved(seconds) {
+  if (!(seconds > 0)) return;
+  try {
+    localStorage.setItem("tanya.savedSeconds", String(Math.round(Number(localStorage.getItem("tanya.savedSeconds") || 0) + seconds)));
+    localStorage.setItem("tanya.searchCount", String(Number(localStorage.getItem("tanya.searchCount") || 0) + 1));
+  } catch (e) { /* storage unavailable: the total just isn't kept */ }
+}
+window.recordTimeSaved = recordTimeSaved;
+function timeSavedSoFar() { try { return {seconds: Number(localStorage.getItem("tanya.savedSeconds") || 0), searches: Number(localStorage.getItem("tanya.searchCount") || 0)}; } catch (e) { return {seconds: 0, searches: 0}; } }
+// Small per-browser memory for the getting-started steps (works without storage, it just forgets).
+function flag(name, set) { try { if (set) localStorage.setItem("tanya." + name, "1"); return localStorage.getItem("tanya." + name) === "1"; } catch (e) { return !!set; } }
 function element(tag, text, className) { const node=document.createElement(tag); if(text !== undefined) node.textContent=text; if(className) node.className=className; return node; }
 function icon(name) { const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg"), use=document.createElementNS(ns,"use"); use.setAttribute("href","#i-"+name); svg.append(use); return svg; }
 let noticeTimer=null;
@@ -55,7 +83,8 @@ function route() {
   if(page==="map") library().then(()=>window.showMap?.()).catch(error=>notice(error.message));
   if(page==="monitor") library().then(()=>window.showMonitor?.()).catch(error=>notice(error.message));
   else window.leaveMonitor?.();
-  if(page==="investigations" && window.refreshInvestigation) window.refreshInvestigation().catch(error=>notice(error.message)); // never show stale source status
+  // Videos first (the incident timeline needs recording lengths), then the case; never show stale source status.
+  if(page==="investigations" && window.refreshInvestigation) library().catch(()=>{}).finally(()=>window.refreshInvestigation().catch(error=>notice(error.message)));
   if(page==="system") Promise.all([library(),status()]).catch(error=>notice(error.message));
   window.scrollTo(0,0);
 }
@@ -146,6 +175,9 @@ function updateControls() {
   for(const id of ["visual-check","visual-consent","query","index-button","upload-button"]) $(id).disabled=operationRunning;
   if(connection?.offline_demo) $("visual-check").disabled=true;
   $("plan-button").disabled=operationRunning || !connection?.engine_ready || connection?.offline_demo;
+  // Say why the button is greyed out (the demo doesn't use quick search; otherwise the engine is missing).
+  const planWhy=!connection?"":connection.offline_demo?"Not used in the offline demo: its searches come from the preset index.":!connection.engine_ready?"Needs the search engine first (see Status).":"";
+  $("plan-note").textContent=planWhy; $("plan-note").hidden=!planWhy; $("plan-button").hidden=!!connection?.offline_demo;
   $("sync-button").disabled=operationRunning || !planHasChanges;
   $("busy-pill").hidden=!operationRunning;
 }
@@ -171,7 +203,11 @@ async function renderDashboard() {
       : stat("AI search","Off","Connect it in Settings to search footage","#system","attention"),
     stat("Investigations",cases.length,unreviewed?`${plural(unreviewed,"clip")} to review`:`${open.length} open`,"#investigations",unreviewed?"attention":"")];
   if(failed) tiles.push(stat("Problems",failed,failed===1?"recording needs attention":"recordings need attention","#library","alert"));
+  const saved=timeSavedSoFar();
+  if(saved.seconds>0){ const tile=stat("Footage skipped",time(saved.seconds),`you didn't have to watch, across ${plural(saved.searches,"search","searches")}`,"#search","saved"); tiles.splice(1,0,tile); }
   $("stats").replaceChildren(...tiles);
+  // Even rows: 4 cards go 2 × 2 on medium screens instead of 3 + 1.
+  $("stats").style.setProperty("--tiles",String(tiles.length)); $("stats").style.setProperty("--tiles-md",String(tiles.length===4?2:Math.min(tiles.length,3)));
   const recent=$("dash-videos"); recent.replaceChildren();
   if(!videosCache.length){ const a=element("a","No recordings yet. Add your first video →","empty"); a.href="#library"; a.onclick=()=>{$("upload-form").hidden=false;}; recent.append(a); }
   if(window.renderCameraWall) window.renderCameraWall(recent, videosCache);
@@ -186,6 +222,7 @@ async function renderDashboard() {
     row.append(element("strong",c.title),element("span",`${c.status==="open"?"Open":"Closed"} · ${plural(c.evidence_count,"clip")}`+(c.unreviewed_count?` · ${c.unreviewed_count} to review`:""),"muted"));
     row.onclick=()=>{ location.hash="#investigations"; if(window.openInvestigation) window.openInvestigation(c.id); }; box.append(row);
   }
+  renderSteps();
   // Only problems are worth dashboard space; the full list lives under Settings.
   const problems=statusItems().filter(([kind])=>kind!=="ok");
   renderStatusList($("dash-status"),problems.length?problems:[["ok","Everything is ready. You can search your footage."]]);
@@ -205,8 +242,9 @@ function videoStatus(v) {
   if(v.status!=="done") return ["Processing…","pending"];
   if(v.playback?.status==="missing") return ["File missing","failed"];
   if(v.playback?.changed) return ["File changed","failed"];
-  if(connection?.demo_mode==="event_index") return ["In the demo library",""];
-  if(connection?.offline_demo) return v.search_state==="prepared"?["In the recorded demo",""]:["Not in the recorded demo","neutral"];
+  // In the demo every recording is in the demo library, so a badge would say nothing; only exceptions get one.
+  if(connection?.demo_mode==="event_index") return [null];
+  if(connection?.offline_demo) return v.search_state==="prepared"?[null]:["Not in the recorded demo","neutral"];
   return canSearch() ? ["Ready to search",""] : ["Ready to watch","neutral"];
 }
 function thumb(video) {
@@ -253,7 +291,7 @@ function renderLibrary() {
     body.append(title,element("p",[v.camera?.place,`${time(v.duration_sec)} · ${v.width||"—"} × ${v.height||"—"}`].filter(Boolean).join(" · "),"meta"));
     if(v.camera?.name) body.append(element("p",String(v.filename).replace(/^[0-9a-f]{12}_/,""),"file-name"));
     const [label,kind]=videoStatus(v);
-    body.append(element("span",label,"badge "+kind));
+    if(label) body.append(element("span",label,"badge "+kind));
     if(v.camera?.hidden){ card.classList.add("is-hidden"); body.append(element("span","Hidden from wall, map and “All recordings”","badge neutral")); }
     if(v.error) body.append(element("p",v.error,"error-text"));
     if(v.playback?.status==="missing") body.append(element("p",v.playback.message,"error-text"));
@@ -272,6 +310,7 @@ function overlay(text){ $("player-overlay").hidden=!text; $("player-overlay-text
 function playerError(text){ $("player-error").hidden=!text; $("player-error").textContent=text||""; if(text) overlay(null); }
 function resetPlayer(){ const p=$("player"); p.pause(); p.removeAttribute("src"); p.load(); playerError(null); overlay(null); window.clearFollow?.(); }
 async function showWatch(id,start,end) {
+  flag("watched",true);
   end=playbackEnd(start,end);
   const myToken=++watchToken; activeVideo=id; framePage=0; currentMoment=start; watchWindow=end!==null?[start,end]:null;
   resetPlayer(); $("frames").replaceChildren(); $("more-frames").hidden=true; $("player-window").hidden=true; $("replay-window").hidden=true;
@@ -391,7 +430,7 @@ async function indexVideos() {
   await Promise.all([library(),status()]);
   $("sync-plan").hidden=true;
   const duplicateNote=duplicates.length ? ` ${plural(duplicates.length,"file")} ${duplicates.length===1?"was":"were"} identical to videos already in the library and were not added again.` : "";
-  notice((failed.length ? `${plural(failed.length,"video")} couldn't be added. On the Cameras page, filter by “Problems” to see why.` : (canSearch()?"Done. Your footage is ready to search.":"Done. Your footage is ready to watch. Connect the AI in Settings to search it."))+duplicateNote);
+  notice((failed.length ? `${plural(failed.length,"video")} couldn't be added. On the Cameras page, filter by “Problems” to see why.` : (connection?.offline_demo?"Done. It plays here, but the offline demo only searches its preset events, so new footage won't appear in search results.":canSearch()?"Done. Your footage is ready to search.":"Done. Your footage is ready to watch. Connect the AI in Settings to search it."))+duplicateNote);
 }
 $("index-button").onclick=async()=>{ busy(true); notice("Adding videos from the folder… Keep this page open."); try{await indexVideos();}catch(error){notice(error.message);}finally{busy(false);} };
 $("upload-form").onsubmit=async event=>{
@@ -434,26 +473,69 @@ $("search-form").onsubmit=async event=>{
     const filters=window.searchFilters?.()||null;
     // With filters, an empty box means "every event that passes the filters".
     const queryText=$("query").value.trim()||(filters?"all":$("query").value);
+    const startedAt=performance.now(); flag("searched",true);
     const data=await post("/api/search",{query:queryText,visual_check:visual,approve_frame_upload:approved,...(filters?{filters}:{}),...(saveToId()?{investigation_id:saveToId()}:{})});
     const indexed=data.mode==="event_index";
-    $("results").replaceChildren(element("p",indexed?`Events in the preset index for “${data.query}”. Each result says where its label comes from: watch the footage before deciding.`:visual?`Results for “${data.query}”. These are AI suggestions from a few images per clip: always watch before deciding.`:`Closest-looking clips for “${data.query}”. They appear even if what you described never happened: watch to check.`,"results-intro"));
-    const active=indexed?window.filterSummary?.(data.applied_filters):null; if(active) $("results").append(active);
-    for(const warning of data.warnings) $("results").append(element("p",warning,"warning"));
+    // One compact box above the results instead of a stack of separate notes. Demo disclaimers (already in the
+    // demo strip and the top-bar pill) and the general note go under "About these results".
+    const head=element("div",undefined,"results-head");
+    const intro=element("div",undefined,"results-intro");
+    intro.append(element("span",indexed?`Events in the preset index for “${data.query}”. Each result says where its label comes from: watch the footage before deciding.`:visual?`Results for “${data.query}”. These are AI suggestions from a few images per clip: always watch before deciding.`:`Closest-looking clips for “${data.query}”. They appear even if what you described never happened: watch to check.`));
+    if(data.saved_query){ const chosen=$("save-to").selectedOptions[0]; intro.append(element("span",`Saved to “${chosen?.value?chosen.textContent:"your investigation"}”`,"badge saved-badge")); }
+    head.append(resultKpis(data,filters,(performance.now()-startedAt)/1000),intro);
+    const active=indexed?window.filterSummary?.(data.applied_filters):null; if(active) head.append(active);
+    const demoNote=w=>/^OFFLINE (DEMO|REPLAY)\b/.test(w);
+    const shown=data.warnings.filter(w=>!demoNote(w)), aboutLines=[...data.warnings.filter(demoNote),data.note].filter(Boolean);
+    // With no results, the warnings explain why, so they go in the empty-state card instead.
+    if(shown.length && data.hits.length){ const list=element("ul",undefined,"results-warnings"); for(const w of shown) list.append(element("li",w)); head.append(list); }
+    if(aboutLines.length){ const about=element("details",undefined,"results-about"); about.append(element("summary","About these results"),...aboutLines.map(t=>element("p",t))); head.append(about); }
+    $("results").replaceChildren(head);
     if(data.visual_review) $("results").append(element("h3",`${data.visual_review.supported} likely · ${data.visual_review.unclear} maybe · ${data.visual_review.rejected} no match`));
-    if(!data.hits.length){ const e=element("div",undefined,"card empty-state"); e.append(icon("search"),element("h2",indexed?"No matching events":"No likely matches"),element("p",indexed?"No annotated event matches. Not finding it doesn't prove it didn't happen.":visual?(data.unclear_hits?.length?"Check the “maybe” clips below. ":"")+"Not finding it doesn't prove it didn't happen.":"No clips came back. Try different wording.","muted")); $("results").append(e); }
+    if(!data.hits.length){
+      const e=element("div",undefined,"card empty-state"); e.append(icon("search"),element("h2",indexed?"No matching events":"No likely matches"));
+      if(shown.length) for(const w of shown) e.append(element("p",w,"muted"));
+      else e.append(element("p",indexed?"No annotated event matches. Not finding it doesn't prove it didn't happen.":visual?(data.unclear_hits?.length?"Check the “maybe” clips below. ":"")+"Not finding it doesn't prove it didn't happen.":"No clips came back. Try different wording.","muted"));
+      $("results").append(e);
+    }
     const ranked=[...data.hits,...(data.unclear_hits||[]),...(data.rejected_hits||[])];
-    if(data.saved_query) $("results").append(element("p",`Search saved to your investigation.`,"muted"));
     for(const hit of data.hits) $("results").append(resultCard(hit,data.query,visual,ranked.indexOf(hit)+1));
     for(const [key,title] of [["unclear_hits","Maybe: worth a look"],["rejected_hits","Checked: no match"]]){
       if(data[key]?.length){ const details=element("details",undefined,"result-group"); details.open=key==="unclear_hits" && !data.hits.length; details.append(element("summary",`${title} (${data[key].length})`)); for(const hit of data[key]) details.append(resultCard(hit,data.query,visual,ranked.indexOf(hit)+1)); $("results").append(details); }
     }
-    $("results").append(element("p",data.note,"muted small-note"));
+    $("results").querySelectorAll(":scope > .result").forEach((card,i)=>card.style.setProperty("--i",i));   // staggered entrance
     if(saveToId() && window.refreshInvestigation) window.refreshInvestigation();
   }catch(error){ const e=element("div",undefined,"banner error"); e.append(icon("alert"),element("span",error.message)); $("results").replaceChildren(e); }
   finally{ $("visual-consent").checked=false; busy(false); }
 };
 const verdictLabels={supported:["Likely match",""],unclear:["Maybe","pending"],not_supported:["No match","neutral"]};
 const answerNames={correct:"Yes",wrong:"No",unsure:"Not sure"};
+// "How much footage did this save me?": search time, footage searched, moments found, share not to watch.
+function resultKpis(data, filters, seconds) {
+  const searched = filters?.video_ids?.length ? videosCache.filter(v => filters.video_ids.includes(v.id))
+                                               : videosCache.filter(v => v.status === "done" && !v.camera?.hidden);
+  const footage = searched.reduce((sum, v) => { const d = v.duration_sec || 0, a = Math.max(0, filters?.start_sec ?? 0), b = Math.min(d, filters?.end_sec ?? d); return sum + Math.max(0, b - a); }, 0);
+  const byVideo = {}; for (const h of data.hits) (byVideo[h.video_id] ||= []).push([h.start_sec, h.end_sec]);
+  const watch = Object.values(byVideo).reduce((sum, r) => sum + coveredSeconds(r), 0);
+  recordTimeSaved(footage - watch);
+  const box = element("div", undefined, "results-kpis");
+  const kpi = (label, cls) => { const d = element("div", undefined, "kpi " + (cls || "")); const b = element("b", "0"); d.append(b, element("span", label)); box.append(d); return b; };
+  animateNumber(kpi("search time"), Math.max(1, Math.round(seconds * 10)), n => `${(n / 10).toFixed(1)} s`);
+  animateNumber(kpi(`footage searched · ${plural(searched.length, "camera")}`), Math.round(footage), n => time(n));
+  animateNumber(kpi(data.hits.length === 1 ? "moment to watch" : "moments to watch", "g"), data.hits.length);
+  if (data.hits.length && footage) animateNumber(kpi(`less to watch · ${time(watch)} of clips`, "hot"), Math.max(0, Math.round(100 * (1 - watch / footage))), n => `${n}%`);
+  else { const d = element("div", undefined, "kpi"); d.append(element("b", "—"), element("span", "nothing to watch")); box.append(d); }
+  return box;
+}
+// Where the moment sits in its recording, as a small bar (click to play).
+function positionBar(hit) {
+  const duration = videosCache.find(v => v.id === hit.video_id)?.duration_sec;
+  if (!duration) return null;
+  const bar = element("div", undefined, "pos-bar"), label = `${time(hit.start_sec)}–${time(hit.end_sec)} of ${time(duration)} in ${displayName(hit.filename)}`;
+  bar.title = label; bar.setAttribute("role", "img"); bar.setAttribute("aria-label", label);
+  const seg = element("span"); seg.style.left = `${Math.min(98.5, hit.start_sec / duration * 100)}%`; seg.style.width = `${Math.max(1.5, (hit.end_sec - hit.start_sec) / duration * 100)}%`;
+  bar.append(seg, element("i", "0:00"), element("i", time(duration)));
+  return bar;
+}
 function resultCard(hit, query, visual, rank){
   const card=element("article",undefined,"result"), review=hit.visual_review, focus=hit.review_focus, span=review?.evidence_span;
   // With the AI's box, the player follows that target from the cited frame (tracked on this computer).
@@ -474,6 +556,7 @@ function resultCard(hit, query, visual, rank){
   const head=element("div",undefined,"result-head");
   head.append(element("span",verdict,"badge "+kind),element("span",`${time(hit.start_sec)} – ${time(hit.end_sec)}`,"when"),element("span",displayName(hit.filename),"muted"));
   info.append(head);
+  const bar=positionBar(hit); if(bar){ bar.onclick=playBest; info.append(bar); }
   if(review?.reason) info.append(element("p",review.reason,"reason"));
   if(ev){
     info.append(element("p",ev.needs_human_review?`${ev.label}. Needs human review: a person detection is not an event.`:`${ev.label} (${ev.dataset}${ev.views.length?", "+ev.views.join(", ")+" view":""}).`,"reason"));
@@ -650,3 +733,33 @@ $("sync-button").onclick=async()=>{
 
 status().catch(error=>notice(error.message));
 route();
+
+// ---------------------------------------------------------------- demo notice
+// Open in full the first time this browser sees the demo, then a one-line strip (click to expand).
+(() => {
+  const strip = $("demo-banner"); if (!strip) return;
+  let seen = false;
+  try { seen = localStorage.getItem("tanya.demoSeen") === "1"; localStorage.setItem("tanya.demoSeen", "1"); } catch (e) { /* storage unavailable */ }
+  strip.open = !seen;
+  // After the first visit's full explanation, fold it away on the next page change (unless it was opened by hand).
+  strip.querySelector("summary").addEventListener("click", () => { strip.dataset.byHand = "1"; });
+  window.addEventListener("hashchange", () => { if (!strip.dataset.byHand) strip.open = false; }, {once: true});
+})();
+
+// ---------------------------------------------------------------- getting started and shortcuts
+// The 1-2-3 steps on the dashboard tick off as they are done in this browser.
+function renderSteps() {
+  const done = {footage: videosCache.length > 0, search: flag("searched"), watch: flag("watched")};
+  const steps = [...document.querySelectorAll("#dash-steps [data-step]")];
+  steps.forEach((step, i) => { const ok = done[step.dataset.step]; step.classList.toggle("done", ok); step.querySelector("b").textContent = ok ? "✓" : String(i + 1); });
+  $("dash-steps").classList.toggle("all-done", steps.every(step => step.classList.contains("done")));
+}
+// "/" jumps to the search box from anywhere (except while typing).
+document.addEventListener("keydown", event => {
+  if (event.key !== "/" || event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.("input, textarea, select, [contenteditable]")) return;
+  event.preventDefault();
+  const page = (location.hash.slice(1) || "dashboard").split(/[/?]/)[0];
+  if (page === "dashboard") { $("dash-query").focus(); return; }
+  if (page !== "search") location.hash = "#search";
+  setTimeout(() => $("query").focus(), 60);
+});

@@ -69,15 +69,88 @@ function renderCase() {
   $("case-status").textContent = open ? "OPEN INVESTIGATION" : "CLOSED · REOPEN TO MAKE CHANGES";
   $("case-close").textContent = open ? "Close" : "Reopen";
   $("case-rename").disabled = !open;
+  renderProgress(c);
+  renderStory(c);
   renderQueries(c, open);
   renderClocks(c, open);
   $("case-basis").textContent = basisText[c.timeline_basis];
   const list = $("case-evidence");
   list.replaceChildren();
-  for (const e of c.evidence) list.append(evidenceCard(e, open));
+  c.evidence.forEach((e, i) => list.append(evidenceCard(e, open, i + 1)));
   if (c.removed_evidence.length) list.append(element("p", `${plural(c.removed_evidence.length, "clip")} removed; ${c.removed_evidence.length === 1 ? "it remains" : "they remain"} in the change history and the report.`, "muted"));
   $("case-history").open = false;
   $("case-history-items").replaceChildren();
+}
+
+// ---- incident timeline: one lane per camera, each saved clip a numbered block coloured by the decision.
+// With camera start times entered, clips line up on real (camera) time across cameras; otherwise each
+// lane shows positions within its own recording.
+const decisionClass = e => e.decision ? "d-" + e.decision : "d-none";
+const storyLabels = {correct: "Relevant", wrong: "Not relevant", unsure: "Uncertain"};
+function storyClock(date) { return date.toTimeString().slice(0, 8); }
+function renderStory(c) {
+  const box = $("case-story"), clips = c.evidence.map((e, i) => ({e, n: i + 1}));
+  box.hidden = !clips.length;
+  if (!clips.length) return;
+  const timed = clips.filter(x => x.e.absolute_start && x.e.absolute_end);
+  const clock = timed.length > 0;   // real time when any camera has a start time
+  const shown = clock ? timed : clips;
+  const startOf = x => clock ? new Date(x.e.absolute_start).getTime() / 1000 : x.e.start_sec;
+  const endOf = x => clock ? new Date(x.e.absolute_end).getTime() / 1000 : x.e.end_sec;
+  const durationOf = x => videosCache.find(v => v.id === x.e.current_video_id)?.duration_sec || x.e.end_sec;
+  let lo = clock ? Math.min(...shown.map(startOf)) : 0, hi = clock ? Math.max(...shown.map(endOf)) : Math.max(...shown.map(durationOf));
+  if (clock) { const pad = Math.max(5, (hi - lo) * 0.06); lo -= pad; hi += pad; }
+  const span = Math.max(1, hi - lo), pct = t => (t - lo) / span * 100;
+  // Lanes in order of first appearance, so the story reads top to bottom.
+  const lanes = new Map();
+  for (const x of shown) { const key = x.e.video_sha256; if (!lanes.has(key)) lanes.set(key, {name: displayName(x.e.current_filename || x.e.video_filename), clips: []}); lanes.get(key).clips.push(x); }
+  const host = $("story-lanes"); host.replaceChildren();
+  for (const lane of lanes.values()) {
+    const row = element("div", undefined, "story-lane");
+    const track = element("div", undefined, "story-track");
+    for (const x of lane.clips) {
+      const block = element("button", String(x.n), "story-clip " + decisionClass(x.e)); block.type = "button";
+      const a = Math.max(0, pct(startOf(x))), w = Math.max(0.8, pct(endOf(x)) - pct(startOf(x)));
+      block.style.left = `${Math.min(a, 99)}%`; block.style.width = `${w}%`;
+      const when = clock ? `${x.e.absolute_start.replace("T", " ").slice(0, 19)} camera time` : `${time(x.e.start_sec)}–${time(x.e.end_sec)} in the recording`;
+      block.title = `Clip ${x.n} · ${lane.name} · ${when} · ${x.e.decision ? storyLabels[x.e.decision] : "not reviewed"}. Click to play.`;
+      block.setAttribute("aria-label", block.title);
+      block.onclick = () => x.e.video_url ? openVideo(x.e.current_video_id, x.e.current_filename || x.e.video_filename, x.e.video_url, x.e.start_sec, x.e.end_sec)
+                                        : document.getElementById(`clip-${x.e.id}`)?.scrollIntoView({behavior: reducedMotion() ? "auto" : "smooth", block: "center"});
+      track.append(block);
+    }
+    row.append(element("span", lane.name, "story-name"), track);
+    host.append(row);
+  }
+  const axis = $("story-axis"); axis.replaceChildren();
+  for (const f of [0, 0.25, 0.5, 0.75, 1]) {
+    const t = lo + span * f;
+    const tick = element("span", clock ? storyClock(new Date(t * 1000)) : time(t)); tick.style.left = `${f * 100}%`; axis.append(tick);
+  }
+  $("story-basis").textContent = clock ? "Camera time, across cameras" : "Position in each recording";
+  const legend = $("story-legend"); legend.replaceChildren();
+  for (const [cls, label] of [["d-correct", "Relevant"], ["d-unsure", "Uncertain"], ["d-wrong", "Not relevant"], ["d-none", "Not reviewed"]]) legend.append(element("span", label, "story-key " + cls));
+  const hiddenCount = clips.length - shown.length;
+  $("story-note").textContent = clock
+    ? (hiddenCount ? `${plural(hiddenCount, "clip")} without a camera start time ${hiddenCount === 1 ? "isn't" : "aren't"} shown. Enter each camera's start time below to place ${hiddenCount === 1 ? "it" : "them"}.` : "")
+    : (lanes.size > 1 ? "Enter each camera's recording start time below to line the clips up in real time across cameras." : "");
+}
+
+// How far the human review has got: every clip needs a decision before the report tells the full story.
+function renderProgress(c) {
+  const box = $("case-progress"), total = c.evidence.length, done = c.evidence.filter(e => e.decision).length;
+  box.hidden = !total; box.replaceChildren();
+  if (!total) return;
+  const complete = done === total;
+  box.classList.toggle("complete", complete);
+  const bar = element("div", undefined, "progress"), fill = element("span"); fill.style.width = `${Math.round(done / total * 100)}%`; bar.append(fill);
+  box.append(element("p", complete ? `All ${plural(total, "clip")} reviewed · ready for the report` : `${done} of ${plural(total, "clip")} reviewed`, "progress-text"), bar);
+  bar.setAttribute("role", "progressbar"); bar.setAttribute("aria-valuemin", "0"); bar.setAttribute("aria-valuemax", String(total)); bar.setAttribute("aria-valuenow", String(done));
+  if (complete) {
+    const exp = element("button", "Export report", "small"); exp.type = "button";
+    exp.onclick = event => { event.stopPropagation(); $("case-export").open = true; $("case-export").scrollIntoView({block: "nearest"}); };
+    box.append(exp);
+  }
 }
 
 function renderQueries(c, open) {
@@ -101,7 +174,7 @@ function renderQueries(c, open) {
       location.hash = "#search";
       notice(q.search_mode === "visual" ? "Tick the image-check approval, then search." : "Press search to run this saved query again.");
     };
-    const remove = element("button", "Remove", "secondary danger");
+    const remove = element("button", "Remove", "ghost small danger-link");
     remove.type = "button"; remove.disabled = !open;
     remove.onclick = () => change(post(`/api/investigations/${c.id}/queries/${q.id}/remove`));
     row.append(run, remove);
@@ -126,22 +199,31 @@ function renderClocks(c, open) {
   }
 }
 
-function evidenceCard(e, open) {
+function evidenceCard(e, open, number) {
   const card = element("article", undefined, "result evidence-item");
   if (e.thumbnail_url) { const img = element("img"); img.src = e.thumbnail_url; img.alt = `Frame from ${e.video_filename}`; card.append(img); }
   else card.append(element("div", e.source_status === "missing" ? "Source missing" : "No frame", "video-placeholder small-placeholder"));
   const info = element("div");
   const category = e.decision ? `Human review: ${decisionNames[e.decision]}` : (e.event && e.event.source === "yolo_person" ? "Model candidate · not reviewed" : "Unreviewed candidate");
-  info.append(element("h3", e.current_filename && e.current_filename !== e.video_filename ? `${e.video_filename} (now ${e.current_filename})` : e.video_filename));
+  const title = element("h3");
+  if (number) { const num = element("span", String(number), "clip-num " + decisionClass(e)); num.title = `Clip ${number} on the incident timeline`; title.append(num); }
+  title.append(e.current_filename && e.current_filename !== e.video_filename ? `${e.video_filename} (now ${e.current_filename})` : e.video_filename);
+  info.append(title);
+  card.id = `clip-${e.id}`;
   info.append(element("span", category, "badge" + (e.decision ? "" : " pending")), element("span", sourceNames[e.source_status], "badge" + (e.source_status === "missing" || e.source_status === "changed" ? " failed" : "")));
   info.append(element("p", `${time(e.start_sec)}–${time(e.end_sec)} in the recording` + (e.absolute_start ? ` · camera time ${e.absolute_start.replace("T", " ").slice(0, 19)}` : "")));
   if (e.event) {
     const ev = element("div", undefined, "evidence-event");
     ev.append(element("span", eventSourceNames[e.event.source] || e.event.source, "badge " + (e.event.source === "yolo_person" ? "pending" : "info")));
-    ev.append(element("p", `Label: ${e.event.label} · status: ${String(e.event.verification || "unknown").replace(/_/g, " ")}`));
-    if (e.event.provenance) ev.append(element("p", e.event.provenance, "muted small-note"));
+    ev.append(element("span", `${e.event.label} · ${String(e.event.verification || "unknown").replace(/_/g, " ")}`, "evidence-label"));
     const d = e.event.detector;
-    if (d) ev.append(element("p", `Detector confidence up to ${d.max_conf.toFixed(2)} (mean ${d.mean_conf.toFixed(2)}) over ${d.frames} frames; model ${d.weights || "unknown"}, ${d.imgsz || "?"} px. A person-presence candidate, not an action.`, "muted small-note"));
+    if (e.event.provenance || d) {
+      const more = element("details", undefined, "more-info");
+      more.append(element("summary", "Where this label comes from"));
+      if (e.event.provenance) more.append(element("p", e.event.provenance, "muted small-note"));
+      if (d) more.append(element("p", `Detector confidence up to ${d.max_conf.toFixed(2)} (mean ${d.mean_conf.toFixed(2)}) over ${plural(d.frames, "frame")}; model ${d.weights || "unknown"}, ${d.imgsz || "?"} px. A person-presence candidate, not an action.`, "muted small-note"));
+      ev.append(more);
+    }
     info.append(ev);
   }
   const how = e.search_mode === "index" ? `Found in the preset offline event index by “${e.query}” (keyword match; no AI, no ranking)` : e.search_mode === "manual" ? "Chosen manually in the video player (not a search result)" : e.search_mode === "scan" ? `Found by a direct footage scan for “${e.query}” (sampled images checked in time order; not a similarity ranking)` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "") : `Found by “${e.query}” (${e.search_mode === "visual" ? "with image check" : "ranked"}${e.rank ? `, rank ${e.rank}` : ""}${e.best_score !== null ? `, ranking score ${e.best_score.toFixed(3)} — not a probability` : ""})` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "");
@@ -154,24 +236,35 @@ function evidenceCard(e, open) {
     info.append(watch);
   }
   const review = element("div", undefined, "review-feedback");
-  review.append(element("p", "Your decision (recorded in the change history; earlier decisions are kept):"));
+  review.append(element("p", "Your decision (kept in the change history):"));
   for (const [value, label] of Object.entries(decisionNames)) {
     const b = element("button", label, "secondary"); b.type = "button"; b.disabled = !open; b.title = decisionHelp[value];
     b.setAttribute("aria-pressed", String(e.decision === value));
     b.onclick = () => change(post(`/api/investigations/${activeCase.id}/evidence/${e.id}/review`, {decision: value}), `Saved: ${label}.`);
     review.append(b);
   }
+  // The note editor stays folded away until it's wanted; an existing note shows as text.
   const noteId = `note-${e.id}`;
+  const editor = element("div", undefined, "note-editor"); editor.hidden = true;
   const noteLabel = element("label", "Reviewer note"); noteLabel.htmlFor = noteId; noteLabel.className = "note-label";
   const note = element("textarea"); note.id = noteId; note.maxLength = 2000; note.rows = 2; note.value = e.note; note.disabled = !open;
-  const saveNote = element("button", "Save note", "secondary"); saveNote.type = "button"; saveNote.disabled = !open;
+  const saveNote = element("button", "Save note", "secondary small"); saveNote.type = "button"; saveNote.disabled = !open;
   saveNote.onclick = () => change(post(`/api/investigations/${activeCase.id}/evidence/${e.id}/review`, {note: note.value}), "Note saved.");
-  const remove = element("button", "Remove from investigation", "secondary danger"); remove.type = "button"; remove.disabled = !open;
+  const cancelNote = element("button", "Cancel", "ghost small"); cancelNote.type = "button";
+  editor.append(noteLabel, note, saveNote, cancelNote);
+  const shownNote = e.note ? element("p", e.note, "note-text") : null;
+  const editNote = element("button", e.note ? "Edit note" : "Add note", "ghost small"); editNote.type = "button"; editNote.disabled = !open;
+  editNote.onclick = () => { editor.hidden = false; editNote.hidden = true; if (shownNote) shownNote.hidden = true; note.focus(); };
+  cancelNote.onclick = () => { note.value = e.note; editor.hidden = true; editNote.hidden = false; if (shownNote) shownNote.hidden = false; };
+  const remove = element("button", "Remove clip", "ghost small danger-link"); remove.type = "button"; remove.disabled = !open;
+  remove.title = "Remove this clip from the investigation (kept in the change history)";
   remove.onclick = () => {
     const reason = window.prompt("Why remove this clip? (kept in the change history)", "");
     if (reason !== null) change(post(`/api/investigations/${activeCase.id}/evidence/${e.id}/remove`, {reason}), "Clip removed.");
   };
-  review.append(noteLabel, note, saveNote, remove);
+  const tools = element("div", undefined, "clip-tools"); tools.append(editNote, remove);
+  if (shownNote) review.append(shownNote);
+  review.append(tools, editor);
   if (e.reviewed_at) review.append(element("span", `Decision saved ${new Date(e.reviewed_at).toLocaleString()}.`, "muted"));
   const decisions = (e.history || []).filter(h => h.action !== "note_changed");
   if (decisions.length) review.append(element("p", "History: not reviewed → " + decisions.map(h => `${decisionNames[h.to] || h.to} (${new Date(h.at).toLocaleString()})`).join(" → "), "muted small-note"));

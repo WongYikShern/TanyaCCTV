@@ -68,8 +68,9 @@
 
   <main>
     {% if config.get('LOCAL_RESEARCH_SOURCE') %}<div class="banner warn" role="status"><strong>{{ config.get('LOCAL_RESEARCH_TITLE', 'CAVIAR real-camera research set — staged scenes.') }}</strong> Local review only; Google processing disabled. Showing MP4 review copies; publisher originals are kept separately. Attribution: {{ config.get('LOCAL_RESEARCH_ATTRIBUTION', 'EC Funded CAVIAR project/IST 2001 37540. Publisher states CC BY-SA.') }} <a href="{{ config['LOCAL_RESEARCH_SOURCE'] }}" target="_blank" rel="noreferrer">Publisher and usage terms</a></div>{% endif %}
-    {% if offline_demo and demo_mode == "event_index" %}<div class="banner warn" role="status" id="demo-banner"><strong>OFFLINE DEMO — preset event index, no live AI.</strong> Search matches your words to events that were annotated in advance (CAVIAR labels, scripted demo clips) and, where cached, YOLO person detections. Each result shows its source. Nothing is sent over the network; image checking and AI preparation are disabled.</div>
-    {% elif offline_demo %}<div class="banner warn" role="status"><strong>OFFLINE REPLAY DEMO — no live AI.</strong> Search replays four recorded queries on synthetic footage. Image checking and AI preparation are disabled. Demo uploads are local and are not added to recorded search results.</div>{% endif %}
+    {# Demo notice: shown in full on the first visit, then a one-line strip that opens on click. #}
+    {% if offline_demo and demo_mode == "event_index" %}<details class="demo-strip" id="demo-banner"><summary><strong>OFFLINE DEMO — preset event index, no live AI.</strong><span class="demo-more">What does this mean?</span></summary><p>Search matches your words to events that were annotated in advance (CAVIAR labels, scripted demo clips) and, where cached, YOLO person detections. Each result shows its source. Nothing is sent over the network; image checking and AI preparation are disabled.</p></details>
+    {% elif offline_demo %}<details class="demo-strip" id="demo-banner"><summary><strong>OFFLINE REPLAY DEMO — no live AI.</strong><span class="demo-more">What does this mean?</span></summary><p>Search replays four recorded queries on synthetic footage. Image checking and AI preparation are disabled. Demo uploads are local and are not added to recorded search results.</p></details>{% endif %}
     <!-- Dashboard -->
     <section class="page" data-page="dashboard">
       <form id="dash-search" class="card dash-search">
@@ -77,11 +78,14 @@
         <p class="muted">Describe it in plain words. The AI looks through your footage and shows you the moments worth watching.</p>
         <div class="search-input"><svg><use href="#i-search"/></svg><label class="sr-only" for="dash-query">Describe a moment</label><input id="dash-query" maxlength="500" required placeholder="e.g. a person in a black jacket walking in"><button type="button" class="mic" data-target="dash-query" aria-label="Speak your search" title="Speak your search (Chrome turns speech into text using Google's speech service)" hidden><svg><use href="#i-mic"/></svg></button><button id="dash-search-button">Search</button></div>
         <div class="ai-callout" data-ai-callout hidden><svg aria-hidden="true"><use href="#i-alert"/></svg><p><strong>AI search isn't connected yet.</strong> You can still add, watch and organise footage. <a href="#system">Connect the AI in Settings →</a></p></div>
-        <p class="steps"><span><b>1</b>Add footage</span><span><b>2</b>Describe what you're looking for</span><span><b>3</b>Watch the suggested moments</span></p>
+        <p class="steps" id="dash-steps"><a href="#library" data-step="footage"><b>1</b>Add footage</a><span data-step="search"><b>2</b>Describe what you're looking for</span><span data-step="watch"><b>3</b>Watch the suggested moments</span></p>
       </form>
       <div class="stat-grid" id="stats" aria-live="polite"></div>
       <div class="dash-grid">
-        <article class="card wall-card"><div class="card-head"><h2>Camera wall</h2><span class="muted small-note">Recorded footage, playing on loop</span><a href="#map" class="link">Map view →</a></div><div id="dash-videos" class="cam-wall"></div></article>
+        <div>
+          <article class="card wall-card"><div class="card-head"><h2>Camera wall</h2><span class="muted small-note">Recorded footage, playing on loop</span><a href="#map" class="link">Map view →</a></div><div id="dash-videos" class="cam-wall"></div></article>
+          <article class="card"><div class="card-head"><h2>Investigations</h2><a href="#investigations" class="link">View all →</a></div><div id="dash-cases"></div></article>
+        </div>
         <div>
           <article class="card watch-card" id="watch-card"><div class="card-head"><h2><svg><use href="#i-eye"/></svg>Watch mode</h2><span class="watch-dot" aria-hidden="true"></span></div>
             <p class="muted small-note">Check every new recording automatically while this page is open, and raise an alert on a match.</p>
@@ -92,7 +96,6 @@
             <p id="watch-status" class="watch-status" role="status">Not watching.</p>
             <ul id="watch-log" class="watch-log"></ul>
           </article>
-          <article class="card"><div class="card-head"><h2>Investigations</h2><a href="#investigations" class="link">View all →</a></div><div id="dash-cases"></div></article>
           <article class="card"><div class="card-head"><h2>Status</h2><a href="#system" class="link">Settings →</a></div><ul id="dash-status" class="status-list"></ul></article>
         </div>
       </div>
@@ -289,6 +292,13 @@
               </div>
             </section>
             <form id="rename-form" class="inline-form" hidden><label class="sr-only" for="rename-title">New title</label><input id="rename-title" class="input" maxlength="200" required><button>Save title</button><button type="button" class="secondary" id="rename-cancel">Cancel</button></form>
+            <div id="case-progress" class="case-progress" hidden></div>
+            <section id="case-story" class="case-story" aria-labelledby="story-title" hidden>
+              <div class="story-head"><h3 id="story-title">Incident timeline</h3><span id="story-basis" class="muted small-note"></span></div>
+              <div id="story-lanes" class="story-lanes"></div>
+              <div id="story-axis" class="story-axis" aria-hidden="true"></div>
+              <div class="story-foot"><div id="story-legend" class="story-legend"></div><p id="story-note" class="muted small-note"></p></div>
+            </section>
             <h3 class="section-title">Saved searches</h3><div id="case-queries"></div>
             <h3 class="section-title">Evidence timeline</h3><p id="case-basis" class="muted"></p><div id="case-clocks"></div><div id="case-evidence" class="timeline" aria-live="polite"></div>
             <details id="case-history"><summary>Change history</summary><div id="case-history-items"></div></details>
@@ -305,6 +315,7 @@
           <details id="setup-details"><summary>How to connect the AI</summary><p>Search needs SentrySearch in a separate Python 3.12 environment and a Gemini API key, set in the same terminal window before starting this website (see the README). Run <code>check_setup.py</code> for a full report.</p></details></article>
         <article class="card"><div class="card-head"><h2>Quick search set-up (optional)</h2></div>
           <p class="muted">Only needed for the <b>Quick</b> search type. The normal (thorough) search works without it. This uploads your videos to Google once, which may cost a little.</p>
+          <p id="plan-note" class="ai-note" hidden></p>
           <button id="plan-button" type="button" class="secondary">Check what needs uploading</button>
           <div id="sync-plan" hidden><p id="plan-summary"></p><p id="plan-files" class="muted"></p><div id="sync-approval"><p class="warning">This uploads the videos listed above to Google and may cost a little. On Google's free tier, Google may use the content to improve its products. Only continue with footage you're allowed to share. Your original videos are not changed.</p><label class="check"><input id="sync-consent" type="checkbox"><span>OK to upload these videos to Google.</span></label><button id="sync-button" type="button">Set up quick search</button></div></div>
           <div id="sync-messages"></div></article>
