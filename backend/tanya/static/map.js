@@ -282,7 +282,8 @@
       // A small ring around the current view, so pins don't overlap. Demo positions: move them to the real spots.
       for (const [i, v] of todo.entries()) {
         const angle = 2 * Math.PI * i / todo.length;
-        await post(`/api/videos/${v.id}/camera`, {lat: centre.lat + 0.0012 * Math.sin(angle), lng: centre.lng + 0.0016 * Math.cos(angle), heading: Math.round(angle * 180 / Math.PI + 180) % 360});
+        const ring = Math.max(1, Math.sqrt(todo.length / 3));   // a wider ring for more cameras, so names don't overlap
+        await post(`/api/videos/${v.id}/camera`, {lat: centre.lat + 0.0012 * ring * Math.sin(angle), lng: centre.lng + 0.0016 * ring * Math.cos(angle), heading: Math.round(angle * 180 / Math.PI + 180) % 360});
       }
       await library(); render(); if (map) fit(map, cameras());
       notice(`Placed ${plural(todo.length, "camera")} as a demo layout. Drag each pin to its real location.`);
