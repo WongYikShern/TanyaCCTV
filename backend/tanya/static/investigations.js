@@ -101,7 +101,7 @@ function renderQueries(c, open) {
       location.hash = "#search";
       notice(q.search_mode === "visual" ? "Tick the image-check approval, then search." : "Press search to run this saved query again.");
     };
-    const remove = element("button", "Remove", "secondary danger");
+    const remove = element("button", "Remove", "ghost small danger-link");
     remove.type = "button"; remove.disabled = !open;
     remove.onclick = () => change(post(`/api/investigations/${c.id}/queries/${q.id}/remove`));
     row.append(run, remove);
@@ -138,10 +138,15 @@ function evidenceCard(e, open) {
   if (e.event) {
     const ev = element("div", undefined, "evidence-event");
     ev.append(element("span", eventSourceNames[e.event.source] || e.event.source, "badge " + (e.event.source === "yolo_person" ? "pending" : "info")));
-    ev.append(element("p", `Label: ${e.event.label} · status: ${String(e.event.verification || "unknown").replace(/_/g, " ")}`));
-    if (e.event.provenance) ev.append(element("p", e.event.provenance, "muted small-note"));
+    ev.append(element("span", `${e.event.label} · ${String(e.event.verification || "unknown").replace(/_/g, " ")}`, "evidence-label"));
     const d = e.event.detector;
-    if (d) ev.append(element("p", `Detector confidence up to ${d.max_conf.toFixed(2)} (mean ${d.mean_conf.toFixed(2)}) over ${d.frames} frames; model ${d.weights || "unknown"}, ${d.imgsz || "?"} px. A person-presence candidate, not an action.`, "muted small-note"));
+    if (e.event.provenance || d) {
+      const more = element("details", undefined, "more-info");
+      more.append(element("summary", "Where this label comes from"));
+      if (e.event.provenance) more.append(element("p", e.event.provenance, "muted small-note"));
+      if (d) more.append(element("p", `Detector confidence up to ${d.max_conf.toFixed(2)} (mean ${d.mean_conf.toFixed(2)}) over ${plural(d.frames, "frame")}; model ${d.weights || "unknown"}, ${d.imgsz || "?"} px. A person-presence candidate, not an action.`, "muted small-note"));
+      ev.append(more);
+    }
     info.append(ev);
   }
   const how = e.search_mode === "index" ? `Found in the preset offline event index by “${e.query}” (keyword match; no AI, no ranking)` : e.search_mode === "manual" ? "Chosen manually in the video player (not a search result)" : e.search_mode === "scan" ? `Found by a direct footage scan for “${e.query}” (sampled images checked in time order; not a similarity ranking)` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "") : `Found by “${e.query}” (${e.search_mode === "visual" ? "with image check" : "ranked"}${e.rank ? `, rank ${e.rank}` : ""}${e.best_score !== null ? `, ranking score ${e.best_score.toFixed(3)} — not a probability` : ""})` + (e.visual_verdict ? ` · AI image check: ${e.visual_verdict.replace("_", " ")} (unverified)` : "");
@@ -154,24 +159,35 @@ function evidenceCard(e, open) {
     info.append(watch);
   }
   const review = element("div", undefined, "review-feedback");
-  review.append(element("p", "Your decision (recorded in the change history; earlier decisions are kept):"));
+  review.append(element("p", "Your decision (kept in the change history):"));
   for (const [value, label] of Object.entries(decisionNames)) {
     const b = element("button", label, "secondary"); b.type = "button"; b.disabled = !open; b.title = decisionHelp[value];
     b.setAttribute("aria-pressed", String(e.decision === value));
     b.onclick = () => change(post(`/api/investigations/${activeCase.id}/evidence/${e.id}/review`, {decision: value}), `Saved: ${label}.`);
     review.append(b);
   }
+  // The note editor stays folded away until it's wanted; an existing note shows as text.
   const noteId = `note-${e.id}`;
+  const editor = element("div", undefined, "note-editor"); editor.hidden = true;
   const noteLabel = element("label", "Reviewer note"); noteLabel.htmlFor = noteId; noteLabel.className = "note-label";
   const note = element("textarea"); note.id = noteId; note.maxLength = 2000; note.rows = 2; note.value = e.note; note.disabled = !open;
-  const saveNote = element("button", "Save note", "secondary"); saveNote.type = "button"; saveNote.disabled = !open;
+  const saveNote = element("button", "Save note", "secondary small"); saveNote.type = "button"; saveNote.disabled = !open;
   saveNote.onclick = () => change(post(`/api/investigations/${activeCase.id}/evidence/${e.id}/review`, {note: note.value}), "Note saved.");
-  const remove = element("button", "Remove from investigation", "secondary danger"); remove.type = "button"; remove.disabled = !open;
+  const cancelNote = element("button", "Cancel", "ghost small"); cancelNote.type = "button";
+  editor.append(noteLabel, note, saveNote, cancelNote);
+  const shownNote = e.note ? element("p", e.note, "note-text") : null;
+  const editNote = element("button", e.note ? "Edit note" : "Add note", "ghost small"); editNote.type = "button"; editNote.disabled = !open;
+  editNote.onclick = () => { editor.hidden = false; editNote.hidden = true; if (shownNote) shownNote.hidden = true; note.focus(); };
+  cancelNote.onclick = () => { note.value = e.note; editor.hidden = true; editNote.hidden = false; if (shownNote) shownNote.hidden = false; };
+  const remove = element("button", "Remove clip", "ghost small danger-link"); remove.type = "button"; remove.disabled = !open;
+  remove.title = "Remove this clip from the investigation (kept in the change history)";
   remove.onclick = () => {
     const reason = window.prompt("Why remove this clip? (kept in the change history)", "");
     if (reason !== null) change(post(`/api/investigations/${activeCase.id}/evidence/${e.id}/remove`, {reason}), "Clip removed.");
   };
-  review.append(noteLabel, note, saveNote, remove);
+  const tools = element("div", undefined, "clip-tools"); tools.append(editNote, remove);
+  if (shownNote) review.append(shownNote);
+  review.append(tools, editor);
   if (e.reviewed_at) review.append(element("span", `Decision saved ${new Date(e.reviewed_at).toLocaleString()}.`, "muted"));
   const decisions = (e.history || []).filter(h => h.action !== "note_changed");
   if (decisions.length) review.append(element("p", "History: not reviewed → " + decisions.map(h => `${decisionNames[h.to] || h.to} (${new Date(h.at).toLocaleString()})`).join(" → "), "muted small-note"));

@@ -144,6 +144,9 @@ function updateControls() {
   for(const id of ["visual-check","visual-consent","query","index-button","upload-button"]) $(id).disabled=operationRunning;
   if(connection?.offline_demo) $("visual-check").disabled=true;
   $("plan-button").disabled=operationRunning || !connection?.engine_ready || connection?.offline_demo;
+  // Say why the button is greyed out (the demo doesn't use quick search; otherwise the engine is missing).
+  const planWhy=!connection?"":connection.offline_demo?"Not used in the offline demo: its searches come from the preset index.":!connection.engine_ready?"Needs the search engine first (see Status).":"";
+  $("plan-note").textContent=planWhy; $("plan-note").hidden=!planWhy; $("plan-button").hidden=!!connection?.offline_demo;
   $("sync-button").disabled=operationRunning || !planHasChanges;
   $("busy-pill").hidden=!operationRunning;
 }
@@ -203,8 +206,9 @@ function videoStatus(v) {
   if(v.status!=="done") return ["Processing…","pending"];
   if(v.playback?.status==="missing") return ["File missing","failed"];
   if(v.playback?.changed) return ["File changed","failed"];
-  if(connection?.demo_mode==="event_index") return ["In the demo library",""];
-  if(connection?.offline_demo) return v.search_state==="prepared"?["In the recorded demo",""]:["Not in the recorded demo","neutral"];
+  // In the demo every recording is in the demo library, so a badge would say nothing; only exceptions get one.
+  if(connection?.demo_mode==="event_index") return [null];
+  if(connection?.offline_demo) return v.search_state==="prepared"?[null]:["Not in the recorded demo","neutral"];
   return canSearch() ? ["Ready to search",""] : ["Ready to watch","neutral"];
 }
 function thumb(video) {
@@ -251,7 +255,7 @@ function renderLibrary() {
     body.append(title,element("p",[v.camera?.place,`${time(v.duration_sec)} · ${v.width||"—"} × ${v.height||"—"}`].filter(Boolean).join(" · "),"meta"));
     if(v.camera?.name) body.append(element("p",String(v.filename).replace(/^[0-9a-f]{12}_/,""),"file-name"));
     const [label,kind]=videoStatus(v);
-    body.append(element("span",label,"badge "+kind));
+    if(label) body.append(element("span",label,"badge "+kind));
     if(v.camera?.hidden){ card.classList.add("is-hidden"); body.append(element("span","Hidden from wall, map and “All recordings”","badge neutral")); }
     if(v.error) body.append(element("p",v.error,"error-text"));
     if(v.playback?.status==="missing") body.append(element("p",v.playback.message,"error-text"));
@@ -432,18 +436,32 @@ $("search-form").onsubmit=async event=>{
     const queryText=$("query").value.trim()||(filters?"all":$("query").value);
     const data=await post("/api/search",{query:queryText,visual_check:visual,approve_frame_upload:approved,...(filters?{filters}:{}),...(saveToId()?{investigation_id:saveToId()}:{})});
     const indexed=data.mode==="event_index";
-    $("results").replaceChildren(element("p",indexed?`Events in the preset index for “${data.query}”. Each result says where its label comes from: watch the footage before deciding.`:visual?`Results for “${data.query}”. These are AI suggestions from a few images per clip: always watch before deciding.`:`Closest-looking clips for “${data.query}”. They appear even if what you described never happened: watch to check.`,"results-intro"));
-    const active=indexed?window.filterSummary?.(data.applied_filters):null; if(active) $("results").append(active);
-    for(const warning of data.warnings) $("results").append(element("p",warning,"warning"));
+    // One compact box above the results instead of a stack of separate notes. Demo disclaimers (already in the
+    // demo strip and the top-bar pill) and the general note go under "About these results".
+    const head=element("div",undefined,"results-head");
+    const intro=element("div",undefined,"results-intro");
+    intro.append(element("span",indexed?`Events in the preset index for “${data.query}”. Each result says where its label comes from: watch the footage before deciding.`:visual?`Results for “${data.query}”. These are AI suggestions from a few images per clip: always watch before deciding.`:`Closest-looking clips for “${data.query}”. They appear even if what you described never happened: watch to check.`));
+    if(data.saved_query){ const chosen=$("save-to").selectedOptions[0]; intro.append(element("span",`Saved to “${chosen?.value?chosen.textContent:"your investigation"}”`,"badge saved-badge")); }
+    head.append(intro);
+    const active=indexed?window.filterSummary?.(data.applied_filters):null; if(active) head.append(active);
+    const demoNote=w=>/^OFFLINE (DEMO|REPLAY)\b/.test(w);
+    const shown=data.warnings.filter(w=>!demoNote(w)), aboutLines=[...data.warnings.filter(demoNote),data.note].filter(Boolean);
+    // With no results, the warnings explain why, so they go in the empty-state card instead.
+    if(shown.length && data.hits.length){ const list=element("ul",undefined,"results-warnings"); for(const w of shown) list.append(element("li",w)); head.append(list); }
+    if(aboutLines.length){ const about=element("details",undefined,"results-about"); about.append(element("summary","About these results"),...aboutLines.map(t=>element("p",t))); head.append(about); }
+    $("results").replaceChildren(head);
     if(data.visual_review) $("results").append(element("h3",`${data.visual_review.supported} likely · ${data.visual_review.unclear} maybe · ${data.visual_review.rejected} no match`));
-    if(!data.hits.length){ const e=element("div",undefined,"card empty-state"); e.append(icon("search"),element("h2",indexed?"No matching events":"No likely matches"),element("p",indexed?"No annotated event matches. Not finding it doesn't prove it didn't happen.":visual?(data.unclear_hits?.length?"Check the “maybe” clips below. ":"")+"Not finding it doesn't prove it didn't happen.":"No clips came back. Try different wording.","muted")); $("results").append(e); }
+    if(!data.hits.length){
+      const e=element("div",undefined,"card empty-state"); e.append(icon("search"),element("h2",indexed?"No matching events":"No likely matches"));
+      if(shown.length) for(const w of shown) e.append(element("p",w,"muted"));
+      else e.append(element("p",indexed?"No annotated event matches. Not finding it doesn't prove it didn't happen.":visual?(data.unclear_hits?.length?"Check the “maybe” clips below. ":"")+"Not finding it doesn't prove it didn't happen.":"No clips came back. Try different wording.","muted"));
+      $("results").append(e);
+    }
     const ranked=[...data.hits,...(data.unclear_hits||[]),...(data.rejected_hits||[])];
-    if(data.saved_query) $("results").append(element("p",`Search saved to your investigation.`,"muted"));
     for(const hit of data.hits) $("results").append(resultCard(hit,data.query,visual,ranked.indexOf(hit)+1));
     for(const [key,title] of [["unclear_hits","Maybe: worth a look"],["rejected_hits","Checked: no match"]]){
       if(data[key]?.length){ const details=element("details",undefined,"result-group"); details.open=key==="unclear_hits" && !data.hits.length; details.append(element("summary",`${title} (${data[key].length})`)); for(const hit of data[key]) details.append(resultCard(hit,data.query,visual,ranked.indexOf(hit)+1)); $("results").append(details); }
     }
-    $("results").append(element("p",data.note,"muted small-note"));
     if(saveToId() && window.refreshInvestigation) window.refreshInvestigation();
   }catch(error){ const e=element("div",undefined,"banner error"); e.append(icon("alert"),element("span",error.message)); $("results").replaceChildren(e); }
   finally{ $("visual-consent").checked=false; busy(false); }
@@ -629,3 +647,12 @@ $("sync-button").onclick=async()=>{
 
 status().catch(error=>notice(error.message));
 route();
+
+// ---------------------------------------------------------------- demo notice
+// Open in full the first time this browser sees the demo, then a one-line strip (click to expand).
+(() => {
+  const strip = $("demo-banner"); if (!strip) return;
+  let seen = false;
+  try { seen = localStorage.getItem("tanya.demoSeen") === "1"; localStorage.setItem("tanya.demoSeen", "1"); } catch (e) { /* storage unavailable */ }
+  strip.open = !seen;
+})();

@@ -534,7 +534,8 @@ a.top-pill:hover { border-color: var(--orange); color: var(--orange-text); }
 .search-card > .ai-callout { margin: 0 0 16px; }
 .ai-note { margin: 8px 0; font-size: 13px; color: var(--muted); }
 .ai-note a { font-weight: 600; }
-.watch-card.ai-off .input, .watch-card.ai-off .check { opacity: .55; }
+/* Watch mode unavailable: show what it does and why it is off, without the controls. */
+.watch-card.ai-off .input, .watch-card.ai-off .check, .watch-card.ai-off #watch-start, .watch-card.ai-off .watch-status { display: none; }
 /* Disabled filled buttons turn neutral grey, so they can't be mistaken for a pale but working button. */
 button:is(:not([class]), [class=""]):disabled { background: var(--raised); color: var(--faint); border-color: var(--line); opacity: 1; }
 
@@ -605,3 +606,40 @@ button:is(:not([class]), [class=""]):disabled { background: var(--raised); color
 
   .stat-grid > .stat:first-child:nth-last-child(odd) { grid-column: 1 / -1; }
 }
+
+/* Offline demo notice: a one-line strip; the full explanation opens on click (and on the first visit). */
+.demo-strip { margin: 0 0 14px; border: 1px solid #F1D79A; border-left: 4px solid #D99A1E; border-radius: 10px; background: var(--amber-soft); color: var(--text); }
+:root[data-theme="dark"] .demo-strip { border-color: rgba(242,181,58,.3); border-left-color: var(--amber); }
+.demo-strip > summary { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; padding: 7px 14px; cursor: pointer; list-style: none; font-size: 13px; }
+.demo-strip > summary::-webkit-details-marker { display: none; }
+.demo-strip strong { color: var(--amber); }
+.demo-more { margin-left: auto; font-size: 12.5px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+.demo-strip[open] .demo-more { font-size: 0; }
+.demo-strip[open] .demo-more::after { content: "Hide"; font-size: 12.5px; }
+.demo-strip > p { margin: 0; padding: 0 14px 10px; }
+
+/* Search results: one compact box of context above the results. */
+.results-head { margin: 4px 0 14px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.results-head .results-intro { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.saved-badge { margin: 0; }
+.results-warnings { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+.results-warnings li { position: relative; padding-left: 18px; margin: 3px 0; }
+.results-warnings li::before { content: "!"; position: absolute; left: 0; top: 1px; width: 13px; height: 13px; border-radius: 50%; background: var(--amber-soft); color: var(--amber); font: 800 10px/13px var(--font); text-align: center; }
+.results-about { margin-top: 6px; font-size: 13px; color: var(--muted); }
+.results-about > summary { margin: 4px 0 0; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.results-about > p { margin: 6px 0 0; }
+.empty-state p + p { margin-top: 4px; }
+
+/* Investigation clips: notes fold away, Remove is a quiet text button that turns red on hover. */
+.clip-tools { width: 100%; display: flex; align-items: center; gap: 8px; margin: -2px 0 0 -6px; }
+.clip-tools .danger-link { margin-left: auto; }
+button.ghost.danger-link { color: var(--muted); padding: 4px 6px; }
+button.ghost.danger-link:hover:not(:disabled) { color: var(--red-text); text-decoration: underline; }
+.review-feedback button.ghost.small { padding: 4px 6px; }
+.review-feedback > p.note-text { color: var(--text); font-size: 13.5px; padding: 6px 10px; border-left: 3px solid var(--line-strong); background: var(--raised); border-radius: 6px; white-space: pre-wrap; }
+.note-editor { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.note-editor textarea { flex-basis: 100%; }
+.evidence-label { display: inline-block; margin-left: 8px; font-weight: 600; font-size: 13.5px; }
+.more-info { margin-top: 4px; }
+.more-info > summary { margin: 2px 0 0; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.case-row button.ghost.danger-link { margin-left: 0; }
