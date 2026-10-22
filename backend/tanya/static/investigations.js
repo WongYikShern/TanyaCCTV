@@ -70,15 +70,70 @@ function renderCase() {
   $("case-close").textContent = open ? "Close" : "Reopen";
   $("case-rename").disabled = !open;
   renderProgress(c);
+  renderStory(c);
   renderQueries(c, open);
   renderClocks(c, open);
   $("case-basis").textContent = basisText[c.timeline_basis];
   const list = $("case-evidence");
   list.replaceChildren();
-  for (const e of c.evidence) list.append(evidenceCard(e, open));
+  c.evidence.forEach((e, i) => list.append(evidenceCard(e, open, i + 1)));
   if (c.removed_evidence.length) list.append(element("p", `${plural(c.removed_evidence.length, "clip")} removed; ${c.removed_evidence.length === 1 ? "it remains" : "they remain"} in the change history and the report.`, "muted"));
   $("case-history").open = false;
   $("case-history-items").replaceChildren();
+}
+
+// ---- incident timeline: one lane per camera, each saved clip a numbered block coloured by the decision.
+// With camera start times entered, clips line up on real (camera) time across cameras; otherwise each
+// lane shows positions within its own recording.
+const decisionClass = e => e.decision ? "d-" + e.decision : "d-none";
+const storyLabels = {correct: "Relevant", wrong: "Not relevant", unsure: "Uncertain"};
+function storyClock(date) { return date.toTimeString().slice(0, 8); }
+function renderStory(c) {
+  const box = $("case-story"), clips = c.evidence.map((e, i) => ({e, n: i + 1}));
+  box.hidden = !clips.length;
+  if (!clips.length) return;
+  const timed = clips.filter(x => x.e.absolute_start && x.e.absolute_end);
+  const clock = timed.length > 0;   // real time when any camera has a start time
+  const shown = clock ? timed : clips;
+  const startOf = x => clock ? new Date(x.e.absolute_start).getTime() / 1000 : x.e.start_sec;
+  const endOf = x => clock ? new Date(x.e.absolute_end).getTime() / 1000 : x.e.end_sec;
+  const durationOf = x => videosCache.find(v => v.id === x.e.current_video_id)?.duration_sec || x.e.end_sec;
+  let lo = clock ? Math.min(...shown.map(startOf)) : 0, hi = clock ? Math.max(...shown.map(endOf)) : Math.max(...shown.map(durationOf));
+  if (clock) { const pad = Math.max(5, (hi - lo) * 0.06); lo -= pad; hi += pad; }
+  const span = Math.max(1, hi - lo), pct = t => (t - lo) / span * 100;
+  // Lanes in order of first appearance, so the story reads top to bottom.
+  const lanes = new Map();
+  for (const x of shown) { const key = x.e.video_sha256; if (!lanes.has(key)) lanes.set(key, {name: displayName(x.e.current_filename || x.e.video_filename), clips: []}); lanes.get(key).clips.push(x); }
+  const host = $("story-lanes"); host.replaceChildren();
+  for (const lane of lanes.values()) {
+    const row = element("div", undefined, "story-lane");
+    const track = element("div", undefined, "story-track");
+    for (const x of lane.clips) {
+      const block = element("button", String(x.n), "story-clip " + decisionClass(x.e)); block.type = "button";
+      const a = Math.max(0, pct(startOf(x))), w = Math.max(0.8, pct(endOf(x)) - pct(startOf(x)));
+      block.style.left = `${Math.min(a, 99)}%`; block.style.width = `${w}%`;
+      const when = clock ? `${x.e.absolute_start.replace("T", " ").slice(0, 19)} camera time` : `${time(x.e.start_sec)}–${time(x.e.end_sec)} in the recording`;
+      block.title = `Clip ${x.n} · ${lane.name} · ${when} · ${x.e.decision ? storyLabels[x.e.decision] : "not reviewed"}. Click to play.`;
+      block.setAttribute("aria-label", block.title);
+      block.onclick = () => x.e.video_url ? openVideo(x.e.current_video_id, x.e.current_filename || x.e.video_filename, x.e.video_url, x.e.start_sec, x.e.end_sec)
+                                        : document.getElementById(`clip-${x.e.id}`)?.scrollIntoView({behavior: reducedMotion() ? "auto" : "smooth", block: "center"});
+      track.append(block);
+    }
+    row.append(element("span", lane.name, "story-name"), track);
+    host.append(row);
+  }
+  const axis = $("story-axis"); axis.replaceChildren();
+  for (const f of [0, 0.25, 0.5, 0.75, 1]) {
+    const t = lo + span * f;
+    const tick = element("span", clock ? storyClock(new Date(t * 1000)) : time(t)); tick.style.left = `${f * 100}%`; axis.append(tick);
+  }
+  $("story-basis").textContent = clock ? "Camera time, across cameras" : "Position in each recording";
+  const legend = $("story-legend"); legend.replaceChildren();
+  for (const [cls, label] of [["d-correct", "Relevant"], ["d-unsure", "Uncertain"], ["d-wrong", "Not relevant"], ["d-none", "Not reviewed"]]) legend.append(element("span", label, "story-key " + cls));
+  const hiddenCount = clips.length - shown.length;
+  $("story-note").textContent = clock
+    ? (hiddenCount ? `${plural(hiddenCount, "clip")} without a camera start time ${hiddenCount === 1 ? "isn't" : "aren't"} shown. Enter each camera's start time below to place ${hiddenCount === 1 ? "it" : "them"}.` : "")
+    : (lanes.size > 1 ? "Enter each camera's recording start time below to line the clips up in real time across cameras." : "");
 }
 
 // How far the human review has got: every clip needs a decision before the report tells the full story.
@@ -144,13 +199,17 @@ function renderClocks(c, open) {
   }
 }
 
-function evidenceCard(e, open) {
+function evidenceCard(e, open, number) {
   const card = element("article", undefined, "result evidence-item");
   if (e.thumbnail_url) { const img = element("img"); img.src = e.thumbnail_url; img.alt = `Frame from ${e.video_filename}`; card.append(img); }
   else card.append(element("div", e.source_status === "missing" ? "Source missing" : "No frame", "video-placeholder small-placeholder"));
   const info = element("div");
   const category = e.decision ? `Human review: ${decisionNames[e.decision]}` : (e.event && e.event.source === "yolo_person" ? "Model candidate · not reviewed" : "Unreviewed candidate");
-  info.append(element("h3", e.current_filename && e.current_filename !== e.video_filename ? `${e.video_filename} (now ${e.current_filename})` : e.video_filename));
+  const title = element("h3");
+  if (number) { const num = element("span", String(number), "clip-num " + decisionClass(e)); num.title = `Clip ${number} on the incident timeline`; title.append(num); }
+  title.append(e.current_filename && e.current_filename !== e.video_filename ? `${e.video_filename} (now ${e.current_filename})` : e.video_filename);
+  info.append(title);
+  card.id = `clip-${e.id}`;
   info.append(element("span", category, "badge" + (e.decision ? "" : " pending")), element("span", sourceNames[e.source_status], "badge" + (e.source_status === "missing" || e.source_status === "changed" ? " failed" : "")));
   info.append(element("p", `${time(e.start_sec)}–${time(e.end_sec)} in the recording` + (e.absolute_start ? ` · camera time ${e.absolute_start.replace("T", " ").slice(0, 19)}` : "")));
   if (e.event) {
