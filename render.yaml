@@ -1,0 +1,18 @@
+# Render Blueprint: New → Blueprint → pick this repository. See docs/deploy-render.md.
+services:
+  - type: web
+    name: tanyacctv
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      # The offline demo: preset event index, no API key, nothing sent to Google.
+      - key: TANYA_MODE
+        value: demo
+      # Public site: visitors can search, review and build investigations, but not add footage.
+      - key: TANYA_DISABLE_UPLOADS
+        value: "1"
+      # Optional: add TANYA_SITE_PASSWORD in the Render dashboard (Environment) to put the site behind
+      # a password. Render's own web address is allowed automatically.
