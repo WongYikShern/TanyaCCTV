@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CCTV view</title>
+<style>
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 1920px; height: 1080px; background: #000; overflow: hidden; font-family: "SF Mono", Menlo, monospace; color: #fff; }
+video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: contrast(1.08) saturate(.85); transform: scale(1.04); transition: transform 14s linear; }
+video.zoom { transform: scale(1.22); }
+.scan { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 2px, transparent 2px 4px); pointer-events: none; }
+.vig { position: absolute; inset: 0; background: radial-gradient(110% 90% at 50% 50%, transparent 50%, rgba(0,0,0,.7)); }
+.hud { position: absolute; left: 60px; top: 50px; font-size: 30px; letter-spacing: .08em; text-shadow: 0 2px 6px #000; }
+.rec { position: absolute; right: 64px; top: 50px; font-size: 30px; letter-spacing: .1em; }
+.rec i { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: #E3342F; margin-right: 12px; animation: blink 1s steps(1) infinite; vertical-align: -2px; }
+@keyframes blink { 50% { opacity: 0; } }
+.clock { position: absolute; left: 60px; bottom: 50px; font-size: 34px; letter-spacing: .06em; text-shadow: 0 2px 6px #000; }
+.cam { position: absolute; right: 64px; bottom: 50px; font-size: 24px; color: #C9CFD8; letter-spacing: .14em; }
+.nobody { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: "Helvetica Neue", sans-serif; font-size: 54px; font-weight: 300; letter-spacing: .02em; text-align: center; opacity: 0; transition: opacity 1.2s; text-shadow: 0 4px 30px #000; }
+.nobody.on { opacity: 1; }
+.nobody b { font-weight: 650; color: #F59A5F; }
+</style></head><body>
+<video id="v" muted playsinline preload="auto"></video>
+<div class="scan"></div><div class="vig"></div>
+<div class="hud">CAM 07 · MALL LOBBY</div><div class="rec"><i></i>REC</div>
+<div class="clock" id="clock"></div><div class="cam">CITY OF ELMINA · DEMO FOOTAGE</div>
+<div class="nobody" id="nobody">The camera sees everything.<br><b>Nobody is watching.</b></div>
+<script>
+const p = new URLSearchParams(location.search), v = document.getElementById("v");
+v.src = p.get("src"); const start = Number(p.get("t") || 0), base = p.get("clock") || "19:42:00";
+v.addEventListener("loadedmetadata", () => { v.currentTime = start; });
+const [H, M, S] = base.split(":").map(Number);
+function tick() { const s = H * 3600 + M * 60 + S + (v.currentTime - start); const pad = n => String(Math.floor(n)).padStart(2, "0");
+  document.getElementById("clock").textContent = `2026-10-24  ${pad(s / 3600)}:${pad(s / 60 % 60)}:${pad(s % 60)}`; requestAnimationFrame(tick); }
+tick();
+window.go = () => { v.play(); v.classList.add("zoom"); };
+window.nobody = on => document.getElementById("nobody").classList.toggle("on", on);
+</script></body></html>

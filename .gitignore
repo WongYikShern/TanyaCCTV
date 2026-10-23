@@ -56,5 +56,15 @@ caviar-review-*.csv
 *.onnx
 experiments/yolo/results*/
 
-# Demo video build (recordings, voice-over, renders)
-/demo-video/
+# Demo video build: keep the scripts and designs, not the generated or third-party media
+/demo-video/segments/
+/demo-video/out/
+/demo-video/vo/
+/demo-video/vo2/
+/demo-video/samples/
+/demo-video/check/
+/demo-video/sfx/
+/demo-video/music/
+/demo-video/__pycache__/
+/demo-video/.chrome-profile/
+/demo-video/ffmpeg-path

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>TanyaCCTV film cards</title>
+<style>
+:root { --o: #E8742F; --o2: #F59A5F; --red: #E3342F; --ink: #07090C; }
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 1920px; height: 1080px; background: var(--ink); color: #F2F4F7; overflow: hidden;
+  font-family: "Helvetica Neue", "Inter", -apple-system, sans-serif; }
+.card { position: absolute; inset: 0; display: none; }
+.card.on { display: block; animation: drift 32s linear forwards; transform-origin: 50% 50%; }
+@keyframes drift { from { transform: scale(1); } to { transform: scale(1.07); } }
+.vignette { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 45%, transparent 40%, rgba(0,0,0,.75)); pointer-events: none; }
+.grain { position: absolute; inset: -50%; opacity: .07; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); animation: grain 1s steps(6) infinite; }
+@keyframes grain { 0%{transform:translate(0,0)} 33%{transform:translate(-3%,2%)} 66%{transform:translate(2%,-3%)} 100%{transform:translate(0,0)} }
+@keyframes up { from { opacity: 0; transform: translateY(26px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes line { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes track { from { letter-spacing: .5em; opacity: 0 } to { letter-spacing: .32em; opacity: 1 } }
+.a { opacity: 0; animation: up 1.1s cubic-bezier(.2,.8,.2,1) forwards; }
+/* place / time slate */
+.slate { position: absolute; left: 160px; bottom: 210px; }
+.slate .rule { width: 120px; height: 3px; background: var(--o); transform-origin: left; transform: scaleX(0); animation: line .9s .2s cubic-bezier(.2,.8,.2,1) forwards; margin-bottom: 30px; }
+.slate .place { font-size: 30px; font-weight: 600; letter-spacing: .32em; text-transform: uppercase; color: #C9CFD8; opacity: 0; animation: track 1.6s .4s cubic-bezier(.2,.8,.2,1) forwards; }
+.slate .time { font-size: 128px; font-weight: 200; letter-spacing: -.02em; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.slate .time b { font-weight: 600; color: var(--o2); }
+.disclaimer { position: absolute; right: 70px; bottom: 50px; font-size: 18px; letter-spacing: .12em; text-transform: uppercase; color: #6E7785; opacity: 0; animation: fade 1s 1.4s forwards; }
+/* statement */
+.statement { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 26px; padding: 0 200px; }
+.statement h1 { font-size: 84px; font-weight: 250; line-height: 1.12; letter-spacing: -.015em; }
+.statement h1 b { font-weight: 650; color: var(--o2); }
+.statement p { font-size: 30px; color: #9AA4B2; font-weight: 400; letter-spacing: .02em; }
+.kicker { font-size: 24px; letter-spacing: .34em; text-transform: uppercase; color: var(--o2); font-weight: 600; }
+/* safe city */
+.wall { position: absolute; inset: 0; display: grid; gap: 6px; padding: 6px; }
+.wall div { background-size: cover; background-position: center; filter: grayscale(.6) brightness(.55); opacity: 0; animation: fade .5s forwards; }
+.wall-mask { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(7,9,12,.96) 0%, rgba(7,9,12,.88) 46%, rgba(7,9,12,.35) 100%); }
+.history { position: absolute; left: 150px; top: 50%; transform: translateY(-50%); width: 980px; }
+.history .year { font-size: 200px; font-weight: 150; line-height: .9; letter-spacing: -.04em; color: #fff; }
+.history .year b { color: var(--o); font-weight: 600; }
+.history h2 { font-size: 46px; font-weight: 300; margin-top: 24px; line-height: 1.25; }
+.history h2 b { font-weight: 650; }
+.history .facts { display: flex; gap: 70px; margin-top: 44px; }
+.history .facts div { border-left: 3px solid var(--o); padding-left: 20px; }
+.history .facts strong { display: block; font-size: 64px; font-weight: 300; }
+.history .facts span { font-size: 21px; color: #9AA4B2; letter-spacing: .06em; text-transform: uppercase; }
+.source { position: absolute; left: 150px; bottom: 50px; font-size: 17px; color: #6E7785; letter-spacing: .04em; opacity: 0; animation: fade 1s 1.5s forwards; }
+/* logo */
+.logo { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 34px; }
+.logo .mark { width: 170px; height: 170px; opacity: 0; animation: logoin 1.4s cubic-bezier(.2,.8,.2,1) forwards; filter: drop-shadow(0 0 60px rgba(232,116,47,.45)); }
+@keyframes logoin { from { opacity: 0; transform: scale(.7) rotate(-8deg); } to { opacity: 1; transform: none; } }
+.logo .name { font-size: 104px; font-weight: 700; letter-spacing: -.02em; opacity: 0; animation: up 1.1s .5s cubic-bezier(.2,.8,.2,1) forwards; }
+.logo .name span { color: var(--o); }
+.logo .tag { font-size: 32px; font-weight: 300; color: #C9CFD8; letter-spacing: .04em; opacity: 0; animation: up 1.1s 1s cubic-bezier(.2,.8,.2,1) forwards; }
+.logo .glow { position: absolute; width: 900px; height: 900px; border-radius: 50%; background: radial-gradient(circle, rgba(232,116,47,.18), transparent 60%); left: 50%; top: 50%; transform: translate(-50%, -50%); animation: fade 2s forwards; }
+.credits { position: absolute; left: 0; right: 0; bottom: 46px; text-align: center; font-size: 17px; color: #6E7785; line-height: 1.7; letter-spacing: .02em; opacity: 0; animation: fade 1.2s 2.2s forwards; }
+.pill { display: inline-block; padding: 8px 20px; border: 1px solid rgba(245,154,95,.45); border-radius: 999px; font-size: 22px; letter-spacing: .26em; text-transform: uppercase; color: var(--o2); }
+
+/* ---- pitch cards (v2) ---- */
+.lines { position: absolute; left: 160px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 22px; }
+.lines h1 { font-size: 92px; font-weight: 250; letter-spacing: -.02em; line-height: 1.05; }
+.lines h1 b { font-weight: 650; }
+.lines h1.o b { color: var(--o2); }
+.section { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 18px; text-align: center; }
+.section .num { font-size: 30px; font-weight: 600; letter-spacing: .4em; color: var(--o2); }
+.section .word { font-size: 170px; font-weight: 800; letter-spacing: -.03em; line-height: .95; }
+.section .sub { font-size: 34px; font-weight: 300; color: #C9CFD8; }
+.stat { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; text-align: center; }
+.stat .big { font-size: 260px; font-weight: 800; letter-spacing: -.05em; line-height: .9; background: linear-gradient(180deg, #fff, #F59A5F 120%); -webkit-background-clip: text; color: transparent; font-variant-numeric: tabular-nums; }
+.stat .big small { font-size: 120px; font-weight: 300; }
+.stat .cap { font-size: 40px; font-weight: 300; color: #DDE2E8; } .stat .cap b { font-weight: 650; color: var(--o2); }
+.versus { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; align-items: center; padding: 0 140px; gap: 80px; }
+.versus > div { border-left: 3px solid #3A414C; padding-left: 40px; }
+.versus > div.now { border-left-color: var(--o); }
+.versus .y { font-size: 150px; font-weight: 200; letter-spacing: -.04em; line-height: 1; }
+.versus .now .y { color: var(--o2); font-weight: 600; }
+.versus h3 { font-size: 40px; font-weight: 600; margin-top: 18px; } .versus p { font-size: 30px; color: #9AA4B2; margin-top: 10px; font-weight: 300; line-height: 1.35; }
+.team { font-size: 26px; letter-spacing: .28em; text-transform: uppercase; color: var(--o2); font-weight: 600; opacity: 0; animation: up 1.1s 1.5s cubic-bezier(.2,.8,.2,1) forwards; margin-top: 18px; }
+</style></head>
+<body>
+<div class="grain"></div>
+
+<!-- 0: opening dramatisation note -->
+<section class="card" id="intro"><div class="statement"><p class="a" style="font-size:24px;letter-spacing:.3em;text-transform:uppercase;color:#6E7785">A dramatisation · demo footage</p></div></section>
+
+<!-- slates -->
+<section class="card" id="elmina"><div class="slate"><div class="rule"></div><div class="place">City of Elmina · Mall lobby</div><div class="time a" style="animation-delay:.7s">7:42 <b>PM</b></div></div><div class="disclaimer">Dramatisation · demo footage</div><div class="vignette"></div></section>
+<section class="card" id="bukitraja"><div class="slate"><div class="rule"></div><div class="place">Bandar Bukit Raja · Residents' parking</div><div class="time a" style="animation-delay:.7s">3:30 <b>AM</b></div></div><div class="disclaimer">Dramatisation · demo footage</div><div class="vignette"></div></section>
+<section class="card" id="morning"><div class="slate"><div class="rule"></div><div class="place">The next morning · Guardhouse</div><div class="time a" style="animation-delay:.7s">9:05 <b>AM</b></div></div><div class="vignette"></div></section>
+
+<!-- Safe City history -->
+<section class="card" id="history"><div class="wall" id="wall"></div><div class="wall-mask"></div>
+  <div class="history"><div class="kicker a">Sime Darby Property · Safe City Initiative</div>
+    <div class="year a" style="animation-delay:.3s"><b>2009</b></div>
+    <h2 class="a" style="animation-delay:.6s">Ara Damansara. <b>22 cameras</b>, linked to the police.</h2>
+    <div class="facts a" style="animation-delay:1.1s"><div><strong>Today</strong><span>Thousands of acres</span></div><div><strong>Hundreds</strong><span>of cameras</span></div><div><strong>Most</strong><span>footage never watched</span></div></div>
+  </div>
+  <div class="source">Safe City Initiative: Sime Darby Property press release (2009)</div></section>
+
+<!-- statements -->
+<section class="card" id="mission"><div class="statement"><div class="kicker a">Our mission</div><h1 class="a" style="animation-delay:.3s">From <b>recorders</b><br>into <b>responders</b>.</h1></div><div class="vignette"></div></section>
+<section class="card" id="map"><div class="statement"><div class="kicker a">One township</div><h1 class="a" style="animation-delay:.3s">Every camera.<br><b>One map.</b></h1></div></section>
+<section class="card" id="evidence"><div class="statement"><div class="kicker a">From alert to evidence</div><h1 class="a" style="animation-delay:.3s">Clips you can <b>trust</b>.</h1><p class="a" style="animation-delay:.7s">A person confirms every alert.</p></div></section>
+<section class="card" id="outcome"><div class="statement"><h1 class="a">He was reached in <b>minutes</b>.</h1><p class="a" style="animation-delay:.9s">Because this time, someone was watching.</p></div><div class="vignette"></div></section>
+<section class="card" id="pillars"><div class="statement" style="gap:44px">
+  <div class="a"><span class="pill">Works with existing cameras</span></div>
+  <div class="a" style="animation-delay:.35s"><span class="pill">Runs on one computer</span></div>
+  <div class="a" style="animation-delay:.7s"><span class="pill">Footage stays on site</span></div>
+  <h1 class="a" style="animation-delay:1.2s;font-size:64px;margin-top:20px">Finds any moment in <b>seconds</b>.<br>Warns you <b>before</b> it happens.</h1></div></section>
+
+<!-- logo -->
+<section class="card" id="logo"><div class="glow"></div><div class="logo">
+  <img class="mark" src="http://127.0.0.1:5001/static/brand/tanyacctv-mark.png" alt="">
+  <div class="name">Tanya<span>CCTV</span></div>
+  <div class="tag">Your township's cameras, now listening.</div></div>
+  <div class="credits">Built for the Sime Darby Property University Hackathon 2026 · Township of Tomorrow · People track<br>Dramatisation. Demo footage from public research datasets (CAVIAR, AAU RainSnow and others) and stock video, not from a Sime Darby Property township. Map tiles © Esri.</div></section>
+
+
+<!-- v2 pitch cards -->
+<section class="card" id="problem"><div class="wall" id="wall2"></div><div class="wall-mask"></div>
+  <div class="lines"><h1 class="a">More cameras <b>than ever.</b></h1><h1 class="a o" style="animation-delay:1.6s">Almost none of it <b>is watched.</b></h1><h1 class="a" style="animation-delay:3.4s;color:#9AA4B2">CCTV only <b style="color:#fff">looks back.</b></h1></div></section>
+<section class="card" id="solution"><div class="glow"></div><div class="logo">
+  <img class="mark" src="http://127.0.0.1:5001/static/brand/tanyacctv-mark.png" alt="">
+  <div class="name">Tanya<span>CCTV</span></div>
+  <div class="tag">Cameras that don't just record. <b style="color:#F59A5F;font-weight:600">They respond.</b></div></div></section>
+<section class="card" id="sec-prevent"><div class="section"><div class="num a">01</div><div class="word a" style="animation-delay:.15s">Prevent</div><div class="sub a" style="animation-delay:.35s">Warns before it happens</div></div><div class="vignette"></div></section>
+<section class="card" id="sec-find"><div class="section"><div class="num a">02</div><div class="word a" style="animation-delay:.15s">Find</div><div class="sub a" style="animation-delay:.35s">Any moment, in plain words</div></div><div class="vignette"></div></section>
+<section class="card" id="sec-people"><div class="section"><div class="num a">03</div><div class="word a" style="animation-delay:.15s">Protect</div><div class="sub a" style="animation-delay:.35s">People, not just property</div></div><div class="vignette"></div></section>
+<section class="card" id="sec-township"><div class="section"><div class="num a">04</div><div class="word a" style="animation-delay:.15s">One township</div><div class="sub a" style="animation-delay:.35s">Every camera. One map. Evidence you can trust.</div></div><div class="vignette"></div></section>
+<section class="card" id="stat40"><div class="stat"><div class="big"><span id="n40">0</span><small>s</small></div><div class="cap a" style="animation-delay:.8s">of warning <b>before</b> the motorbike was taken</div></div><div class="vignette"></div></section>
+<section class="card" id="stathours"><div class="stat"><div class="big" style="font-size:200px">Hours <small>→</small> seconds</div><div class="cap a" style="animation-delay:.8s">Just describe it. <b>TanyaCCTV finds it.</b></div></div><div class="vignette"></div></section>
+<section class="card" id="why"><div class="statement" style="gap:40px"><div class="kicker a">Built for real townships</div>
+  <div class="a" style="animation-delay:.3s"><span class="pill">Works with existing cameras</span></div>
+  <div class="a" style="animation-delay:.6s"><span class="pill">Runs on one computer · footage stays on site</span></div>
+  <div class="a" style="animation-delay:.9s"><span class="pill">A person makes every final call</span></div></div></section>
+<section class="card" id="whynow"><div class="versus">
+  <div class="a"><div class="y">2009</div><h3>Safe City Initiative</h3><p>Sime Darby Property, Ara Damansara.<br>22 cameras, linked to the police.</p></div>
+  <div class="now a" style="animation-delay:1.2s"><div class="y">2026</div><h3>The Township of Tomorrow</h3><p>Cameras that don't just record.<br>Cameras that think, and respond.</p></div></div>
+  <div class="source">Safe City Initiative: Sime Darby Property press release (2009)</div></section>
+<section class="card" id="ask"><div class="statement"><div class="kicker a">The ask</div><h1 class="a" style="animation-delay:.3s">One precinct. <b>Thirty days.</b></h1><p class="a" style="animation-delay:1s">We'll show you the moments that matter, before they happen.</p></div><div class="vignette"></div></section>
+<section class="card" id="final"><div class="glow"></div><div class="logo">
+  <img class="mark" src="http://127.0.0.1:5001/static/brand/tanyacctv-mark.png" alt="">
+  <div class="name">Tanya<span>CCTV</span></div>
+  <div class="tag">Your township's cameras, now listening.</div>
+  <div class="team">Team · Simebody's Gonna Win</div></div>
+  <div class="credits">Sime Darby Property University Hackathon 2026 · Township of Tomorrow · People track<br>Dramatisation. Demo footage from public research datasets and stock video, not from a Sime Darby Property township. Music: "Drawing the Sky", Eugenio Mininni (Mixkit). Map tiles © Esri.</div></section>
+
+<script>
+const show = id => { document.querySelectorAll(".card").forEach(c => c.classList.toggle("on", c.id === id));
+  const c = document.getElementById(id); c.querySelectorAll("*").forEach(e => { e.style.animationName = "none"; void e.offsetWidth; e.style.animationName = ""; }); };
+window.show = show;
+// Safe City wall: camera frames appearing one after another.
+const frames = (window.FRAMES || []);
+function buildWall(urls) {
+  const wall = document.getElementById("wall"); const cols = 8, rows = 6;
+  wall.style.gridTemplateColumns = `repeat(${cols}, 1fr)`; wall.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  for (let i = 0; i < cols * rows; i++) { const d = document.createElement("div"); d.style.backgroundImage = `url(${urls[i % urls.length]})`; d.style.animationDelay = `${(i < 22 ? i * 0.05 : 1.1 + (i - 22) * 0.06)}s`; wall.append(d); }
+}
+window.buildWall = buildWall;
+function buildWall2(urls) { const w = document.getElementById("wall"); const keep = w.id; w.id = "x"; document.getElementById("wall2").id = "wall"; buildWall(urls); document.getElementById("wall").id = "wall2"; w.id = keep; }
+window.buildWall2 = buildWall2;
+// Counter on the 40-second card.
+const _show = show; window.show = id => { _show(id); if (id === "stat40") { const el = document.getElementById("n40"); let n = 0; const t = setInterval(() => { n += 1; el.textContent = n; if (n >= 40) clearInterval(t); }, 28); } };
+show(location.hash.slice(1) || "intro");
+</script>
+</body></html>
