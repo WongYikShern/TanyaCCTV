@@ -1,0 +1,113 @@
+{
+ "format": "tanyacctv-footage-notes/1",
+ "note": "Described by watching the footage; not an AI result.",
+ "notes": [
+  {
+   "sha256": "278d9ba14aedec97d4220de9bf14b527247b6daabd4f4b464923e5771814b4e6",
+   "start_sec": 26.2,
+   "end_sec": 38,
+   "description": "A person falls and is lying on the floor of the lobby.",
+   "tags": [
+    "fall",
+    "fallen",
+    "lying",
+    "floor",
+    "person",
+    "man",
+    "collapse",
+    "emergency",
+    "lobby"
+   ],
+   "box": {
+    "timestamp": 30.0,
+    "box_2d": [
+     330,
+     440,
+     510,
+     560
+    ],
+    "label": "person on the floor"
+   }
+  },
+  {
+   "sha256": "278d9ba14aedec97d4220de9bf14b527247b6daabd4f4b464923e5771814b4e6",
+   "start_sec": 19.2,
+   "end_sec": 26.2,
+   "description": "A person walks into the lobby from the top of the picture.",
+   "tags": [
+    "person",
+    "man",
+    "walking",
+    "enter",
+    "lobby"
+   ]
+  },
+  {
+   "sha256": "dbd9ed3ad9f4f7a64dbaea5acff6d608cb8e028f590ce724953a852add61e66c",
+   "start_sec": 6,
+   "end_sec": 15.3,
+   "description": "A man in a white jumper and brown trousers walks along the corridor towards the camera.",
+   "tags": [
+    "man",
+    "person",
+    "white jumper",
+    "light",
+    "walking",
+    "corridor",
+    "mall"
+   ],
+   "box": {
+    "timestamp": 10.0,
+    "box_2d": [
+     370,
+     490,
+     800,
+     600
+    ],
+    "label": "man in white jumper"
+   }
+  },
+  {
+   "sha256": "1eff4901c6d76aa7ad70208254d45fb842c3750f3d9e2ed88422dc8ca299ae92",
+   "start_sec": 8.7,
+   "end_sec": 10.9,
+   "description": "A man in a light top walks out of the shop.",
+   "tags": [
+    "man",
+    "person",
+    "white",
+    "light",
+    "leaving",
+    "exit",
+    "shop",
+    "mall",
+    "walking"
+   ],
+   "box": {
+    "timestamp": 9.0,
+    "box_2d": [
+     250,
+     640,
+     500,
+     700
+    ],
+    "label": "man in light top"
+   }
+  },
+  {
+   "sha256": "2a2dafc770828093344421bca3a209d778ce1194c34be65edc3a66558aa938c1",
+   "start_sec": 21.9,
+   "end_sec": 30,
+   "description": "A person stops and looks at a shop window in the atrium.",
+   "tags": [
+    "person",
+    "browsing",
+    "shop",
+    "window",
+    "atrium",
+    "mall",
+    "standing"
+   ]
+  }
+ ]
+}

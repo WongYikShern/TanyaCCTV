@@ -1,0 +1,50 @@
+{
+  "1eff4901c6d76aa7ad70208254d45fb842c3750f3d9e2ed88422dc8ca299ae92": {
+    "heading": 160.0,
+    "lat": 3.14852,
+    "lng": 101.71326,
+    "name": "Shop front",
+    "place": "Mall \u00b7 Level 1 shops",
+    "started_at": "2004-01-20T10:35:08.277"
+  },
+  "278d9ba14aedec97d4220de9bf14b527247b6daabd4f4b464923e5771814b4e6": {
+    "heading": 135.0,
+    "lat": 3.14905,
+    "lng": 101.71335,
+    "name": "Lobby (overhead)",
+    "place": "Mall \u00b7 Ground floor lobby",
+    "rules": {
+      "hours": null,
+      "items": [],
+      "loiter_sec": 10,
+      "still_sec": 4,
+      "unattended_sec": 5,
+      "zones": [
+        {
+          "box_2d": [
+            150,
+            250,
+            750,
+            800
+          ],
+          "name": "Lobby"
+        }
+      ]
+    }
+  },
+  "2a2dafc770828093344421bca3a209d778ce1194c34be65edc3a66558aa938c1": {
+    "heading": 250.0,
+    "lat": 3.14888,
+    "lng": 101.71368,
+    "name": "Atrium (overhead)",
+    "place": "Mall \u00b7 Atrium"
+  },
+  "dbd9ed3ad9f4f7a64dbaea5acff6d608cb8e028f590ce724953a852add61e66c": {
+    "heading": 200.0,
+    "lat": 3.1487,
+    "lng": 101.71298,
+    "name": "Corridor",
+    "place": "Mall \u00b7 Level 1 corridor",
+    "started_at": "2004-01-20T10:35:11.317"
+  }
+}
