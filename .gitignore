@@ -68,3 +68,6 @@ experiments/yolo/results*/
 /demo-video/__pycache__/
 /demo-video/.chrome-profile/
 /demo-video/ffmpeg-path
+
+# Footage staged for the hosted image (deploy/stage_hosted_library.py)
+/deploy/hosted-library/

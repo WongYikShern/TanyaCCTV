@@ -1,0 +1,9 @@
+# Only what deploy/Dockerfile.hosted copies; everything else (data/, evaluation/, .env, review files) stays out.
+*
+!backend/requirements.txt
+!backend/tanya
+!backend/scripts
+!search_engine
+!deploy/hosted-library
+**/__pycache__
+backend/tests

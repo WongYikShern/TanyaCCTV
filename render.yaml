@@ -7,18 +7,5 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
 
-  # The real website with live search. Password-protected; data lives on the disk.
-  - type: web
-    name: tanyacctv-live
-    runtime: docker
-    plan: starter
-    dockerfilePath: ./deploy/Dockerfile.live
-    disk:
-      name: tanya-data
-      mountPath: /Users/jasonlee
-      sizeGB: 2
-    envVars:
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: TANYA_SITE_PASSWORD
-        sync: false
+  # The judges' copy of the real website (CAVIAR clips, footage-notes search) runs from a private
+  # image built with deploy/Dockerfile.hosted; it is set up in the Render dashboard, not here.

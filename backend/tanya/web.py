@@ -144,6 +144,7 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
     allowed_hosts |= {h.strip() for h in os.environ.get("TANYA_ALLOWED_HOSTS", "").split(",") if h.strip()}
     if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
         allowed_hosts.add(os.environ["RENDER_EXTERNAL_HOSTNAME"])
+    uploads_disabled = os.environ.get("TANYA_DISABLE_UPLOADS", "") == "1"
 
     @app.before_request
     def local_requests_only():
@@ -158,6 +159,9 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             auth = request.authorization
             if not (auth and secrets.compare_digest((auth.password or "").encode(), password.encode())):
                 abort(Response("Password required.", 401, {"WWW-Authenticate": 'Basic realm="TanyaCCTV"'}))
+        # A public hosted copy keeps its fixed library: no uploads or folder re-scans from visitors.
+        if uploads_disabled and request.path in {"/api/upload", "/api/index"}:
+            abort(403, description="Adding footage is turned off on this hosted demo.")
         if request.method not in ("GET", "HEAD", "OPTIONS"):  # every state-changing method needs the token
             token = session.get("csrf")
             if not token or not secrets.compare_digest(request.headers.get("X-CSRF-Token", ""), token):
@@ -206,7 +210,8 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
                        search_ready=(offline_search is not None) or (engine and key),
                        scan_ready=bool(key and search_settings.sentry_python and search_settings.sentry_python.is_file()
                                        and offline_search is None),
-                       busy=lock.locked(), max_upload_mb=512, coverage=search_coverage())
+                       busy=lock.locked(), max_upload_mb=512, coverage=search_coverage(),
+                       uploads_disabled=uploads_disabled)
 
     playback_dir = settings.db_path.with_name("playback")
 

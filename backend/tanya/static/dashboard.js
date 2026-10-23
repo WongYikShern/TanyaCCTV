@@ -106,6 +106,7 @@ const liveAi = () => !!connection?.scan_ready;
 window.aiState = () => ({known: !!connection, demo: !!connection?.offline_demo, live: liveAi(), search: canSearch()});
 async function status() {
   const data=await api("/api/status"); connection=data;
+  if(data.uploads_disabled){ for(const id of ["toggle-upload","index-button","upload-form"]) $(id).hidden=true; }
   if(data.offline_demo){$("visual-check").checked=false;$("visual-consent").checked=false;
     const examples=data.demo_mode==="event_index"?["a person falling","someone entering a shop","a red car","a fight"]:["a person walking","a red car","a person lying on the floor","fire and smoke"];
     document.querySelectorAll("#examples .chip").forEach((chip,i)=>{chip.textContent=examples[i];});
