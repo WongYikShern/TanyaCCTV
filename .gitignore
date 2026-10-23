@@ -71,3 +71,13 @@ experiments/yolo/results*/
 
 # The four public CAVIAR clips staged for the hosted website (deploy/stage_hosted_library.py)
 !/deploy/hosted-library/videos/caviar_*.mp4
+
+# Public dataset clips used by the website (UCF-Crime, RainSnow, synthetic); other footage stays out
+!/data/videos/16ba45746b64_Burglary021_x264.mp4
+!/data/videos/870b41c237f6_Stealing013_x264.mp4
+!/data/videos/Stealing013_3m00-4m15.mp4
+!/data/videos/rainsnow_Egensevej-4_60-90s.mp4
+!/data/videos/rainsnow_Hadsundvej-2_60-90s.mp4
+!/data/videos/rainsnow_Hjorringvej-3_60-90s.mp4
+!/data/videos/synthetic_browser_demo.mp4
+!/data/videos/synthetic_cam1.mp4
