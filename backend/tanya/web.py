@@ -139,12 +139,18 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         return {state: [v["filename"] for v in videos if search_state(v, manifest) == state]
                 for state in ("prepared", "needs_preparation", "unsupported", "local_index_needed")}
 
+    # A hosted demo adds its public name: Render sets RENDER_EXTERNAL_HOSTNAME; others use TANYA_ALLOWED_HOSTS.
+    allowed_hosts = {"localhost:5001", "127.0.0.1:5001", "localhost", "127.0.0.1"}
+    allowed_hosts |= {h.strip() for h in os.environ.get("TANYA_ALLOWED_HOSTS", "").split(",") if h.strip()}
+    if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
+        allowed_hosts.add(os.environ["RENDER_EXTERNAL_HOSTNAME"])
+
     @app.before_request
     def local_requests_only():
         if offline_search is not None and request.path in {"/api/search/plan", "/api/search/sync"}:
             abort(403, description="AI preparation is disabled in the offline replay demo.")
         # Reject DNS rebinding and cross-site mutation requests, even on localhost.
-        if request.host not in {"localhost:5001", "127.0.0.1:5001", "localhost", "127.0.0.1"}:
+        if request.host not in allowed_hosts:
             abort(403)
         if request.method not in ("GET", "HEAD", "OPTIONS"):  # every state-changing method needs the token
             token = session.get("csrf")
