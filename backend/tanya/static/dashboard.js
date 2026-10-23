@@ -113,6 +113,9 @@ async function status() {
   const ready=data.offline_demo || data.scan_ready || data.search_ready;
   $("ai-pill").textContent=data.offline_demo ? "Offline demo · no live AI" : ready ? "AI connected" : "AI not set up";
   $("ai-pill").classList.toggle("ready",ready);
+  // A public demo can turn adding footage off; hide those buttons rather than let them fail.
+  const uploadsOff=data.uploads_enabled===false;
+  $("toggle-upload").hidden=uploadsOff; $("index-button").hidden=uploadsOff; if(uploadsOff) $("upload-form").hidden=true;
   $("ai-pill").classList.toggle("off",!ready);
   $("ai-pill").title=ready ? "Open Settings to see the AI connection" : "AI search isn't connected. Open Settings to set it up.";
   document.querySelectorAll("[data-ai-callout]").forEach(box=>{box.hidden=ready;});
