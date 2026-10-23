@@ -1,0 +1,25 @@
+# Hosted copy of the real website: your data on a Render disk, live Gemini search.
+# The disk is mounted at /Users/jasonlee and the code is copied into the same project path as on the Mac,
+# so the absolute paths saved in the search index and manifest still match.
+FROM python:3.12-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt imageio-ffmpeg \
+    && ln -s "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" /usr/local/bin/ffmpeg
+
+# The separate SentrySearch environment, pinned to the tested commit (see tanya.config).
+RUN python -m venv /opt/sentry \
+    && /opt/sentry/bin/pip install --no-cache-dir \
+       'git+https://github.com/ssrajadh/sentrysearch@d3efd6a4351251084dc101a24970e40a38e1426d'
+
+COPY . /opt/app
+
+ENV PYTHONUNBUFFERED=1 \
+    HOME=/Users/jasonlee \
+    TANYA_HOST=0.0.0.0 \
+    TANYA_SENTRY_PYTHON=/opt/sentry/bin/python
+CMD ["sh", "/opt/app/deploy/start-live.sh"]

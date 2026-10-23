@@ -11,7 +11,7 @@ import hashlib
 import json
 import math
 
-from flask import Flask, abort, jsonify, render_template, request, send_file, session, url_for
+from flask import Flask, Response, abort, jsonify, render_template, request, send_file, session, url_for
 from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 
@@ -152,6 +152,12 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         # Reject DNS rebinding and cross-site mutation requests, even on localhost.
         if request.host not in allowed_hosts:
             abort(403)
+        # A hosted copy is locked with one shared password (any user name); unset locally.
+        password = os.environ.get("TANYA_SITE_PASSWORD", "")
+        if password:
+            auth = request.authorization
+            if not (auth and secrets.compare_digest((auth.password or "").encode(), password.encode())):
+                abort(Response("Password required.", 401, {"WWW-Authenticate": 'Basic realm="TanyaCCTV"'}))
         if request.method not in ("GET", "HEAD", "OPTIONS"):  # every state-changing method needs the token
             token = session.get("csrf")
             if not token or not secrets.compare_digest(request.headers.get("X-CSRF-Token", ""), token):

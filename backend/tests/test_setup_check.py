@@ -150,7 +150,7 @@ def test_explicit_interpreter_takes_precedence(fake_root, monkeypatch):
 
 def test_busy_port_stops_startup_with_a_clear_message(monkeypatch, capsys):
     monkeypatch.setattr(run_web, "check_port",
-                        lambda: setup_check.Check("Website port", WARN, "127.0.0.1:5001 is already in use", "stop it"))
+                        lambda port=5001: setup_check.Check("Website port", WARN, "127.0.0.1:5001 is already in use", "stop it"))
     monkeypatch.setattr(run_web, "create_app", lambda *a: pytest.fail("app must not be created"))
     assert run_web.main() == 1
     assert "already in use" in capsys.readouterr().err
