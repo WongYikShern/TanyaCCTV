@@ -81,3 +81,8 @@ experiments/yolo/results*/
 !/data/videos/rainsnow_Hjorringvej-3_60-90s.mp4
 !/data/videos/synthetic_browser_demo.mp4
 !/data/videos/synthetic_cam1.mp4
+# Uploaded clips the website library uses
+!/data/videos/1218879bc572_photoshop_video_5.mp4
+!/data/videos/6280dacb333d_AZ2pEBoV-c5SmU-2sD6x-A-AZ2pEBoV2MKAgesGeKWzzA.mp4
+!/data/videos/6cda70328aae_video_preview_h264.mp4
+!/data/videos/e592470f31c9_IMG_2814.MOV
