@@ -139,29 +139,37 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
         return {state: [v["filename"] for v in videos if search_state(v, manifest) == state]
                 for state in ("prepared", "needs_preparation", "unsupported", "local_index_needed")}
 
-    # A hosted demo adds its public name: Render sets RENDER_EXTERNAL_HOSTNAME; others use TANYA_ALLOWED_HOSTS.
+    # Hosting (e.g. Render). Locally none of these are set, so the site stays localhost-only and open.
+    # TANYA_ALLOWED_HOSTS: extra host names to accept (comma-separated); Render's own address is added
+    # automatically. TANYA_SITE_PASSWORD: if set, every page asks for it (HTTP Basic; any user name).
+    # TANYA_DISABLE_UPLOADS: "1" turns off uploading and folder indexing (for a public demo).
     allowed_hosts = {"localhost:5001", "127.0.0.1:5001", "localhost", "127.0.0.1"}
     allowed_hosts |= {h.strip() for h in os.environ.get("TANYA_ALLOWED_HOSTS", "").split(",") if h.strip()}
-    if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
-        allowed_hosts.add(os.environ["RENDER_EXTERNAL_HOSTNAME"])
-    uploads_disabled = os.environ.get("TANYA_DISABLE_UPLOADS", "") == "1"
+    if os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip():
+        allowed_hosts.add(os.environ["RENDER_EXTERNAL_HOSTNAME"].strip())
+    site_password = os.environ.get("TANYA_SITE_PASSWORD", "")
+    uploads_enabled = os.environ.get("TANYA_DISABLE_UPLOADS", "").strip().lower() not in {"1", "true", "yes"}
+
+    @app.get("/healthz")
+    def healthz():
+        """For the host's health check: no data, no password, any host name."""
+        return Response("ok", mimetype="text/plain")
 
     @app.before_request
     def local_requests_only():
+        if request.path == "/healthz":
+            return None
         if offline_search is not None and request.path in {"/api/search/plan", "/api/search/sync"}:
             abort(403, description="AI preparation is disabled in the offline replay demo.")
         # Reject DNS rebinding and cross-site mutation requests, even on localhost.
         if request.host not in allowed_hosts:
             abort(403)
-        # A hosted copy is locked with one shared password (any user name); unset locally.
-        password = os.environ.get("TANYA_SITE_PASSWORD", "")
-        if password:
+        if site_password:
             auth = request.authorization
-            if not (auth and secrets.compare_digest((auth.password or "").encode(), password.encode())):
-                abort(Response("Password required.", 401, {"WWW-Authenticate": 'Basic realm="TanyaCCTV"'}))
-        # A public hosted copy keeps its fixed library: no uploads or folder re-scans from visitors.
-        if uploads_disabled and request.path in {"/api/upload", "/api/index"}:
-            abort(403, description="Adding footage is turned off on this hosted demo.")
+            if not auth or not secrets.compare_digest((auth.password or "").encode(), site_password.encode()):
+                return Response("Password required.", 401, {"WWW-Authenticate": 'Basic realm="TanyaCCTV", charset="UTF-8"'})
+        if not uploads_enabled and request.method == "POST" and request.path in {"/api/upload", "/api/index"}:
+            abort(403, description="Adding footage is turned off on this public demo.")
         if request.method not in ("GET", "HEAD", "OPTIONS"):  # every state-changing method needs the token
             token = session.get("csrf")
             if not token or not secrets.compare_digest(request.headers.get("X-CSRF-Token", ""), token):
@@ -206,12 +214,12 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
                 engine = False
         key = bool(os.environ.get("GEMINI_API_KEY"))
         return jsonify(offline_demo=offline_search is not None, demo_mode=demo_mode, engine_ready=engine, key_ready=key,
+                       uploads_enabled=uploads_enabled,
                        yolo_ready=yolo.available,
                        search_ready=(offline_search is not None) or (engine and key),
                        scan_ready=bool(key and search_settings.sentry_python and search_settings.sentry_python.is_file()
                                        and offline_search is None),
-                       busy=lock.locked(), max_upload_mb=512, coverage=search_coverage(),
-                       uploads_disabled=uploads_disabled)
+                       busy=lock.locked(), max_upload_mb=512, coverage=search_coverage())
 
     playback_dir = settings.db_path.with_name("playback")
 

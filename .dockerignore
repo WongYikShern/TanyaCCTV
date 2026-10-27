@@ -4,13 +4,17 @@ venv
 .env
 .env.*
 **/__pycache__
+*.pyc
 .pytest_cache
 data/videos
 data/frames
 data/playback
+data/*.db
+data/cameras.json
 data/cctv_validation
 demo-video
 experiments/yolo/results*
+node_modules
 *.db
 *.mp4
 *.avi

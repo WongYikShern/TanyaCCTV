@@ -106,7 +106,6 @@ const liveAi = () => !!connection?.scan_ready;
 window.aiState = () => ({known: !!connection, demo: !!connection?.offline_demo, live: liveAi(), search: canSearch()});
 async function status() {
   const data=await api("/api/status"); connection=data;
-  if(data.uploads_disabled){ for(const id of ["toggle-upload","index-button","upload-form"]) $(id).hidden=true; }
   if(data.offline_demo){$("visual-check").checked=false;$("visual-consent").checked=false;
     const examples=data.demo_mode==="event_index"?["a person falling","someone entering a shop","a red car","a fight"]:["a person walking","a red car","a person lying on the floor","fire and smoke"];
     document.querySelectorAll("#examples .chip").forEach((chip,i)=>{chip.textContent=examples[i];});
@@ -114,6 +113,9 @@ async function status() {
   const ready=data.offline_demo || data.scan_ready || data.search_ready;
   $("ai-pill").textContent=data.offline_demo ? "Offline demo · no live AI" : ready ? "AI connected" : "AI not set up";
   $("ai-pill").classList.toggle("ready",ready);
+  // A public demo can turn adding footage off; hide those buttons rather than let them fail.
+  const uploadsOff=data.uploads_enabled===false;
+  $("toggle-upload").hidden=uploadsOff; $("index-button").hidden=uploadsOff; if(uploadsOff) $("upload-form").hidden=true;
   $("ai-pill").classList.toggle("off",!ready);
   $("ai-pill").title=ready ? "Open Settings to see the AI connection" : "AI search isn't connected. Open Settings to set it up.";
   document.querySelectorAll("[data-ai-callout]").forEach(box=>{box.hidden=ready;});

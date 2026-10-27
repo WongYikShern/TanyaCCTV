@@ -47,6 +47,7 @@ rather than claiming they are fixed.
   individual event/timing diagnostics, cached YOLO analysis and the next review handoff
 
 - [Demo guide](docs/demo.md): search, review, then an investigation and its report, on synthetic footage
+- [Putting it online with Render](docs/deploy-render.md): the offline demo as a public website
 - [Search evaluation](docs/search-evaluation.md): measured ranking quality and its limits
 - [Real-camera evaluation](docs/real-cctv-evaluation.md): CAVIAR dataset, benchmark, failure analysis, live-run plan
 - [Event support](docs/event-support.md): which event types are measured, unmeasured or unsupported
