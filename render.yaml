@@ -17,13 +17,7 @@ services:
       # Optional: add TANYA_SITE_PASSWORD in the Render dashboard (Environment) to put the site behind
       # a password. Render's own web address is allowed automatically.
 
-  # The judges' copy of the real website: the sixteen approved library clips (data/videos plus
-  # deploy/hosted-library), footage-notes search, no API key, uploads off. Built from GitHub on every push.
-  - type: web
-    name: tanyacctv-hosted
-    runtime: docker
-    plan: free
-    dockerfilePath: ./deploy/Dockerfile.hosted
-    dockerContext: .
-    healthCheckPath: /healthz
-    autoDeploy: true
+  # The judges' copy of the real website (sixteen library clips, footage-notes search) is its own service,
+  # created earlier in the Render dashboard so it keeps its address. It is backed by this GitHub repository:
+  # Dockerfile path ./deploy/Dockerfile.hosted, Docker build context ".", health check /healthz,
+  # auto-deploy on. See docs/deploy-render.md ("Keeping the hosted website's address").
