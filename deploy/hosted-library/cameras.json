@@ -39,6 +39,149 @@
     "name": "Atrium (overhead)",
     "place": "Mall \u00b7 Atrium"
   },
+  "45429de8acfac5e4b2d9c2d99747561712e585b1910f119dcaa03cea3df028cb": {
+    "heading": 300.0,
+    "hidden": true,
+    "lat": 3.1519,
+    "lng": 101.7156,
+    "name": "Ring road (snow, night)",
+    "place": "Outer ring road"
+  },
+  "472a849da949700d4c3811eba87170e7125dc2ad81ce7f1249729eeea07bed14": {
+    "hidden": true
+  },
+  "48d230b67f43871882c05bc6450275caf93737d525aae8b6770230b3a74b7760": {
+    "heading": 200.0,
+    "lat": 2.7568,
+    "lng": 101.7046,
+    "name": "Departure hall",
+    "place": "Airport \u00b7 Departure hall",
+    "rules": {
+      "hours": null,
+      "items": [
+        {
+          "box_2d": [
+            650,
+            400,
+            750,
+            450
+          ],
+          "mode": "unattended",
+          "name": "red bag"
+        }
+      ],
+      "loiter_sec": 10,
+      "still_sec": 4,
+      "unattended_sec": 5,
+      "zones": []
+    }
+  },
+  "8e6b6535ac0de704fe9dc0f1a8e3e79f2ded2292c4a38d3330ebcd5866bb4bc5": {
+    "hidden": true,
+    "lat": 3.148942,
+    "lng": 101.713508,
+    "name": "Living room",
+    "place": "Block A, Lobby"
+  },
+  "96a0bec21f06add29ecea5f714e355c8deb5a8c736f2a94fb26b3a68d53b508b": {
+    "heading": 140.0,
+    "lat": 3.13055,
+    "lng": 101.67085,
+    "name": "Parking bay (night)",
+    "place": "Residence \u00b7 Basement parking",
+    "rules": {
+      "hours": null,
+      "items": [
+        {
+          "box_2d": [
+            430,
+            540,
+            680,
+            850
+          ],
+          "mode": "theft",
+          "name": "motorbike"
+        }
+      ],
+      "loiter_sec": 10,
+      "still_sec": 4,
+      "unattended_sec": 5,
+      "zones": [
+        {
+          "box_2d": [
+            300,
+            0,
+            1000,
+            1000
+          ],
+          "name": "Parking bay"
+        }
+      ]
+    }
+  },
+  "9a40aad3d184d1b183ea8f7fba571b467f54c937105974a3c5fb803aeb103914": {
+    "heading": 120.0,
+    "hidden": true,
+    "lat": 3.15045,
+    "lng": 101.70955,
+    "name": "Junction B (night)",
+    "place": "Crossing near car park"
+  },
+  "a438205b40371b5e47d1a5c243856e684a6bf711e6b1da5e11ead296cbc851e5": {
+    "hidden": true,
+    "lat": 3.148506,
+    "lng": 101.711719,
+    "name": "Jetty"
+  },
+  "a72093c73083df54ebbb1b4b2f6c9d85666367ee5283ad338caa501a82ff007e": {
+    "hidden": true,
+    "lat": 3.146659,
+    "lng": 101.713508,
+    "name": "Test pattern B"
+  },
+  "af4720c2c938ace17e3cb67b6c8b4eb2178d9b88a8a5de5fce87c3790a84033f": {
+    "hidden": true,
+    "lat": 3.147095,
+    "lng": 101.711719,
+    "name": "Test pattern A"
+  },
+  "b6cc776b9fca3268a6504f0f2133e72503e61cb435c3a6c61a28c9082b6d7505": {
+    "heading": 20.0,
+    "hidden": true,
+    "lat": 3.1469,
+    "lng": 101.7108,
+    "name": "Junction A (rain)",
+    "place": "Main road junction"
+  },
+  "c38034a8b3917a891e40ca4905b8318cc92f8572105c839c54f65797883d0391": {
+    "heading": 300.0,
+    "lat": 3.1301,
+    "lng": 101.6702,
+    "name": "Garage driveway (night)",
+    "place": "Residence \u00b7 Garage driveway",
+    "rules": {
+      "hours": {
+        "from": "22:00",
+        "to": "06:00"
+      },
+      "items": [],
+      "loiter_sec": 10,
+      "still_sec": 4,
+      "unattended_sec": 5,
+      "zones": [
+        {
+          "box_2d": [
+            250,
+            0,
+            1000,
+            820
+          ],
+          "name": "Driveway"
+        }
+      ]
+    },
+    "started_at": "2015-06-18T04:02:50.000"
+  },
   "dbd9ed3ad9f4f7a64dbaea5acff6d608cb8e028f590ce724953a852add61e66c": {
     "heading": 200.0,
     "lat": 3.1487,
@@ -46,5 +189,12 @@
     "name": "Corridor",
     "place": "Mall \u00b7 Level 1 corridor",
     "started_at": "2004-01-20T10:35:11.317"
+  },
+  "f07085ebe4718727453e50c71c99ed844f00154034e63843a15c071a2a33648d": {
+    "hidden": true,
+    "lat": 3.147801,
+    "lng": 101.714614,
+    "name": "Office desk",
+    "place": "Block A, Level 1"
   }
 }

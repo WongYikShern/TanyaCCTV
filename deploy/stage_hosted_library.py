@@ -1,6 +1,6 @@
 """Stage the footage for the hosted website: python deploy/stage_hosted_library.py
 
-Copies only the approved public clips (the four CAVIAR clips) from data/videos, with their footage notes
+Copies only the approved clips (the sixteen in the local website library) from data/videos, with their footage notes
 and camera-map entries, into deploy/hosted-library/ (git-ignored). deploy/Dockerfile.hosted bakes that
 folder into a private image; nothing else from data/ goes into it.
 """
@@ -15,7 +15,14 @@ DATA = ROOT / "data"
 OUT = ROOT / "deploy" / "hosted-library"
 MARKER = OUT / ".staged-by-stage_hosted_library"
 CLIPS = ["caviar_Browse2.mp4", "caviar_EnterExitCrossingPaths1cor.mp4",
-         "caviar_EnterExitCrossingPaths1front.mp4", "caviar_Rest_FallOnFloor.mp4"]
+         "caviar_EnterExitCrossingPaths1front.mp4", "caviar_Rest_FallOnFloor.mp4",
+         "16ba45746b64_Burglary021_x264.mp4", "870b41c237f6_Stealing013_x264.mp4",
+         "Stealing013_3m00-4m15.mp4", "rainsnow_Egensevej-4_60-90s.mp4",
+         "rainsnow_Hadsundvej-2_60-90s.mp4", "rainsnow_Hjorringvej-3_60-90s.mp4",
+         "synthetic_browser_demo.mp4", "synthetic_cam1.mp4",
+         "1218879bc572_photoshop_video_5.mp4",
+         "6280dacb333d_AZ2pEBoV-c5SmU-2sD6x-A-AZ2pEBoV2MKAgesGeKWzzA.mp4",
+         "6cda70328aae_video_preview_h264.mp4", "e592470f31c9_IMG_2814.MOV"]
 
 
 def sha256(path):
@@ -35,7 +42,7 @@ def main():
     for name in CLIPS:
         source = DATA / "videos" / name
         if not source.is_file():
-            print(f"Missing {source}; prepare the CAVIAR clips first.", file=sys.stderr)
+            print(f"Missing {source}; add it to the local library first.", file=sys.stderr)
             return 1
         shutil.copy2(source, OUT / "videos" / name)
         hashes.add(sha256(source))
