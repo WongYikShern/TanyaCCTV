@@ -213,8 +213,11 @@ def create_app(settings=None, search_settings=None, *, offline_search=None):
             except SearchError:
                 engine = False
         key = bool(os.environ.get("GEMINI_API_KEY"))
+        # Footage notes (written in advance) make search work without AI for the recordings they describe.
+        library = {r["sha256"] for r in rows("SELECT sha256 FROM videos WHERE status='done'")}
+        notes_ready = any(n["sha256"] in library for n in footage_notes.load(settings.db_path.with_name("footage_notes.json")))
         return jsonify(offline_demo=offline_search is not None, demo_mode=demo_mode, engine_ready=engine, key_ready=key,
-                       uploads_enabled=uploads_enabled,
+                       uploads_enabled=uploads_enabled, notes_ready=notes_ready,
                        yolo_ready=yolo.available,
                        search_ready=(offline_search is not None) or (engine and key),
                        scan_ready=bool(key and search_settings.sentry_python and search_settings.sentry_python.is_file()

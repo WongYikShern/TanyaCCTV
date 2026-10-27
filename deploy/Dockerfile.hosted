@@ -19,6 +19,9 @@ RUN pip install imageio-ffmpeg \
 COPY backend backend
 COPY search_engine search_engine
 COPY deploy/hosted-library /app/library
+# The other twelve approved clips are tracked in data/videos (the sixteen together are the website library),
+# so a build straight from GitHub has the whole library without running stage_hosted_library.py first.
+COPY data/videos/ /app/library/videos/
 
 ENV PYTHONUNBUFFERED=1 \
     TANYA_VIDEO_DIR=/app/library/videos \

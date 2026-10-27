@@ -6,7 +6,6 @@ venv
 **/__pycache__
 *.pyc
 .pytest_cache
-data/videos
 data/frames
 data/playback
 data/*.db
@@ -16,7 +15,5 @@ demo-video
 experiments/yolo/results*
 node_modules
 *.db
-*.mp4
-*.avi
-*.mov
-*.mkv
+# Footage: only the approved clips tracked in Git are in a Render checkout; the hosted image copies them
+# (data/videos, deploy/hosted-library) and the demo image copies no footage at all.

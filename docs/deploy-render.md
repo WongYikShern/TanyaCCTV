@@ -1,21 +1,37 @@
 # Putting TanyaCCTV online with Render
 
-The repository includes everything Render needs: a `Dockerfile`, a `render.yaml` Blueprint and a small
-start-up file (`backend/scripts/render_app.py`). By default it publishes the **offline demo**: the
-generated demo footage with its preset event index. Search, results, the player, the map,
-investigations, the incident timeline and report export all work. No API key is used and nothing is
-sent to Google.
+The repository includes everything Render needs. The `render.yaml` Blueprint creates two websites, both
+built straight from GitHub and redeployed on every push to `main`:
+
+| Service | What it is | Built from |
+| --- | --- | --- |
+| `tanyacctv-hosted` | **The real website for judges**: the sixteen approved library clips (CAVIAR, RainSnow, the theft and garage clips…), their camera names and map places, and search over the footage notes written in advance. No API key, uploads off. | `deploy/Dockerfile.hosted` (clips from `data/videos` and `deploy/hosted-library`) |
+| `tanyacctv` | **The offline demo**: generated cartoon footage with a preset event index. | `Dockerfile` |
+
+Neither uses an API key or sends anything to Google. Search, results, the player, the map,
+investigations, the incident timeline and report export all work. Without live AI, the hosted website
+finds the moments its footage notes describe; the page says so next to the search box.
+
+To change the hosted library, add or remove clips with `deploy/stage_hosted_library.py` (and the footage
+notes and camera entries it copies), commit, and push: Render rebuilds it. No image needs building or
+uploading by hand.
 
 ## Deploy (about 10 minutes, mostly waiting)
 
 1. Sign in at https://dashboard.render.com with GitHub.
 2. **New → Blueprint**, then choose the `TanyaCCTV` repository (grant Render access to it if asked) and
    the `main` branch.
-3. Render reads `render.yaml` and shows one web service, `tanyacctv`, on the free plan. Press **Apply**.
-4. Wait for the first build (5–8 minutes: it installs Python packages and builds the demo footage once).
-   When the service shows **Live**, open its address, e.g. `https://tanyacctv.onrender.com`.
+3. Render reads `render.yaml` and shows two web services, `tanyacctv` and `tanyacctv-hosted`, on the free
+   plan. Press **Apply**.
+4. Wait for the first builds (5–8 minutes each). When a service shows **Live**, open its address, e.g.
+   `https://tanyacctv-hosted.onrender.com`.
 
-After that, every push to `main` redeploys automatically.
+After that, every push to `main` redeploys both automatically.
+
+**Already set up the Blueprint before?** Render picks up the new `tanyacctv-hosted` service from
+`render.yaml` on the next sync (Blueprints → your Blueprint → **Manual Sync** if it doesn't appear on its
+own). If a hosted service was created earlier by hand from a privately built image, it does not update
+from GitHub; once the new one is live, delete the old one (Settings → Delete Web Service).
 
 **Optional password.** In the service's **Environment** tab, add `TANYA_SITE_PASSWORD` with a password of
 your choice and save. The browser then asks for it (any user name). Remove it to open the site again.

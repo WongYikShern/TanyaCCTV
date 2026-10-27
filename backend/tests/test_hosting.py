@@ -66,3 +66,19 @@ def test_uploads_can_be_turned_off(workspace, monkeypatch):
         response = client.post(path, headers=headers)
         assert response.status_code == 403 and "turned off" in response.json["error"]
     assert not list(workspace.video_dir.iterdir())
+
+
+def test_status_reports_footage_notes_for_indexed_recordings(workspace, monkeypatch):
+    """The hosted website searches footage notes without AI; the page needs to know they exist."""
+    import json
+    from tests.conftest import make_video
+    client = make_client(workspace, monkeypatch)
+    assert client.get("/api/status").json["notes_ready"] is False
+    make_video(workspace.video_dir / "cam.mp4", seconds=2)
+    workspace.run()
+    sha = workspace.videos()[0]["sha256"]
+    notes = workspace.settings().db_path.with_name("footage_notes.json")
+    notes.write_text(json.dumps({"notes": [{"sha256": "0" * 64, "description": "not in the library"}]}), encoding="utf-8")
+    assert client.get("/api/status").json["notes_ready"] is False
+    notes.write_text(json.dumps({"notes": [{"sha256": sha, "start_sec": 0, "end_sec": 1, "description": "a truck"}]}), encoding="utf-8")
+    assert client.get("/api/status").json["notes_ready"] is True

@@ -11,7 +11,10 @@ RUN pip install --no-cache-dir -r backend/requirements.txt gunicorn==23.0.0 imag
  && ln -s "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" /usr/local/bin/ffmpeg \
  && ffmpeg -hide_banner -version | head -1
 
-COPY . .
+# Only what the demo needs: the app, the search bridge path and the event labels (no footage from data/).
+COPY backend backend
+COPY search_engine search_engine
+COPY evaluation evaluation
 # Build the offline demo once, so the server starts in seconds and every restart starts clean.
 RUN python backend/scripts/render_app.py build "$TANYA_DEMO_DIR"
 
