@@ -140,8 +140,12 @@ def main():
     parser.add_argument('--search', choices=('index', 'replay'), default='index')
     parser.add_argument('--dataset', choices=('all', 'synthetic', 'caviar'), default='all',
                         help='footage for the event index (default: all available)')
+    parser.add_argument('--host', default=os.environ.get('TANYA_HOST', '127.0.0.1'),
+                        help='address to listen on (default: 127.0.0.1; 0.0.0.0 inside a hosted container)')
+    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', 5001)),
+                        help='port to listen on (default: $PORT, else 5001)')
     args = parser.parse_args()
-    port = check_port()
+    port = check_port(args.port)
     if port.status != PASS:
         print(f'Cannot start: {port.detail}. Stop the existing website first.', file=sys.stderr)
         return 1
@@ -152,12 +156,12 @@ def main():
         print(str(error), file=sys.stderr)
         return 1
     if args.search == 'replay':
-        print(f'OFFLINE REPLAY — no live AI. Workspace: {root}\nOpen http://localhost:5001/\nQueries: ' + '; '.join(QUERIES), flush=True)
+        print(f'OFFLINE REPLAY — no live AI. Workspace: {root}\nOpen http://localhost:{args.port}/\nQueries: ' + '; '.join(QUERIES), flush=True)
     else:
-        print(f'OFFLINE DEMO — preset event index, no live AI. Workspace: {root}\nOpen http://localhost:5001/\n'
+        print(f'OFFLINE DEMO — preset event index, no live AI. Workspace: {root}\nOpen http://localhost:{args.port}/\n'
               'Try: a person falling; someone entering a shop; a red car; people meeting; a person in the corridor; '
               'a fight (no match).', flush=True)
-    app.run(host='127.0.0.1', port=5001, debug=False)
+    app.run(host=args.host, port=args.port, debug=False)
     return 0
 
 

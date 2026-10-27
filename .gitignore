@@ -68,3 +68,21 @@ experiments/yolo/results*/
 /demo-video/__pycache__/
 /demo-video/.chrome-profile/
 /demo-video/ffmpeg-path
+
+# The four public CAVIAR clips staged for the hosted website (deploy/stage_hosted_library.py)
+!/deploy/hosted-library/videos/caviar_*.mp4
+
+# Public dataset clips used by the website (UCF-Crime, RainSnow, synthetic); other footage stays out
+!/data/videos/16ba45746b64_Burglary021_x264.mp4
+!/data/videos/870b41c237f6_Stealing013_x264.mp4
+!/data/videos/Stealing013_3m00-4m15.mp4
+!/data/videos/rainsnow_Egensevej-4_60-90s.mp4
+!/data/videos/rainsnow_Hadsundvej-2_60-90s.mp4
+!/data/videos/rainsnow_Hjorringvej-3_60-90s.mp4
+!/data/videos/synthetic_browser_demo.mp4
+!/data/videos/synthetic_cam1.mp4
+# Uploaded clips the website library uses
+!/data/videos/1218879bc572_photoshop_video_5.mp4
+!/data/videos/6280dacb333d_AZ2pEBoV-c5SmU-2sD6x-A-AZ2pEBoV2MKAgesGeKWzzA.mp4
+!/data/videos/6cda70328aae_video_preview_h264.mp4
+!/data/videos/e592470f31c9_IMG_2814.MOV

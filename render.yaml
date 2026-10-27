@@ -16,3 +16,6 @@ services:
         value: "1"
       # Optional: add TANYA_SITE_PASSWORD in the Render dashboard (Environment) to put the site behind
       # a password. Render's own web address is allowed automatically.
+
+  # The judges' copy of the real website (library clips, footage-notes search) runs from a private
+  # image built with deploy/Dockerfile.hosted; it is set up in the Render dashboard, not here.

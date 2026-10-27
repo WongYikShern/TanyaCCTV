@@ -13,12 +13,12 @@ from tanya.setup_check import PASS, WEB_PORT, check_port  # noqa: E402
 from tanya.web import create_app  # noqa: E402
 
 
-def startup_lines(settings, search_settings) -> list[str]:
+def startup_lines(settings, search_settings, port=WEB_PORT) -> list[str]:
     """Readiness summary printed at startup. Shows only whether a key is set, never its value."""
     engine = bool(search_settings.sentry_python and search_settings.sentry_python.is_file())
     key = bool(os.environ.get("GEMINI_API_KEY"))
     return [
-        f"TanyaCCTV is running at http://localhost:{WEB_PORT}/  (Ctrl+C to stop)",
+        f"TanyaCCTV is running at http://localhost:{port}/  (Ctrl+C to stop)",
         f"  Videos:        {settings.video_dir}",
         f"  Search engine: {'found' if engine else 'not configured (local features still work)'}",
         f"  Gemini key:    {'set' if key else 'not set (AI search disabled)'}",
@@ -30,7 +30,9 @@ def main() -> int:
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(errors="replace")
-    port = check_port()
+    host = os.environ.get("TANYA_HOST", "127.0.0.1")  # 0.0.0.0 inside a hosted container
+    web_port = int(os.environ.get("PORT", WEB_PORT))
+    port = check_port(web_port)
     if port.status != PASS:
         print(f"Cannot start: {port.detail}. {port.fix}.", file=sys.stderr)
         return 1
@@ -40,9 +42,9 @@ def main() -> int:
         print(f"Configuration error: {e}", file=sys.stderr)
         return 2
     app = create_app(settings, search_settings)
-    print("\n".join(startup_lines(settings, search_settings)), flush=True)
+    print("\n".join(startup_lines(settings, search_settings, web_port)), flush=True)
     try:
-        app.run(host="127.0.0.1", port=WEB_PORT, debug=False)
+        app.run(host=host, port=web_port, debug=False)
     except OSError as e:  # e.g. the port was taken between the check and startup
         print(f"Cannot start the website: {e}", file=sys.stderr)
         return 1

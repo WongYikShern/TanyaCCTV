@@ -1,0 +1,328 @@
+{
+ "format": "tanyacctv-footage-notes/1",
+ "note": "Described by watching the footage; not an AI result.",
+ "notes": [
+  {
+   "sha256": "c38034a8b3917a891e40ca4905b8318cc92f8572105c839c54f65797883d0391",
+   "start_sec": 3,
+   "end_sec": 9,
+   "description": "A white ute (pickup truck) reverses up to the garage door at night.",
+   "tags": [
+    "truck arriving",
+    "vehicle",
+    "night",
+    "garage",
+    "driveway"
+   ]
+  },
+  {
+   "sha256": "c38034a8b3917a891e40ca4905b8318cc92f8572105c839c54f65797883d0391",
+   "start_sec": 8.5,
+   "end_sec": 12.5,
+   "description": "A man in a dark hoodie gets out of the ute and walks into the garage.",
+   "tags": [
+    "man",
+    "person",
+    "hoodie",
+    "enter",
+    "garage",
+    "night",
+    "suspect",
+    "break in",
+    "intruder"
+   ],
+   "box": {
+    "timestamp": 9.0,
+    "box_2d": [
+     480,
+     300,
+     900,
+     480
+    ],
+    "label": "man in dark hoodie"
+   }
+  },
+  {
+   "sha256": "c38034a8b3917a891e40ca4905b8318cc92f8572105c839c54f65797883d0391",
+   "start_sec": 27,
+   "end_sec": 42,
+   "description": "Theft: the man brings a motorbike out of the garage and loads it onto the back of the ute.",
+   "tags": [
+    "steal",
+    "theft",
+    "motorbike",
+    "man",
+    "loading",
+    "truck",
+    "night",
+    "garage",
+    "burglary",
+    "crime"
+   ],
+   "box": {
+    "timestamp": 30.0,
+    "box_2d": [
+     330,
+     560,
+     880,
+     760
+    ],
+    "label": "man loading motorbike"
+   }
+  },
+  {
+   "sha256": "c38034a8b3917a891e40ca4905b8318cc92f8572105c839c54f65797883d0391",
+   "start_sec": 42,
+   "end_sec": 48,
+   "description": "The ute drives away with the stolen motorbike on the back.",
+   "tags": [
+    "drive away",
+    "leaving",
+    "truck",
+    "motorbike",
+    "stolen",
+    "theft",
+    "escape"
+   ]
+  },
+  {
+   "sha256": "96a0bec21f06add29ecea5f714e355c8deb5a8c736f2a94fb26b3a68d53b508b",
+   "start_sec": 9,
+   "end_sec": 21,
+   "description": "A man wearing a helmet comes in through the blue door into the parking bay at night.",
+   "tags": [
+    "man",
+    "person",
+    "helmet",
+    "enter",
+    "door",
+    "night",
+    "parking",
+    "intruder",
+    "suspect"
+   ],
+   "box": {
+    "timestamp": 20.0,
+    "box_2d": [
+     450,
+     220,
+     900,
+     370
+    ],
+    "label": "man in helmet"
+   }
+  },
+  {
+   "sha256": "96a0bec21f06add29ecea5f714e355c8deb5a8c736f2a94fb26b3a68d53b508b",
+   "start_sec": 21,
+   "end_sec": 48,
+   "description": "The man in the helmet crouches beside the parked motorbike and tampers with it.",
+   "tags": [
+    "man",
+    "helmet",
+    "motorbike",
+    "tampering",
+    "crouching",
+    "theft",
+    "steal",
+    "night",
+    "suspicious"
+   ],
+   "box": {
+    "timestamp": 30.0,
+    "box_2d": [
+     580,
+     250,
+     860,
+     430
+    ],
+    "label": "man at the motorbike"
+   }
+  },
+  {
+   "sha256": "96a0bec21f06add29ecea5f714e355c8deb5a8c736f2a94fb26b3a68d53b508b",
+   "start_sec": 48,
+   "end_sec": 60,
+   "description": "Theft: the man wheels the motorbike out of the parking bay through the door.",
+   "tags": [
+    "steal",
+    "theft",
+    "motorbike",
+    "man",
+    "helmet",
+    "pushing",
+    "taking",
+    "night",
+    "crime",
+    "burglary"
+   ],
+   "box": {
+    "timestamp": 54.0,
+    "box_2d": [
+     230,
+     380,
+     600,
+     600
+    ],
+    "label": "man taking motorbike"
+   }
+  },
+  {
+   "sha256": "48d230b67f43871882c05bc6450275caf93737d525aae8b6770230b3a74b7760",
+   "start_sec": 0,
+   "end_sec": 8.1,
+   "description": "Missing item: a red bag is left alone on the floor of the departure hall, with nobody near it.",
+   "tags": [
+    "bag",
+    "luggage",
+    "left",
+    "unattended",
+    "abandoned",
+    "missing item",
+    "red",
+    "airport",
+    "lost"
+   ],
+   "box": {
+    "timestamp": 1.0,
+    "box_2d": [
+     650,
+     400,
+     750,
+     450
+    ],
+    "label": "unattended red bag"
+   }
+  },
+  {
+   "sha256": "48d230b67f43871882c05bc6450275caf93737d525aae8b6770230b3a74b7760",
+   "start_sec": 0,
+   "end_sec": 8.1,
+   "description": "A person walks across the departure hall past the bag.",
+   "tags": [
+    "person",
+    "man",
+    "walking",
+    "airport",
+    "departure hall"
+   ],
+   "box": {
+    "timestamp": 1.0,
+    "box_2d": [
+     480,
+     340,
+     620,
+     390
+    ],
+    "label": "person walking"
+   }
+  },
+  {
+   "sha256": "278d9ba14aedec97d4220de9bf14b527247b6daabd4f4b464923e5771814b4e6",
+   "start_sec": 26.2,
+   "end_sec": 38,
+   "description": "A person falls and is lying on the floor of the lobby.",
+   "tags": [
+    "fall",
+    "fallen",
+    "lying",
+    "floor",
+    "person",
+    "man",
+    "collapse",
+    "emergency",
+    "lobby"
+   ],
+   "box": {
+    "timestamp": 30.0,
+    "box_2d": [
+     330,
+     440,
+     510,
+     560
+    ],
+    "label": "person on the floor"
+   }
+  },
+  {
+   "sha256": "278d9ba14aedec97d4220de9bf14b527247b6daabd4f4b464923e5771814b4e6",
+   "start_sec": 19.2,
+   "end_sec": 26.2,
+   "description": "A person walks into the lobby from the top of the picture.",
+   "tags": [
+    "person",
+    "man",
+    "walking",
+    "enter",
+    "lobby"
+   ]
+  },
+  {
+   "sha256": "dbd9ed3ad9f4f7a64dbaea5acff6d608cb8e028f590ce724953a852add61e66c",
+   "start_sec": 6,
+   "end_sec": 15.3,
+   "description": "A man in a white jumper and brown trousers walks along the corridor towards the camera.",
+   "tags": [
+    "man",
+    "person",
+    "white jumper",
+    "light",
+    "walking",
+    "corridor",
+    "mall"
+   ],
+   "box": {
+    "timestamp": 10.0,
+    "box_2d": [
+     370,
+     490,
+     800,
+     600
+    ],
+    "label": "man in white jumper"
+   }
+  },
+  {
+   "sha256": "1eff4901c6d76aa7ad70208254d45fb842c3750f3d9e2ed88422dc8ca299ae92",
+   "start_sec": 8.7,
+   "end_sec": 10.9,
+   "description": "A man in a light top walks out of the shop.",
+   "tags": [
+    "man",
+    "person",
+    "white",
+    "light",
+    "leaving",
+    "exit",
+    "shop",
+    "mall",
+    "walking"
+   ],
+   "box": {
+    "timestamp": 9.0,
+    "box_2d": [
+     250,
+     640,
+     500,
+     700
+    ],
+    "label": "man in light top"
+   }
+  },
+  {
+   "sha256": "2a2dafc770828093344421bca3a209d778ce1194c34be65edc3a66558aa938c1",
+   "start_sec": 21.9,
+   "end_sec": 30,
+   "description": "A person stops and looks at a shop window in the atrium.",
+   "tags": [
+    "person",
+    "browsing",
+    "shop",
+    "window",
+    "atrium",
+    "mall",
+    "standing"
+   ]
+  }
+ ]
+}
