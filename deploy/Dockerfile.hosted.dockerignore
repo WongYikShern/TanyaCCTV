@@ -5,5 +5,6 @@
 !backend/scripts
 !search_engine
 !deploy/hosted-library
+!data/videos
 **/__pycache__
 backend/tests

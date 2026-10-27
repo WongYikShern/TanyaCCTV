@@ -101,7 +101,10 @@ function openVideo(id,name,url,start=0,end=null,follow=null) {
 // ---------------------------------------------------------------- status
 // canSearch: some search works (live AI, quick search or an offline demo). liveAi: Gemini-backed
 // features (thorough search, watch mode, AI summary) can run. Unknown until /api/status answers.
-const canSearch = () => !!(connection && (connection.offline_demo || connection.scan_ready || connection.search_ready));
+const aiSearch = () => !!(connection && (connection.offline_demo || connection.scan_ready || connection.search_ready));
+// Footage notes (described in advance, no AI) let search find the moments they describe, even with no AI set up.
+const notesOnly = () => !!connection?.notes_ready && !aiSearch();
+const canSearch = () => aiSearch() || !!connection?.notes_ready;
 const liveAi = () => !!connection?.scan_ready;
 window.aiState = () => ({known: !!connection, demo: !!connection?.offline_demo, live: liveAi(), search: canSearch()});
 async function status() {
@@ -111,14 +114,14 @@ async function status() {
     document.querySelectorAll("#examples .chip").forEach((chip,i)=>{chip.textContent=examples[i];});
   }
   const ready=data.offline_demo || data.scan_ready || data.search_ready;
-  $("ai-pill").textContent=data.offline_demo ? "Offline demo · no live AI" : ready ? "AI connected" : "AI not set up";
+  $("ai-pill").textContent=data.offline_demo ? "Offline demo · no live AI" : ready ? "AI connected" : data.notes_ready ? "Footage notes · no live AI" : "AI not set up";
   $("ai-pill").classList.toggle("ready",ready);
   // A public demo can turn adding footage off; hide those buttons rather than let them fail.
   const uploadsOff=data.uploads_enabled===false;
   $("toggle-upload").hidden=uploadsOff; $("index-button").hidden=uploadsOff; if(uploadsOff) $("upload-form").hidden=true;
-  $("ai-pill").classList.toggle("off",!ready);
+  $("ai-pill").classList.toggle("off",!ready && !data.notes_ready);
   $("ai-pill").title=ready ? "Open Settings to see the AI connection" : "AI search isn't connected. Open Settings to set it up.";
-  document.querySelectorAll("[data-ai-callout]").forEach(box=>{box.hidden=ready;});
+  document.querySelectorAll("[data-ai-callout]").forEach(box=>{box.hidden=ready || !!data.notes_ready;});
   if(libraryLoaded){   // re-label recordings now that readiness is known
     renderLibrary();
     if(!document.querySelector('[data-page="dashboard"]').hidden) renderDashboard();
@@ -150,7 +153,7 @@ function searchHints(direct) {
   if(c.demo_mode==="event_index") return ["Offline demo: describe an event, e.g. a person falling, someone entering a shop, people meeting, a red car, a person in the corridor. Words are matched to annotated events; there is no AI.",""];
   if(c.offline_demo) return ["Offline demo: try a red car, a person walking, a person lying on the floor, or fire and smoke. Only these recorded searches work.",""];
   if(direct){
-    if(!c.scan_ready) return ["The AI isn't connected yet, so search can't run. See Settings.",""];
+    if(!c.scan_ready) return [c.notes_ready?"Searches footage notes written in advance by watching the recordings. Live AI isn't connected here, so only the moments they describe can be found.":"The AI isn't connected yet, so search can't run. See Settings.",""];
     return [videosCache.some(v=>v.status==="done")?"":"Add a video on the Cameras page first.",""];
   }
   if(!c.search_ready) return ["Quick search needs the AI connection. See Settings.",""];
@@ -172,7 +175,7 @@ function updateControls() {
   $("scan-start").disabled ||= $("scan-video").value==="all";
   $("scan-end").disabled ||= $("scan-video").value==="all";
   $("search-button").disabled=operationRunning || !connection?.search_ready || !connection?.coverage.prepared.length || (visual && !$("visual-consent").checked);
-  if(direct) $("search-button").disabled=operationRunning || !videosCache.some(v=>v.status==="done") || connection?.offline_demo || !liveAi();
+  if(direct) $("search-button").disabled=operationRunning || !videosCache.some(v=>v.status==="done") || connection?.offline_demo || !(liveAi() || connection?.notes_ready);
   $("dash-search-button").disabled=!!connection && !canSearch();
   $("visual-consent-panel").hidden=direct || !visual;
   for(const id of ["visual-check","visual-consent","query","index-button","upload-button"]) $(id).disabled=operationRunning;
@@ -201,8 +204,9 @@ async function renderDashboard() {
   const open=cases.filter(c=>c.status==="open"), unreviewed=cases.reduce((s,c)=>s+c.unreviewed_count,0);
   const tiles=[
     stat("Recordings",videosCache.length,`${time(videosCache.reduce((s,v)=>s+(v.duration_sec||0),0))} of footage`+(waitingFiles.length?` · ${waitingFiles.length} waiting to be added`:""),"#library","primary"),
-    canSearch() || !connection
+    aiSearch() || !connection
       ? stat("Ready to search",done,done===videosCache.length?"all recordings":`of ${plural(videosCache.length,"recording")}`,"#search")
+      : notesOnly() ? stat("Search","Notes","moments described in advance · no live AI","#search")
       : stat("AI search","Off","Connect it in Settings to search footage","#system","attention"),
     stat("Investigations",cases.length,unreviewed?`${plural(unreviewed,"clip")} to review`:`${open.length} open`,"#investigations",unreviewed?"attention":"")];
   if(failed) tiles.push(stat("Problems",failed,failed===1?"recording needs attention":"recordings need attention","#library","alert"));
@@ -248,7 +252,7 @@ function videoStatus(v) {
   // In the demo every recording is in the demo library, so a badge would say nothing; only exceptions get one.
   if(connection?.demo_mode==="event_index") return [null];
   if(connection?.offline_demo) return v.search_state==="prepared"?[null]:["Not in the recorded demo","neutral"];
-  return canSearch() ? ["Ready to search",""] : ["Ready to watch","neutral"];
+  return aiSearch() ? ["Ready to search",""] : ["Ready to watch","neutral"];
 }
 function thumb(video) {
   const box=element("div",undefined,"thumb");
@@ -433,7 +437,7 @@ async function indexVideos() {
   await Promise.all([library(),status()]);
   $("sync-plan").hidden=true;
   const duplicateNote=duplicates.length ? ` ${plural(duplicates.length,"file")} ${duplicates.length===1?"was":"were"} identical to videos already in the library and were not added again.` : "";
-  notice((failed.length ? `${plural(failed.length,"video")} couldn't be added. On the Cameras page, filter by “Problems” to see why.` : (connection?.offline_demo?"Done. It plays here, but the offline demo only searches its preset events, so new footage won't appear in search results.":canSearch()?"Done. Your footage is ready to search.":"Done. Your footage is ready to watch. Connect the AI in Settings to search it."))+duplicateNote);
+  notice((failed.length ? `${plural(failed.length,"video")} couldn't be added. On the Cameras page, filter by “Problems” to see why.` : (connection?.offline_demo?"Done. It plays here, but the offline demo only searches its preset events, so new footage won't appear in search results.":aiSearch()?"Done. Your footage is ready to search.":"Done. Your footage is ready to watch. Connect the AI in Settings to search it."))+duplicateNote);
 }
 $("index-button").onclick=async()=>{ busy(true); notice("Adding videos from the folder… Keep this page open."); try{await indexVideos();}catch(error){notice(error.message);}finally{busy(false);} };
 $("upload-form").onsubmit=async event=>{
@@ -466,7 +470,7 @@ $("search-form").onsubmit=async event=>{
   event.preventDefault();
   // Thorough search: first the pre-analysed footage notes (instant, no AI); live AI only if nothing matches
   // there, or when the person asks for it.
-  if($("search-mode").value==="direct"){ if(!(await notesSearch())) await reviewScenarioPlan(); return; }
+  if($("search-mode").value==="direct"){ if(!(await notesSearch()) && liveAi()) await reviewScenarioPlan(); return; }
   const visual=$("visual-check").checked, approved=$("visual-consent").checked;
   if(visual && !approved){ notice("Approve the sampled-frame check, or uncheck image checking to see rankings only."); return; }
   busy(true);
@@ -604,14 +608,18 @@ function resultCard(hit, query, visual, rank){
 // ---------------------------------------------------------------- pre-analysed footage notes (no AI)
 async function notesSearch(){
   const query=$("query").value.trim(); if(!query) return false;
+  const startedAt=performance.now(); flag("searched",true);
   let data; try{ data=await post("/api/search/notes",{query}); }catch(error){ return false; }
-  if(!data.hits.length){ $("results").replaceChildren(element("p",`Nothing in the pre-analysed footage matches “${data.query}”. You can search live with AI below (uses Google).`,"results-intro")); return false; }
+  if(!data.hits.length){
+    if(liveAi()){ $("results").replaceChildren(element("p",`Nothing in the pre-analysed footage matches “${data.query}”. You can search live with AI below (uses Google).`,"results-intro")); return false; }
+    const e=element("div",undefined,"card empty-state"); e.append(icon("search"),element("h2","No matching moments"),element("p",`Nothing in the footage notes matches “${data.query}”. Live AI isn't connected here, so only moments described in advance can be found. Not finding it doesn't prove it didn't happen.`,"muted"));
+    $("results").replaceChildren(e); return false;
+  }
   invalidateScenario();
   const intro=element("p",`Found ${data.hits.length} moment(s) for “${data.query}” in pre-analysed footage: described in advance by watching the recordings, so no AI request was needed. Watch each clip to confirm.`,"results-intro");
-  const live=element("button","Also search live with AI (uses Google)","secondary small"); live.type="button";
-  live.onclick=()=>{ live.disabled=true; reviewScenarioPlan(); };
-  const head=element("div",undefined,"notes-head"); head.append(intro,live);
-  $("results").replaceChildren(head,element("h3",`Matches (${data.hits.length})`));
+  const head=element("div",undefined,"notes-head"); head.append(intro);
+  if(liveAi()){ const live=element("button","Also search live with AI (uses Google)","secondary small"); live.type="button"; live.onclick=()=>{ live.disabled=true; reviewScenarioPlan(); }; head.append(live); }
+  $("results").replaceChildren(resultKpis(data,null,(performance.now()-startedAt)/1000),head,element("h3",`Matches (${data.hits.length})`));
   for(const [i,hit] of data.hits.entries()){ const card=resultCard(hit,data.query,true,i+1); window.scanFx?.reveal(card); $("results").append(card); }
   $("scenario-progress").textContent="";
   return true;
@@ -766,3 +774,10 @@ document.addEventListener("keydown", event => {
   if (page !== "search") location.hash = "#search";
   setTimeout(() => $("query").focus(), 60);
 });
+
+// Opened from a web address rather than this computer (e.g. Render): say so in the sidebar.
+if (!["localhost", "127.0.0.1", "::1", "[::1]"].includes(location.hostname)) {
+  const where = $("where-running");
+  where.querySelector("span:not(.dot)").textContent = "Hosted online";
+  where.querySelector("small").textContent = `${location.hostname} · no accounts`;
+}
