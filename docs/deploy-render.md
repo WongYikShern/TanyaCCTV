@@ -1,12 +1,12 @@
 # Putting TanyaCCTV online with Render
 
-The repository includes everything Render needs. The `render.yaml` Blueprint creates two websites, both
-built straight from GitHub and redeployed on every push to `main`:
+The repository includes everything Render needs for two websites, both built straight from GitHub and
+redeployed on every push to `main`:
 
 | Service | What it is | Built from |
 | --- | --- | --- |
-| `tanyacctv-hosted` | **The real website for judges**: the sixteen approved library clips (CAVIAR, RainSnow, the theft and garage clips…), their camera names and map places, and search over the footage notes written in advance. No API key, uploads off. | `deploy/Dockerfile.hosted` (clips from `data/videos` and `deploy/hosted-library`) |
-| `tanyacctv` | **The offline demo**: generated cartoon footage with a preset event index. | `Dockerfile` |
+| hosted website (set up in the dashboard, see below) | **The real website for judges**: the sixteen approved library clips (CAVIAR, RainSnow, the theft and garage clips…), their camera names and map places, and search over the footage notes written in advance. No API key, uploads off. | `deploy/Dockerfile.hosted` (clips from `data/videos` and `deploy/hosted-library`) |
+| `tanyacctv` (in `render.yaml`) | **The offline demo**: generated cartoon footage with a preset event index. | `Dockerfile` |
 
 Neither uses an API key or sends anything to Google. Search, results, the player, the map,
 investigations, the incident timeline and report export all work. Without live AI, the hosted website
@@ -16,22 +16,27 @@ To change the hosted library, add or remove clips with `deploy/stage_hosted_libr
 notes and camera entries it copies), commit, and push: Render rebuilds it. No image needs building or
 uploading by hand.
 
-## Deploy (about 10 minutes, mostly waiting)
+## Keeping the hosted website's address
 
-1. Sign in at https://dashboard.render.com with GitHub.
-2. **New → Blueprint**, then choose the `TanyaCCTV` repository (grant Render access to it if asked) and
-   the `main` branch.
-3. Render reads `render.yaml` and shows two web services, `tanyacctv` and `tanyacctv-hosted`, on the free
-   plan. Press **Apply**.
-4. Wait for the first builds (5–8 minutes each). When a service shows **Live**, open its address, e.g.
-   `https://tanyacctv-hosted.onrender.com`.
+The hosted website is an existing Render service that was first deployed from an image built by hand.
+Point that same service at GitHub, and it keeps its address while rebuilding on every push:
 
-After that, every push to `main` redeploys both automatically.
+1. Open the hosted service in https://dashboard.render.com → **Settings**.
+2. Under **Build & Deploy**, find the source (it shows the image) and choose **Edit**.
+3. Pick **Git repository** → `WongYikShern/TanyaCCTV`, branch `main`.
+4. Set **Dockerfile path** to `./deploy/Dockerfile.hosted` and **Docker build context** to `.` (the
+   repository root). Leave the start command empty: the Dockerfile has it.
+5. Save. Render deploys from GitHub straight away (5–8 minutes). Check **Auto-Deploy** is on, and set
+   **Health Check Path** to `/healthz`.
 
-**Already set up the Blueprint before?** Render picks up the new `tanyacctv-hosted` service from
-`render.yaml` on the next sync (Blueprints → your Blueprint → **Manual Sync** if it doesn't appear on its
-own). If a hosted service was created earlier by hand from a privately built image, it does not update
-from GitHub; once the new one is live, delete the old one (Settings → Delete Web Service).
+If a second service called `tanyacctv-hosted` was created by an earlier version of `render.yaml`, delete it
+(its Settings → Delete Web Service) so only the original address is used.
+
+## The offline demo (Blueprint)
+
+1. **New → Blueprint**, then choose the `TanyaCCTV` repository and the `main` branch.
+2. Render reads `render.yaml` and shows one web service, `tanyacctv`, on the free plan. Press **Apply**.
+3. Wait for the first build (5–8 minutes), then open its address, e.g. `https://tanyacctv.onrender.com`.
 
 **Optional password.** In the service's **Environment** tab, add `TANYA_SITE_PASSWORD` with a password of
 your choice and save. The browser then asks for it (any user name). Remove it to open the site again.
